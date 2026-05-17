@@ -1,5 +1,5 @@
 // Dual-environment: works in Claude artifact previewer (ESM) AND Vercel/Babel CDN
-const { useState, useEffect, useRef } = (typeof React !== 'undefined') ? React : require('react');
+const { useState, useEffect, useRef } = React;
 
 const PAGES = [
   {
@@ -1385,7 +1385,7 @@ const MORE_REFS = [
   },
 ];
 
-export default function App() {
+function App() {
   const [currentPage, setCurrentPage] = useState("preflight");
   const [checked, setChecked] = useState({});
   const [vspeedOpen, setVspeedOpen] = useState(false);
