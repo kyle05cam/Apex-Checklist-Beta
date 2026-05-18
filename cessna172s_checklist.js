@@ -1,5 +1,4 @@
-// Dual-environment: works in Claude artifact previewer (ESM) AND Vercel/Babel CDN
-const { useState, useEffect, useRef } = React;
+const { useState, useEffect, useRef, useMemo, useCallback } = React;
 
 const PAGES = [
   {
@@ -1385,7 +1384,431 @@ const MORE_REFS = [
   },
 ];
 
+// ─────────────────────────────────────────────────────────────────────────────
+// FLEET DATA — saved aircraft in the hangar
+// ─────────────────────────────────────────────────────────────────────────────
+const FLEET = [
+  {
+    id: "n12345",
+    tail: "N12345",
+    type: "Cessna 172S Skyhawk",
+    year: "2019",
+    engine: "Lycoming IO-360-L2A · 180 HP",
+    avionics: "Garmin G1000 NXi",
+    status: "AIRWORTHY",
+    lastFlight: "MAY 14, 2026",
+    totalTime: "1,842.4 HRS",
+    annualDue: "NOV 2026",
+    color: "#e8c84a",
+    accentColor: "#4a9fe8",
+    silhouette: "C172",
+  },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HANGAR VIEW
+// ─────────────────────────────────────────────────────────────────────────────
+function HangarView({ onSelectAircraft }) {
+  const [zuluTime, setZuluTime] = useState("");
+  const [localTime, setLocalTime] = useState("");
+  const [hovered, setHovered] = useState(null);
+
+  useEffect(() => {
+    const tick = () => {
+      const now = new Date();
+      setZuluTime(now.toUTCString().slice(17, 22) + "Z");
+      setLocalTime(now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false }));
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div style={{
+      width: "100%", height: "100vh", overflow: "hidden",
+      background: "#080a0e",
+      display: "flex", flexDirection: "column",
+      fontFamily: "'Rajdhani', sans-serif",
+      position: "relative",
+    }}>
+      {/* Injected fonts */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Oswald:wght@400;600;700&family=Rajdhani:wght@400;500;600;700&display=swap');
+        @keyframes hangarFadeIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes hangarPulse { 0%,100% { opacity:0.6; } 50% { opacity:1; } }
+        @keyframes scanline { 0% { transform:translateY(-100%); } 100% { transform:translateY(400%); } }
+        @keyframes glow { 0%,100% { text-shadow:0 0 8px rgba(232,200,74,0.4); } 50% { text-shadow:0 0 18px rgba(232,200,74,0.9), 0 0 30px rgba(232,200,74,0.4); } }
+      `}</style>
+
+      {/* Background grid */}
+      <div style={{
+        position: "absolute", inset: 0, pointerEvents: "none",
+        backgroundImage: `
+          linear-gradient(rgba(74,159,232,0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(74,159,232,0.04) 1px, transparent 1px)
+        `,
+        backgroundSize: "40px 40px",
+      }} />
+
+      {/* Radial glow center */}
+      <div style={{
+        position: "absolute", top: "30%", left: "50%",
+        transform: "translate(-50%,-50%)",
+        width: 600, height: 400,
+        background: "radial-gradient(ellipse at center, rgba(232,200,74,0.05) 0%, transparent 70%)",
+        pointerEvents: "none",
+      }} />
+
+      {/* ── TOP HEADER ── */}
+      <div style={{
+        flexShrink: 0,
+        background: "linear-gradient(135deg,#0a0c10 0%,#141820 60%,#0a0c10 100%)",
+        borderBottom: "2px solid #e8c84a",
+        padding: "0 20px",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        height: 56,
+        position: "relative", zIndex: 10,
+      }}>
+        {/* Logo / Brand */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {/* Apex logo SVG */}
+          <svg viewBox="0 0 36 36" width={36} height={36} fill="none">
+            <polygon points="18,3 33,30 3,30" stroke="#e8c84a" strokeWidth="2" fill="rgba(232,200,74,0.06)" strokeLinejoin="round"/>
+            <line x1="18" y1="3" x2="18" y2="30" stroke="#e8c84a" strokeWidth="0.8" opacity="0.3"/>
+            <circle cx="18" cy="18" r="3.5" fill="#e8c84a" opacity="0.9"/>
+            <path d="M12 23l6-10 6 10" stroke="#e8c84a" strokeWidth="1" fill="none" opacity="0.5"/>
+          </svg>
+          <div>
+            <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 15, fontWeight: 700, letterSpacing: 4, color: "#e8c84a", lineHeight: 1, textTransform: "uppercase" }}>
+              APEX AVIATION
+            </div>
+            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#4a5068", letterSpacing: 2, marginTop: 2 }}>
+              FLIGHT TRAINING CENTER · KNEEBOARD v2
+            </div>
+          </div>
+        </div>
+
+        {/* Center title */}
+        <div style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", textAlign: "center" }}>
+          <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 22, fontWeight: 700, letterSpacing: 6, color: "#e8e4d8", textTransform: "uppercase", lineHeight: 1, animation: "glow 4s ease-in-out infinite" }}>
+            THE HANGAR
+          </div>
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#4a5068", letterSpacing: 2.5, marginTop: 3 }}>
+            SELECT AIRCRAFT TO OPEN KNEEBOARD
+          </div>
+        </div>
+
+        {/* Clock */}
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 16, fontWeight: 400, color: "#e8c84a", letterSpacing: 2, lineHeight: 1, animation: "hangarPulse 2s ease-in-out infinite" }}>{zuluTime}</div>
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#4a5068", letterSpacing: 1.5, marginTop: 2 }}>LCL {localTime}</div>
+        </div>
+      </div>
+
+      {/* ── STATUS BAR ── */}
+      <div style={{
+        flexShrink: 0,
+        background: "#0d0f14",
+        borderBottom: "1px solid #1e2430",
+        padding: "6px 20px",
+        display: "flex", alignItems: "center", gap: 20,
+      }}>
+        {[
+          { label: "AIRCRAFT ON FILE", value: FLEET.length },
+          { label: "AIRWORTHY", value: FLEET.filter(a => a.status === "AIRWORTHY").length, color: "#3dbe6c" },
+          { label: "ACTIVE PILOT", value: "PIC ON DUTY", color: "#e8c84a" },
+          { label: "POH REF", value: "REV 2022-05", color: "#4a9fe8" },
+        ].map((stat, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#3a4050", letterSpacing: 1.5 }}>{stat.label}</div>
+            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: stat.color || "#7a8090", letterSpacing: 1, fontWeight: 700 }}>{stat.value}</div>
+            {i < 3 && <div style={{ width: 1, height: 12, background: "#1e2430", marginLeft: 8 }} />}
+          </div>
+        ))}
+      </div>
+
+      {/* ── MAIN CONTENT ── */}
+      <div style={{
+        flex: 1, overflowY: "auto", overflowX: "hidden",
+        padding: "28px 24px",
+        display: "flex", flexDirection: "column", gap: 20,
+        position: "relative", zIndex: 1,
+      }}>
+
+        {/* Section label */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
+          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#3a4050", letterSpacing: 3, textTransform: "uppercase" }}>
+            ── YOUR FLEET ──────────────────────
+          </div>
+        </div>
+
+        {/* Aircraft Cards */}
+        {FLEET.map((ac, idx) => {
+          const isHovered = hovered === ac.id;
+          return (
+            <button
+              key={ac.id}
+              onClick={() => onSelectAircraft(ac)}
+              onMouseEnter={() => setHovered(ac.id)}
+              onMouseLeave={() => setHovered(null)}
+              style={{
+                display: "block", width: "100%",
+                background: isHovered
+                  ? "linear-gradient(135deg,#141c28 0%,#1a2234 40%,#141c28 100%)"
+                  : "linear-gradient(135deg,#0e1218 0%,#141820 40%,#0e1218 100%)",
+                border: `1.5px solid ${isHovered ? ac.color : "#2a3040"}`,
+                borderRadius: 10,
+                cursor: "pointer", padding: 0,
+                textAlign: "left",
+                boxShadow: isHovered
+                  ? `0 0 24px rgba(232,200,74,0.12), 0 4px 20px rgba(0,0,0,0.5)`
+                  : "0 2px 12px rgba(0,0,0,0.4)",
+                transition: "all 0.18s ease",
+                animation: `hangarFadeIn 0.35s ease ${idx * 0.1}s both`,
+                position: "relative", overflow: "hidden",
+              }}
+            >
+              {/* Card shimmer line */}
+              {isHovered && (
+                <div style={{
+                  position: "absolute", top: 0, left: 0, right: 0, height: 2,
+                  background: `linear-gradient(90deg, transparent, ${ac.color}, transparent)`,
+                  animation: "none",
+                }} />
+              )}
+
+              {/* Scan line effect on hover */}
+              {isHovered && (
+                <div style={{
+                  position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden", borderRadius: 10,
+                }}>
+                  <div style={{
+                    position: "absolute", left: 0, right: 0, height: "25%",
+                    background: `linear-gradient(transparent, rgba(232,200,74,0.03), transparent)`,
+                    animation: "scanline 2s linear infinite",
+                  }} />
+                </div>
+              )}
+
+              {/* ── CARD INNER ── */}
+              <div style={{ padding: "20px 24px", display: "flex", alignItems: "center", gap: 24 }}>
+
+                {/* Aircraft silhouette */}
+                <div style={{
+                  flexShrink: 0, width: 110, height: 80,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  background: `radial-gradient(ellipse at center, ${ac.color}0a 0%, transparent 70%)`,
+                  borderRadius: 8,
+                  border: `1px solid ${ac.color}20`,
+                  transition: "all 0.18s",
+                }}>
+                  {/* C172 top-down silhouette */}
+                  <svg viewBox="0 0 110 80" width={110} height={80} fill="none">
+                    {/* Fuselage */}
+                    <ellipse cx="55" cy="40" rx="6" ry="30" fill={ac.color} opacity={isHovered ? 0.75 : 0.4} />
+                    {/* Main wings */}
+                    <ellipse cx="55" cy="40" rx="48" ry="5" fill={ac.color} opacity={isHovered ? 0.6 : 0.3} />
+                    {/* Wing sweep taper */}
+                    <path d="M7 38 Q30 35 55 37 Q80 35 103 38 Q80 45 55 43 Q30 45 7 42Z" fill={ac.color} opacity={isHovered ? 0.35 : 0.18} />
+                    {/* H-stab */}
+                    <ellipse cx="55" cy="68" rx="22" ry="2.5" fill={ac.color} opacity={isHovered ? 0.55 : 0.25} />
+                    {/* Rudder */}
+                    <ellipse cx="55" cy="10" rx="3" ry="8" fill={ac.color} opacity={isHovered ? 0.6 : 0.3} />
+                    {/* Prop arc */}
+                    <path d="M55 10 Q62 8 64 12 Q62 16 55 14 Q48 16 46 12 Q48 8 55 10Z" fill={ac.color} opacity={isHovered ? 0.8 : 0.4} />
+                    {/* Gear dots */}
+                    <circle cx="37" cy="43" r="2" fill={ac.color} opacity={isHovered ? 0.5 : 0.25} />
+                    <circle cx="73" cy="43" r="2" fill={ac.color} opacity={isHovered ? 0.5 : 0.25} />
+                    <circle cx="55" cy="65" r="1.5" fill={ac.color} opacity={isHovered ? 0.4 : 0.2} />
+                    {/* Registration on fuselage */}
+                    <text x="55" y="42" textAnchor="middle" fontFamily="'Share Tech Mono',monospace" fontSize="4.5" fill={ac.color} opacity={isHovered ? 1 : 0.6} letterSpacing="0.5">{ac.tail}</text>
+                  </svg>
+                </div>
+
+                {/* Aircraft info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {/* Header row */}
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 6 }}>
+                    <div style={{
+                      fontFamily: "'Oswald',sans-serif", fontSize: 28, fontWeight: 700, letterSpacing: 3,
+                      color: ac.color, lineHeight: 1, transition: "all 0.18s",
+                      textShadow: isHovered ? `0 0 16px ${ac.color}60` : "none",
+                    }}>{ac.tail}</div>
+                    <div style={{
+                      fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: ac.accentColor,
+                      letterSpacing: 2, lineHeight: 1, paddingTop: 2,
+                    }}>{ac.type}</div>
+                    <div style={{ marginLeft: "auto" }}>
+                      <span style={{
+                        fontFamily: "'Share Tech Mono',monospace", fontSize: 9, fontWeight: 700, letterSpacing: 2,
+                        padding: "3px 10px", borderRadius: 3,
+                        background: ac.status === "AIRWORTHY" ? "rgba(61,190,108,0.12)" : "rgba(232,90,74,0.12)",
+                        border: `1px solid ${ac.status === "AIRWORTHY" ? "#3dbe6c" : "#e85a4a"}`,
+                        color: ac.status === "AIRWORTHY" ? "#3dbe6c" : "#e85a4a",
+                      }}>{ac.status}</span>
+                    </div>
+                  </div>
+
+                  {/* Stats grid */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1, marginTop: 8 }}>
+                    {[
+                      { label: "YEAR", value: ac.year },
+                      { label: "TOTAL TIME", value: ac.totalTime },
+                      { label: "LAST FLIGHT", value: ac.lastFlight },
+                      { label: "ANNUAL DUE", value: ac.annualDue },
+                    ].map((s, i) => (
+                      <div key={i} style={{
+                        padding: "8px 12px",
+                        background: isHovered ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.02)",
+                        borderRadius: 4,
+                        borderLeft: i === 0 ? `2px solid ${ac.color}50` : "2px solid transparent",
+                        transition: "all 0.18s",
+                      }}>
+                        <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, color: "#3a4050", letterSpacing: 2, marginBottom: 3 }}>{s.label}</div>
+                        <div style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 13, fontWeight: 700, color: "#c8c4b8", letterSpacing: 0.5 }}>{s.value}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Engine / Avionics row */}
+                  <div style={{ display: "flex", gap: 16, marginTop: 8, alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <svg viewBox="0 0 16 16" width={11} height={11} fill="none">
+                        <rect x="1" y="4" width="14" height="8" rx="1" stroke="#4a5068" strokeWidth="1.2"/>
+                        <rect x="3" y="6" width="2" height="4" rx="0.3" fill="#4a5068" opacity="0.6"/>
+                        <rect x="7" y="6" width="2" height="4" rx="0.3" fill="#4a5068" opacity="0.6"/>
+                        <path d="M3 4V2M6 4V1.5M10 4V2M13 4V1.5" stroke="#4a5068" strokeWidth="1" strokeLinecap="round"/>
+                      </svg>
+                      <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#4a5068", letterSpacing: 0.5 }}>{ac.engine}</span>
+                    </div>
+                    <div style={{ width: 1, height: 10, background: "#1e2430" }} />
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <svg viewBox="0 0 16 16" width={11} height={11} fill="none">
+                        <rect x="1" y="3" width="14" height="10" rx="1" stroke={ac.accentColor} strokeWidth="1.2" opacity="0.5"/>
+                        <line x1="3" y1="6" x2="13" y2="6" stroke={ac.accentColor} strokeWidth="0.8" opacity="0.4"/>
+                        <line x1="3" y1="9" x2="10" y2="9" stroke={ac.accentColor} strokeWidth="0.8" opacity="0.4"/>
+                      </svg>
+                      <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#4a5068", letterSpacing: 0.5 }}>{ac.avionics}</span>
+                    </div>
+                    <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{
+                        fontFamily: "'Oswald',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 3,
+                        color: isHovered ? ac.color : "#3a4050",
+                        transition: "all 0.18s",
+                        textTransform: "uppercase",
+                      }}>
+                        {isHovered ? "OPEN KNEEBOARD →" : "TAP TO OPEN"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+
+        {/* Empty slot card */}
+        <button
+          disabled
+          style={{
+            display: "block", width: "100%",
+            background: "transparent",
+            border: "1.5px dashed #1e2430",
+            borderRadius: 10,
+            cursor: "default", padding: "28px 24px",
+            opacity: 0.4,
+            animation: "hangarFadeIn 0.35s ease 0.2s both",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div style={{
+              width: 110, height: 80,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              border: "1px dashed #2a3040", borderRadius: 8,
+            }}>
+              <span style={{ fontSize: 28, opacity: 0.3 }}>＋</span>
+            </div>
+            <div>
+              <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: 3, color: "#3a4050" }}>ADD AIRCRAFT</div>
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#2a3040", letterSpacing: 2, marginTop: 4 }}>COMING SOON · MANAGE YOUR FLEET</div>
+            </div>
+          </div>
+        </button>
+
+        {/* Bottom padding */}
+        <div style={{ height: 20 }} />
+      </div>
+
+      {/* ── FOOTER ── */}
+      <div style={{
+        flexShrink: 0,
+        background: "#0a0c10",
+        borderTop: "1px solid #1a1e28",
+        padding: "8px 20px",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+      }}>
+        <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#252830", letterSpacing: 2 }}>
+          APEX AVIATION FLIGHT TRAINING CENTER · KNEEBOARD SYSTEM v2.0 · FOR SIMULATION USE
+        </div>
+        <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#252830", letterSpacing: 2 }}>
+          POH REF: CESSNA 172S · REV 2022-05
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ROOT APP — controls view state + localStorage persistence
+// ─────────────────────────────────────────────────────────────────────────────
 function App() {
+  // Initialise view from localStorage so refresh restores last state
+  const [view, setView] = useState(() => {
+    try {
+      const saved = localStorage.getItem("apex_kneeboard_view");
+      if (saved === "checklist") return "checklist";
+    } catch {}
+    return "hangar";
+  });
+  const [selectedAircraft, setSelectedAircraft] = useState(() => {
+    try {
+      const saved = localStorage.getItem("apex_kneeboard_aircraft");
+      if (saved) {
+        const ac = FLEET.find(a => a.id === saved);
+        if (ac) return ac;
+      }
+    } catch {}
+    return null;
+  });
+
+  const openChecklist = (aircraft) => {
+    setSelectedAircraft(aircraft);
+    setView("checklist");
+    try {
+      localStorage.setItem("apex_kneeboard_view", "checklist");
+      localStorage.setItem("apex_kneeboard_aircraft", aircraft.id);
+    } catch {}
+  };
+
+  const goToHangar = () => {
+    setView("hangar");
+    try {
+      localStorage.setItem("apex_kneeboard_view", "hangar");
+      localStorage.removeItem("apex_kneeboard_aircraft");
+    } catch {}
+  };
+
+  if (view === "checklist" && selectedAircraft) {
+    return <ChecklistApp onBackToHangar={goToHangar} aircraft={selectedAircraft} />;
+  }
+  return <HangarView onSelectAircraft={openChecklist} />;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHECKLIST APP (formerly export default App)
+// ─────────────────────────────────────────────────────────────────────────────
+function ChecklistApp({ onBackToHangar, aircraft }) {
   const [currentPage, setCurrentPage] = useState("preflight");
   const [checked, setChecked] = useState({});
   const [vspeedOpen, setVspeedOpen] = useState(false);
@@ -2486,9 +2909,29 @@ function App() {
 
         {/* TOP ROW */}
         <div style={{ padding: "8px 12px 6px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-            <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: 4, color: lightMode ? "#0a2858" : "#e8c84a", textTransform: "uppercase", lineHeight: 1 }}>APEX AVIATION</div>
-            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: 2, color: lightMode ? "#607090" : "#7a8090" }}>· N12345</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {/* Hangar back button */}
+            {onBackToHangar && (
+              <button
+                onClick={onBackToHangar}
+                style={{
+                  display: "flex", alignItems: "center", gap: 5,
+                  background: lightMode ? "rgba(26,58,120,0.08)" : "rgba(232,200,74,0.07)",
+                  border: `1px solid ${lightMode ? "#1a3a78" : "#3a3010"}`,
+                  borderRadius: 5, padding: "4px 10px", cursor: "pointer",
+                  transition: "all 0.15s", flexShrink: 0,
+                }}
+              >
+                <svg viewBox="0 0 16 16" width={12} height={12} fill="none">
+                  <path d="M10 3L5 8l5 5" stroke={lightMode ? "#1a3a78" : "#e8c84a"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, letterSpacing: 1.5, color: lightMode ? "#1a3a78" : "#e8c84a", textTransform: "uppercase" }}>HANGAR</span>
+              </button>
+            )}
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+              <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: 4, color: lightMode ? "#0a2858" : "#e8c84a", textTransform: "uppercase", lineHeight: 1 }}>APEX AVIATION</div>
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: 2, color: lightMode ? "#607090" : "#7a8090" }}>· {aircraft ? aircraft.tail : "N12345"}</div>
+            </div>
           </div>
           {/* LIGHT / DARK TOGGLE */}
           <button
@@ -3001,20 +3444,13 @@ function App() {
     </div>
   );
 }
-
-// --- FINAL IGNITION BLOCK (CDN/Vercel only — skipped in ESM previewer) ---
-if (typeof window !== 'undefined' && window.ReactDOM && !window.__APEX_MOUNTED__) {
-  window.__APEX_MOUNTED__ = true;
+(function() {
   const mountApp = () => {
     const rootElement = document.getElementById('root');
-    const AppUI = window['App'] || (typeof App !== 'undefined' ? App : null);
-    if (rootElement && AppUI) {
-      const root = window.ReactDOM.createRoot(rootElement);
-      root.render(window.React.createElement(AppUI));
-      console.log("Apex Checklist: Ignition Success.");
-    } else {
-      setTimeout(mountApp, 500);
+    if (rootElement) {
+      const root = ReactDOM.createRoot(rootElement);
+      root.render(React.createElement(App));
     }
   };
   mountApp();
-}
+})();
