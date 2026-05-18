@@ -866,6 +866,8 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   const [scratchpadText, setScratchpadText] = useState("");
   const [moreOpen, setMoreOpen] = useState(false);
   const [activeMoreRef, setActiveMoreRef] = useState("light_gun");
+  const [activeDrawer, setActiveDrawer] = useState(null);   // "vspeeds" | "perf" | "more" | null
+  const [perfSubTab, setPerfSubTab] = useState("perf");     // "perf" | "climb" | "cruise"
   const [lightMode, setLightMode] = useState(false);
   const [ttsActive, setTtsActive] = useState(null);
   const [ttsPaused, setTtsPaused] = useState(false);
@@ -1388,28 +1390,197 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
             const count = countPage(pg.id);
             const isDone = count.total > 0 && count.done === count.total;
             return (
-              <button key={pg.id} className="tab-btn" onClick={() => setCurrentPage(pg.id)} style={{ width: "100%", minHeight: 64, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, background: isActive ? T.leftTabActive : "transparent", borderLeft: `3px solid ${isActive ? T.leftTabText : "transparent"}`, border: "none", borderLeft: `3px solid ${isActive ? T.leftTabText : "transparent"}`, cursor: "pointer", padding: "8px 2px", transition: "all 0.12s" }}>
+              <button key={pg.id} className="tab-btn" onClick={() => setCurrentPage(pg.id)} style={{ width: "100%", minHeight: 64, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, background: isActive ? T.leftTabActive : "transparent", outline: "none", borderTop: "none", borderRight: "none", borderBottom: "none", borderLeft: `3px solid ${isActive ? T.leftTabText : "transparent"}`, cursor: "pointer", padding: "8px 2px", transition: "all 0.12s" }}>
                 <div style={{ fontSize: 18, color: isActive ? T.leftTabText : T.leftTabDim, lineHeight: 1 }}>{typeof pg.icon === "string" ? pg.icon : <span style={{ color: isActive ? T.leftTabText : T.leftTabDim }}>{pg.icon}</span>}</div>
                 <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7.5, fontWeight: 700, letterSpacing: 0.5, color: isActive ? T.leftTabText : T.leftTabDim, textAlign: "center", whiteSpace: "pre-line", lineHeight: 1.2, textTransform: "uppercase" }}>{pg.label}</div>
                 {count.total > 0 && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, color: isDone ? "#3dbe6c" : T.leftTabCount }}>{count.done}/{count.total}</div>}
               </button>
             );
           })}
-          {/* V-speed & perf buttons */}
-          <button className="tab-btn" onClick={() => setVspeedOpen(true)} style={{ width: "100%", minHeight: 52, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, background: "transparent", border: "none", borderLeft: "3px solid transparent", cursor: "pointer", padding: "6px 2px", borderTop: `1px solid ${T.leftSideBorder}`, marginTop: "auto" }}>
-            <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#4a9fe8", letterSpacing: 1, fontWeight: 700 }}>V-SPD</span>
-          </button>
-          <button className="tab-btn" onClick={() => setPerfOpen(true)} style={{ width: "100%", minHeight: 52, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, background: "transparent", border: "none", borderLeft: "3px solid transparent", cursor: "pointer", padding: "6px 2px", borderTop: `1px solid ${T.leftSideBorder}` }}>
-            <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#4a9fe8", letterSpacing: 1, fontWeight: 700 }}>PERF</span>
-          </button>
-          <button className="tab-btn" onClick={() => setMoreOpen(true)} style={{ width: "100%", minHeight: 52, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, background: "transparent", border: "none", borderLeft: "3px solid transparent", cursor: "pointer", padding: "6px 2px", borderTop: `1px solid ${T.leftSideBorder}` }}>
-            <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#4a9fe8", letterSpacing: 1, fontWeight: 700 }}>MORE</span>
-          </button>
         </div>
 
-        {/* Center — checklist content */}
-        <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", background: T.centerBg, scrollbarWidth: "thin" }}>
-          {renderChecklist(activePg)}
+        {/* Center — checklist content + bottom performance drawers */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: T.centerBg }}>
+          {/* Main checklist scroll area */}
+          <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", scrollbarWidth: "thin" }}>
+            {renderChecklist(activePg)}
+          </div>
+
+          {/* ── BOTTOM PERFORMANCE DRAWER STRIP ── */}
+          <div style={{ flexShrink: 0, borderTop: `1px solid ${T.leftSideBorder}`, background: lightMode ? "#c8ccd8" : "#0d0f12" }}>
+            {/* Drawer tab row */}
+            <div style={{ display: "flex", borderBottom: `1px solid ${T.leftSideBorder}` }}>
+              {[
+                { key: "vspeeds", label: "V-SPEEDS", icon: "⚡" },
+                { key: "perf",    label: "PERF TABLES", icon: "📊" },
+                { key: "more",    label: "REFERENCE", icon: "📋" },
+              ].map(drawer => {
+                const isOpen = activeDrawer === drawer.key;
+                return (
+                  <button key={drawer.key} onClick={() => setActiveDrawer(isOpen ? null : drawer.key)}
+                    style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "5px 4px", cursor: "pointer", background: isOpen ? "rgba(74,159,232,0.1)" : "transparent", border: "none", borderRight: `1px solid ${T.leftSideBorder}`, borderBottom: isOpen ? "2px solid #4a9fe8" : "2px solid transparent", transition: "all 0.15s" }}>
+                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: isOpen ? "#4a9fe8" : lightMode ? "#607090" : "#4a5068", fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", transition: "color 0.15s" }}>{drawer.label}</span>
+                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: isOpen ? "#4a9fe8" : lightMode ? "#607090" : "#4a5068", transition: "color 0.15s" }}>{isOpen ? "▲" : "▼"}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* V-Speeds drawer */}
+            {activeDrawer === "vspeeds" && (
+              <div style={{ maxHeight: 260, overflowY: "auto", padding: "10px 14px", scrollbarWidth: "thin", animation: "fadeIn 0.15s ease" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                  <span style={{ fontFamily: "'Oswald',sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: 3, color: "#4a9fe8" }}>V-SPEEDS — C172S</span>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    {vspeedEditing && <button onClick={resetVspeeds} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer" }}>↺ RESET</button>}
+                    <button onClick={() => setVspeedEditing(e => !e)} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: 1, padding: "3px 10px", borderRadius: 3, cursor: "pointer", background: vspeedEditing ? "rgba(232,200,74,0.15)" : "transparent", color: vspeedEditing ? "#e8c84a" : "#4a9fe8", border: `1px solid ${vspeedEditing ? "#e8c84a" : "#4a9fe8"}` }}>{vspeedEditing ? "✓ DONE" : "✎ EDIT"}</button>
+                  </div>
+                </div>
+                {vspeeds.map((group, gi) => (
+                  <div key={gi} style={{ marginBottom: 12 }}>
+                    <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#4a9fe8", letterSpacing: 2, marginBottom: 6 }}>{group.group}</div>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      {group.items.map((item, ii) => (
+                        <div key={ii} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 12px", background: "rgba(74,159,232,0.06)", border: "1px solid rgba(74,159,232,0.14)", borderRadius: 5, flex: "1 1 140px", minWidth: 130 }}>
+                          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "#4a9fe8", width: 40, letterSpacing: 1 }}>{vspeedEditing ? <input value={item.code} onChange={e => updateVspeed(gi, ii, "code", e.target.value)} style={{ width: 36, background: "#141820", border: "1px solid #4a9fe8", borderRadius: 3, padding: "2px 4px", fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "#4a9fe8", outline: "none" }} /> : item.code}</div>
+                          <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 22, fontWeight: 700, color: "#e8c84a", lineHeight: 1, minWidth: 48 }}>{vspeedEditing ? <input value={item.value} onChange={e => updateVspeed(gi, ii, "value", e.target.value)} style={{ width: 44, background: "#141820", border: "1px solid #e8c84a", borderRadius: 3, padding: "2px 4px", fontFamily: "'Oswald',sans-serif", fontSize: 18, color: "#e8c84a", outline: "none" }} /> : item.value}</div>
+                          <div>
+                            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, color: "#7a8090" }}>{item.unit}</div>
+                            <div style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 12, color: "#e8e4d8" }}>{vspeedEditing ? <input value={item.desc} onChange={e => updateVspeed(gi, ii, "desc", e.target.value)} style={{ width: 80, background: "#141820", border: "1px solid #2a3040", borderRadius: 3, padding: "2px 4px", fontFamily: "'Rajdhani',sans-serif", fontSize: 11, color: "#e8e4d8", outline: "none" }} /> : item.desc}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Performance Tables drawer */}
+            {activeDrawer === "perf" && (
+              <div style={{ maxHeight: 300, overflowY: "auto", scrollbarWidth: "thin", animation: "fadeIn 0.15s ease" }}>
+                {/* Sub-tab row: Takeoff/Land | Climb | Cruise */}
+                <div style={{ display: "flex", borderBottom: `1px solid ${T.leftSideBorder}`, background: lightMode ? "#d0d4e0" : "#0a0c10", flexShrink: 0 }}>
+                  {[["perf","TAKEOFF / LAND"],["climb","CLIMB"],["cruise","CRUISE"]].map(([id, label]) => (
+                    <button key={id} onClick={() => setPerfSubTab(id)} style={{ flex: 1, padding: "5px 4px", cursor: "pointer", border: "none", borderBottom: `2px solid ${perfSubTab === id ? "#4a9fe8" : "transparent"}`, background: perfSubTab === id ? "rgba(74,159,232,0.1)" : "transparent", fontFamily: "'Share Tech Mono',monospace", fontSize: 8, fontWeight: 700, letterSpacing: 1, color: perfSubTab === id ? "#4a9fe8" : lightMode ? "#607090" : "#4a5068", transition: "all 0.12s" }}>{label}</button>
+                  ))}
+                </div>
+                <div style={{ padding: "10px 14px" }}>
+                  {/* Edit / Reset controls */}
+                  <div style={{ display: "flex", justifyContent: "flex-end", gap: 6, marginBottom: 8 }}>
+                    {perfSubTab === "perf" && perfEditing && <button onClick={resetPerfData} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer" }}>↺ RESET</button>}
+                    {perfSubTab === "climb" && climbEditing && <button onClick={resetClimbData} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer" }}>↺ RESET</button>}
+                    {perfSubTab === "cruise" && cruiseEditing && <button onClick={resetCruiseData} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer" }}>↺ RESET</button>}
+                    {perfSubTab === "perf"   && <button onClick={() => setPerfEditing(e => !e)}   style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: 1, padding: "3px 10px", borderRadius: 3, cursor: "pointer", background: perfEditing   ? "rgba(232,200,74,0.15)" : "transparent", color: perfEditing   ? "#e8c84a" : "#4a9fe8", border: `1px solid ${perfEditing   ? "#e8c84a" : "#4a9fe8"}` }}>{perfEditing   ? "✓ DONE" : "✎ EDIT"}</button>}
+                    {perfSubTab === "climb"  && <button onClick={() => setClimbEditing(e => !e)}  style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: 1, padding: "3px 10px", borderRadius: 3, cursor: "pointer", background: climbEditing  ? "rgba(232,200,74,0.15)" : "transparent", color: climbEditing  ? "#e8c84a" : "#4a9fe8", border: `1px solid ${climbEditing  ? "#e8c84a" : "#4a9fe8"}` }}>{climbEditing  ? "✓ DONE" : "✎ EDIT"}</button>}
+                    {perfSubTab === "cruise" && <button onClick={() => setCruiseEditing(e => !e)} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: 1, padding: "3px 10px", borderRadius: 3, cursor: "pointer", background: cruiseEditing ? "rgba(232,200,74,0.15)" : "transparent", color: cruiseEditing ? "#e8c84a" : "#4a9fe8", border: `1px solid ${cruiseEditing ? "#e8c84a" : "#4a9fe8"}` }}>{cruiseEditing ? "✓ DONE" : "✎ EDIT"}</button>}
+                  </div>
+                  {/* Takeoff/Landing tables */}
+                  {perfSubTab === "perf" && perfData.map((section, si) => (
+                    <div key={si} style={{ marginBottom: 14 }}>
+                      <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 12, fontWeight: 700, color: "#4a9fe8", letterSpacing: 2, marginBottom: 3 }}>{section.group}</div>
+                      {section.note && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, color: "#4a5068", marginBottom: 6, letterSpacing: 1 }}>{section.note}</div>}
+                      <div style={{ border: "1px solid rgba(74,159,232,0.2)", borderRadius: 4, overflow: "hidden" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: "rgba(74,159,232,0.1)" }}>
+                          {section.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#4a9fe8", letterSpacing: 1, padding: "4px 8px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(74,159,232,0.15)" : "none" }}>{col}</div>)}
+                        </div>
+                        {section.rows.map((row, ri) => (
+                          <div key={ri} style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: ri % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent", borderTop: "1px solid rgba(74,159,232,0.08)" }}>
+                            {row.map((cell, ci) => (
+                              <div key={ci} style={{ fontFamily: ci === 0 ? "'Rajdhani',sans-serif" : "'Share Tech Mono',monospace", fontSize: ci === 0 ? 12 : 11, fontWeight: ci === 0 ? 600 : 400, color: ci === 0 ? "#e8e4d8" : "#4a9fe8", padding: "5px 8px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(74,159,232,0.08)" : "none" }}>
+                                {perfEditing ? <input value={cell} onChange={e => updatePerfCell(si, ri, ci, e.target.value)} style={{ width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #2a3040", fontFamily: "inherit", fontSize: "inherit", color: "inherit", outline: "none", padding: 0 }} /> : cell}
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  {/* Climb tables */}
+                  {perfSubTab === "climb" && climbData.map((section, si) => (
+                    <div key={si} style={{ marginBottom: 14 }}>
+                      <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 12, fontWeight: 700, color: "#4a9fe8", letterSpacing: 2, marginBottom: 3 }}>{section.group}</div>
+                      {section.note && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, color: "#4a5068", marginBottom: 6 }}>{section.note}</div>}
+                      <div style={{ border: "1px solid rgba(74,159,232,0.2)", borderRadius: 4, overflow: "hidden" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: "rgba(74,159,232,0.1)" }}>
+                          {section.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#4a9fe8", letterSpacing: 1, padding: "4px 8px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(74,159,232,0.15)" : "none" }}>{col}</div>)}
+                        </div>
+                        {section.rows.map((row, ri) => (
+                          <div key={ri} style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: ri % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent", borderTop: "1px solid rgba(74,159,232,0.08)" }}>
+                            {row.map((cell, ci) => (
+                              <div key={ci} style={{ fontFamily: ci === 0 ? "'Rajdhani',sans-serif" : "'Share Tech Mono',monospace", fontSize: ci === 0 ? 12 : 11, color: ci === 0 ? "#e8e4d8" : "#4a9fe8", padding: "5px 8px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(74,159,232,0.08)" : "none" }}>
+                                {climbEditing ? <input value={cell} onChange={e => updateClimbCell(si, ri, ci, e.target.value)} style={{ width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #2a3040", fontFamily: "inherit", fontSize: "inherit", color: "inherit", outline: "none", padding: 0 }} /> : cell}
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  {/* Cruise tables */}
+                  {perfSubTab === "cruise" && cruiseData.map((section, si) => (
+                    <div key={si} style={{ marginBottom: 14 }}>
+                      <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 12, fontWeight: 700, color: "#4a9fe8", letterSpacing: 2, marginBottom: 3 }}>{section.group}</div>
+                      {section.note && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, color: "#4a5068", marginBottom: 6 }}>{section.note}</div>}
+                      <div style={{ border: "1px solid rgba(74,159,232,0.2)", borderRadius: 4, overflow: "hidden" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: "rgba(74,159,232,0.1)" }}>
+                          {section.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#4a9fe8", letterSpacing: 1, padding: "4px 8px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(74,159,232,0.15)" : "none" }}>{col}</div>)}
+                        </div>
+                        {section.rows.map((row, ri) => (
+                          <div key={ri} style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: ri % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent", borderTop: "1px solid rgba(74,159,232,0.08)" }}>
+                            {row.map((cell, ci) => (
+                              <div key={ci} style={{ fontFamily: ci === 0 ? "'Rajdhani',sans-serif" : "'Share Tech Mono',monospace", fontSize: ci === 0 ? 12 : 11, color: ci === 0 ? "#e8e4d8" : "#4a9fe8", padding: "5px 8px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(74,159,232,0.08)" : "none" }}>
+                                {cruiseEditing ? <input value={cell} onChange={e => updateCruiseCell(si, ri, ci, e.target.value)} style={{ width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #2a3040", fontFamily: "inherit", fontSize: "inherit", color: "inherit", outline: "none", padding: 0 }} /> : cell}
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Reference / More drawer */}
+            {activeDrawer === "more" && (
+              <div style={{ maxHeight: 300, display: "flex", overflow: "hidden", animation: "fadeIn 0.15s ease" }}>
+                {/* Reference sub-nav */}
+                <div style={{ width: 130, flexShrink: 0, background: lightMode ? "#c0c4d0" : "#0a0c10", borderRight: `1px solid ${T.leftSideBorder}`, overflowY: "auto" }}>
+                  {MORE_REFS.map(ref => (
+                    <button key={ref.id} onClick={() => setActiveMoreRef(ref.id)} style={{ width: "100%", textAlign: "left", padding: "8px 10px", cursor: "pointer", background: activeMoreRef === ref.id ? `${ref.color}12` : "transparent", border: "none", borderLeft: `3px solid ${activeMoreRef === ref.id ? ref.color : "transparent"}`, borderBottom: `1px solid ${T.leftSideBorder}`, transition: "all 0.12s" }}>
+                      <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, fontWeight: 700, letterSpacing: 0.5, color: activeMoreRef === ref.id ? ref.color : lightMode ? "#5a6070" : "#4a5068", textTransform: "uppercase", lineHeight: 1.3 }}>{ref.title}</div>
+                    </button>
+                  ))}
+                </div>
+                {/* Reference content */}
+                <div style={{ flex: 1, overflowY: "auto", padding: "10px 14px", scrollbarWidth: "thin" }}>
+                  {(() => {
+                    const ref = MORE_REFS.find(r => r.id === activeMoreRef);
+                    if (!ref) return null;
+                    return (
+                      <div>
+                        <div style={{ marginBottom: 10 }}>
+                          <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 14, fontWeight: 700, letterSpacing: 2, color: ref.color, textTransform: "uppercase" }}>{ref.title}</div>
+                          {ref.note && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#5a6070", letterSpacing: 1, marginTop: 3 }}>{ref.note}</div>}
+                        </div>
+                        <div style={{ border: `1px solid ${ref.color}30`, borderRadius: 4, overflow: "hidden" }}>
+                          <div style={{ display: "grid", gridTemplateColumns: `repeat(${ref.cols.length}, 1fr)`, background: `${ref.color}18` }}>
+                            {ref.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, fontWeight: 700, color: ref.color, letterSpacing: 1, textTransform: "uppercase", padding: "6px 10px", borderRight: ci < ref.cols.length - 1 ? `1px solid ${ref.color}20` : "none" }}>{col}</div>)}
+                          </div>
+                          {ref.rows.map((row, ri) => (
+                            <div key={ri} style={{ display: "grid", gridTemplateColumns: `repeat(${ref.cols.length}, 1fr)`, background: ri % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                              {row.map((cell, ci) => <div key={ci} style={{ fontFamily: ci === 0 ? "'Rajdhani',sans-serif" : "'Share Tech Mono',monospace", fontSize: ci === 0 ? 12 : 11, fontWeight: ci === 0 ? 600 : 400, color: ci === 0 ? "#e8e4d8" : ref.color, padding: "6px 10px", lineHeight: 1.3, borderRight: ci < ref.cols.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>{cell}</div>)}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Right sidebar — emergency pages */}
@@ -1419,7 +1590,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
             const count = countPage(pg.id);
             const isDone = count.total > 0 && count.done === count.total;
             return (
-              <button key={pg.id} className="tab-btn" onClick={() => setCurrentPage(pg.id)} style={{ width: "100%", minHeight: 72, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, background: isActive ? `${pg.color}18` : "transparent", borderRight: `3px solid ${isActive ? pg.color : "transparent"}`, border: "none", borderRight: `3px solid ${isActive ? pg.color : "transparent"}`, cursor: "pointer", padding: "8px 2px", borderBottom: "1px solid #281818", transition: "all 0.12s" }}>
+              <button key={pg.id} className="tab-btn" onClick={() => setCurrentPage(pg.id)} style={{ width: "100%", minHeight: 72, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, background: isActive ? `${pg.color}18` : "transparent", outline: "none", borderTop: "none", borderLeft: "none", borderBottom: "1px solid #281818", borderRight: `3px solid ${isActive ? pg.color : "transparent"}`, cursor: "pointer", padding: "8px 2px", transition: "all 0.12s" }}>
                 <div style={{ color: isActive ? pg.color : pg.dimColor, transition: "color 0.12s" }}>{pg.icon(22)}</div>
                 <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, fontWeight: 700, letterSpacing: 0.5, color: isActive ? pg.color : pg.dimColor, textAlign: "center", whiteSpace: "pre-line", lineHeight: 1.2, textTransform: "uppercase" }}>{pg.label}</div>
                 {count.total > 0 && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, color: isDone ? "#3dbe6c" : pg.dimColor }}>{count.done}/{count.total}</div>}
@@ -1438,206 +1609,6 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
           {aircraft?.pohRef || "POH REV 2022-05"}
         </div>
       </div>
-
-      {/* V-Speed overlay */}
-      {vspeedOpen && (
-        <div style={{ position: "absolute", inset: 0, zIndex: 200, background: "rgba(8,10,14,0.96)", display: "flex", flexDirection: "column", animation: "fadeIn 0.15s ease" }}>
-          <div style={{ background: "linear-gradient(135deg,#0a0c10,#141820)", borderBottom: "2px solid #4a9fe8", padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontFamily: "'Oswald',sans-serif", fontSize: 15, fontWeight: 700, letterSpacing: 3, color: "#4a9fe8", textTransform: "uppercase" }}>V-SPEEDS — C172S</span>
-              {vspeedEditing && <button onClick={resetVspeeds} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer" }}>↺ RESET</button>}
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => setVspeedEditing(e => !e)} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "4px 12px", borderRadius: 4, cursor: "pointer", background: vspeedEditing ? "rgba(232,200,74,0.15)" : "transparent", color: vspeedEditing ? "#e8c84a" : "#4a9fe8", border: `1px solid ${vspeedEditing ? "#e8c84a" : "#4a9fe8"}` }}>{vspeedEditing ? "✓ DONE" : "✎ EDIT"}</button>
-              <button onClick={() => { setVspeedOpen(false); setVspeedEditing(false); }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: 1, padding: "4px 14px", borderRadius: 4, cursor: "pointer", background: "rgba(232,90,74,0.1)", color: "#e85a4a", border: "1px solid #e85a4a" }}>✕ CLOSE</button>
-            </div>
-          </div>
-          <div style={{ flex: 1, overflowY: "auto", padding: "16px 18px" }}>
-            {vspeeds.map((group, gi) => (
-              <div key={gi} style={{ marginBottom: 20 }}>
-                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#4a9fe8", letterSpacing: 2, marginBottom: 8 }}>{group.group}</div>
-                {group.items.map((item, ii) => (
-                  <div key={ii} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", marginBottom: 4, background: "rgba(74,159,232,0.05)", border: "1px solid rgba(74,159,232,0.12)", borderRadius: 5 }}>
-                    <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "#4a9fe8", width: 48, letterSpacing: 1 }}>{vspeedEditing ? <input value={item.code} onChange={e => updateVspeed(gi, ii, "code", e.target.value)} style={{ width: 44, background: "#141820", border: "1px solid #4a9fe8", borderRadius: 3, padding: "2px 4px", fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "#4a9fe8", outline: "none" }} /> : item.code}</div>
-                    <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 28, fontWeight: 700, color: "#e8c84a", lineHeight: 1, minWidth: 60 }}>{vspeedEditing ? <input value={item.value} onChange={e => updateVspeed(gi, ii, "value", e.target.value)} style={{ width: 56, background: "#141820", border: "1px solid #e8c84a", borderRadius: 3, padding: "2px 4px", fontFamily: "'Oswald',sans-serif", fontSize: 22, color: "#e8c84a", outline: "none" }} /> : item.value}</div>
-                    <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#7a8090" }}>{item.unit}</div>
-                    <div style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 14, color: "#e8e4d8", flex: 1 }}>{vspeedEditing ? <input value={item.desc} onChange={e => updateVspeed(gi, ii, "desc", e.target.value)} style={{ width: "100%", background: "#141820", border: "1px solid #2a3040", borderRadius: 3, padding: "2px 6px", fontFamily: "'Rajdhani',sans-serif", fontSize: 14, color: "#e8e4d8", outline: "none" }} /> : item.desc}</div>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Perf overlay */}
-      {perfOpen && (
-        <div style={{ position: "absolute", inset: 0, zIndex: 200, background: "rgba(8,10,14,0.96)", display: "flex", flexDirection: "column", animation: "fadeIn 0.15s ease" }}>
-          <div style={{ background: "linear-gradient(135deg,#0a0c10,#141820)", borderBottom: "2px solid #4a9fe8", padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ display: "flex", background: "#0d0f12", border: "1px solid #2a3040", borderRadius: 4, overflow: "hidden" }}>
-                {[["perf","TAKEOFF/LAND"],["climb","CLIMB"],["cruise","CRUISE"]].map(([id, label]) => (
-                  <button key={id} onClick={() => { if (id === "climb") { setClimbOpen(true); setPerfOpen(false); } else if (id === "cruise") { setCruisePanelOpen(true); setPerfOpen(false); } }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: 1, padding: "4px 12px", cursor: "pointer", border: "none", background: id === "perf" ? "rgba(74,159,232,0.15)" : "transparent", color: id === "perf" ? "#4a9fe8" : "#4a5068", borderRight: id !== "cruise" ? "1px solid #2a3040" : "none" }}>{label}</button>
-                ))}
-              </div>
-              {perfEditing && <button onClick={resetPerfData} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer" }}>↺ RESET</button>}
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => setPerfEditing(e => !e)} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "4px 12px", borderRadius: 4, cursor: "pointer", background: perfEditing ? "rgba(232,200,74,0.15)" : "transparent", color: perfEditing ? "#e8c84a" : "#4a9fe8", border: `1px solid ${perfEditing ? "#e8c84a" : "#4a9fe8"}` }}>{perfEditing ? "✓ DONE" : "✎ EDIT"}</button>
-              <button onClick={() => { setPerfOpen(false); setPerfEditing(false); }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: 1, padding: "4px 14px", borderRadius: 4, cursor: "pointer", background: "rgba(232,90,74,0.1)", color: "#e85a4a", border: "1px solid #e85a4a" }}>✕ CLOSE</button>
-            </div>
-          </div>
-          <div style={{ flex: 1, overflowY: "auto", padding: "16px 18px" }}>
-            {perfData.map((section, si) => (
-              <div key={si} style={{ marginBottom: 20 }}>
-                <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 14, fontWeight: 700, color: "#4a9fe8", letterSpacing: 2, marginBottom: 4 }}>{section.group}</div>
-                {section.note && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#4a5068", marginBottom: 8, letterSpacing: 1 }}>{section.note}</div>}
-                <div style={{ border: "1px solid rgba(74,159,232,0.2)", borderRadius: 5, overflow: "hidden" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: "rgba(74,159,232,0.1)" }}>
-                    {section.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#4a9fe8", letterSpacing: 1.5, padding: "6px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(74,159,232,0.15)" : "none" }}>{col}</div>)}
-                  </div>
-                  {section.rows.map((row, ri) => (
-                    <div key={ri} style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: ri % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent", borderTop: "1px solid rgba(74,159,232,0.08)" }}>
-                      {row.map((cell, ci) => (
-                        <div key={ci} style={{ fontFamily: ci === 0 ? "'Rajdhani',sans-serif" : "'Share Tech Mono',monospace", fontSize: ci === 0 ? 14 : 12, fontWeight: ci === 0 ? 600 : 400, color: ci === 0 ? "#e8e4d8" : "#4a9fe8", padding: "8px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(74,159,232,0.08)" : "none" }}>
-                          {perfEditing ? <input value={cell} onChange={e => updatePerfCell(si, ri, ci, e.target.value)} style={{ width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #2a3040", fontFamily: "inherit", fontSize: "inherit", color: "inherit", outline: "none", padding: 0 }} /> : cell}
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Climb overlay */}
-      {climbOpen && (
-        <div style={{ position: "absolute", inset: 0, zIndex: 200, background: "rgba(8,10,14,0.96)", display: "flex", flexDirection: "column", animation: "fadeIn 0.15s ease" }}>
-          <div style={{ background: "linear-gradient(135deg,#0a0c10,#141820)", borderBottom: "2px solid #4a9fe8", padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ display: "flex", background: "#0d0f12", border: "1px solid #2a3040", borderRadius: 4, overflow: "hidden" }}>
-                {[["perf","TAKEOFF/LAND"],["climb","CLIMB"],["cruise","CRUISE"]].map(([id, label]) => (
-                  <button key={id} onClick={() => { if (id === "perf") { setPerfOpen(true); setClimbOpen(false); } else if (id === "cruise") { setCruisePanelOpen(true); setClimbOpen(false); } }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: 1, padding: "4px 12px", cursor: "pointer", border: "none", background: id === "climb" ? "rgba(74,159,232,0.15)" : "transparent", color: id === "climb" ? "#4a9fe8" : "#4a5068", borderRight: id !== "cruise" ? "1px solid #2a3040" : "none" }}>{label}</button>
-                ))}
-              </div>
-              {climbEditing && <button onClick={resetClimbData} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer" }}>↺ RESET</button>}
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => setClimbEditing(e => !e)} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "4px 12px", borderRadius: 4, cursor: "pointer", background: climbEditing ? "rgba(232,200,74,0.15)" : "transparent", color: climbEditing ? "#e8c84a" : "#4a9fe8", border: `1px solid ${climbEditing ? "#e8c84a" : "#4a9fe8"}` }}>{climbEditing ? "✓ DONE" : "✎ EDIT"}</button>
-              <button onClick={() => { setClimbOpen(false); setClimbEditing(false); }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: 1, padding: "4px 14px", borderRadius: 4, cursor: "pointer", background: "rgba(232,90,74,0.1)", color: "#e85a4a", border: "1px solid #e85a4a" }}>✕ CLOSE</button>
-            </div>
-          </div>
-          <div style={{ flex: 1, overflowY: "auto", padding: "16px 18px" }}>
-            {climbData.map((section, si) => (
-              <div key={si} style={{ marginBottom: 20 }}>
-                <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 14, fontWeight: 700, color: "#4a9fe8", letterSpacing: 2, marginBottom: 4 }}>{section.group}</div>
-                {section.note && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#4a5068", marginBottom: 8 }}>{section.note}</div>}
-                <div style={{ border: "1px solid rgba(74,159,232,0.2)", borderRadius: 5, overflow: "hidden" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: "rgba(74,159,232,0.1)" }}>
-                    {section.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#4a9fe8", letterSpacing: 1.5, padding: "6px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(74,159,232,0.15)" : "none" }}>{col}</div>)}
-                  </div>
-                  {section.rows.map((row, ri) => (
-                    <div key={ri} style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: ri % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent", borderTop: "1px solid rgba(74,159,232,0.08)" }}>
-                      {row.map((cell, ci) => (
-                        <div key={ci} style={{ fontFamily: ci === 0 ? "'Rajdhani',sans-serif" : "'Share Tech Mono',monospace", fontSize: ci === 0 ? 14 : 12, color: ci === 0 ? "#e8e4d8" : "#4a9fe8", padding: "8px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(74,159,232,0.08)" : "none" }}>
-                          {climbEditing ? <input value={cell} onChange={e => updateClimbCell(si, ri, ci, e.target.value)} style={{ width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #2a3040", fontFamily: "inherit", fontSize: "inherit", color: "inherit", outline: "none", padding: 0 }} /> : cell}
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Cruise overlay */}
-      {cruisePanelOpen && (
-        <div style={{ position: "absolute", inset: 0, zIndex: 200, background: "rgba(8,10,14,0.96)", display: "flex", flexDirection: "column", animation: "fadeIn 0.15s ease" }}>
-          <div style={{ background: "linear-gradient(135deg,#0a0c10,#141820)", borderBottom: "2px solid #4a9fe8", padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ display: "flex", background: "#0d0f12", border: "1px solid #2a3040", borderRadius: 4, overflow: "hidden" }}>
-                {[["perf","TAKEOFF/LAND"],["climb","CLIMB"],["cruise","CRUISE"]].map(([id, label]) => (
-                  <button key={id} onClick={() => { if (id === "perf") { setPerfOpen(true); setCruisePanelOpen(false); } else if (id === "climb") { setClimbOpen(true); setCruisePanelOpen(false); } }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: 1, padding: "4px 12px", cursor: "pointer", border: "none", background: id === "cruise" ? "rgba(74,159,232,0.15)" : "transparent", color: id === "cruise" ? "#4a9fe8" : "#4a5068", borderRight: id !== "cruise" ? "1px solid #2a3040" : "none" }}>{label}</button>
-                ))}
-              </div>
-              {cruiseEditing && <button onClick={resetCruiseData} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer" }}>↺ RESET</button>}
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => setCruiseEditing(e => !e)} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "4px 12px", borderRadius: 4, cursor: "pointer", background: cruiseEditing ? "rgba(232,200,74,0.15)" : "transparent", color: cruiseEditing ? "#e8c84a" : "#4a9fe8", border: `1px solid ${cruiseEditing ? "#e8c84a" : "#4a9fe8"}` }}>{cruiseEditing ? "✓ DONE" : "✎ EDIT"}</button>
-              <button onClick={() => { setCruisePanelOpen(false); setCruiseEditing(false); }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: 1, padding: "4px 14px", borderRadius: 4, cursor: "pointer", background: "rgba(232,90,74,0.1)", color: "#e85a4a", border: "1px solid #e85a4a" }}>✕ CLOSE</button>
-            </div>
-          </div>
-          <div style={{ flex: 1, overflowY: "auto", padding: "16px 18px" }}>
-            {cruiseData.map((section, si) => (
-              <div key={si} style={{ marginBottom: 20 }}>
-                <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 14, fontWeight: 700, color: "#4a9fe8", letterSpacing: 2, marginBottom: 4 }}>{section.group}</div>
-                {section.note && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#4a5068", marginBottom: 8 }}>{section.note}</div>}
-                <div style={{ border: "1px solid rgba(74,159,232,0.2)", borderRadius: 5, overflow: "hidden" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: "rgba(74,159,232,0.1)" }}>
-                    {section.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#4a9fe8", letterSpacing: 1.5, padding: "6px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(74,159,232,0.15)" : "none" }}>{col}</div>)}
-                  </div>
-                  {section.rows.map((row, ri) => (
-                    <div key={ri} style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: ri % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent", borderTop: "1px solid rgba(74,159,232,0.08)" }}>
-                      {row.map((cell, ci) => (
-                        <div key={ci} style={{ fontFamily: ci === 0 ? "'Rajdhani',sans-serif" : "'Share Tech Mono',monospace", fontSize: ci === 0 ? 14 : 12, color: ci === 0 ? "#e8e4d8" : "#4a9fe8", padding: "8px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(74,159,232,0.08)" : "none" }}>
-                          {cruiseEditing ? <input value={cell} onChange={e => updateCruiseCell(si, ri, ci, e.target.value)} style={{ width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #2a3040", fontFamily: "inherit", fontSize: "inherit", color: "inherit", outline: "none", padding: 0 }} /> : cell}
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* More refs overlay */}
-      {moreOpen && (
-        <div style={{ position: "absolute", inset: 0, zIndex: 200, background: "rgba(8,10,14,0.96)", display: "flex", flexDirection: "column", animation: "fadeIn 0.15s ease" }}>
-          <div style={{ background: "linear-gradient(135deg,#0a0c10,#141820)", borderBottom: "2px solid #4a9fe8", padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-            <span style={{ fontFamily: "'Oswald',sans-serif", fontSize: 15, fontWeight: 700, letterSpacing: 3, color: "#4a9fe8" }}>REFERENCE TABLES</span>
-            <button onClick={() => setMoreOpen(false)} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: 1, padding: "4px 14px", borderRadius: 4, cursor: "pointer", background: "rgba(232,90,74,0.1)", color: "#e85a4a", border: "1px solid #e85a4a" }}>✕ CLOSE</button>
-          </div>
-          <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-            <div style={{ width: 140, flexShrink: 0, background: "#0a0c10", borderRight: "1px solid #1e2430", overflowY: "auto" }}>
-              {MORE_REFS.map(ref => (
-                <button key={ref.id} onClick={() => setActiveMoreRef(ref.id)} style={{ width: "100%", textAlign: "left", padding: "10px 12px", cursor: "pointer", background: activeMoreRef === ref.id ? "rgba(200,122,232,0.08)" : "transparent", border: "none", borderLeft: `3px solid ${activeMoreRef === ref.id ? ref.color : "transparent"}`, borderBottom: "1px solid rgba(30,32,48,0.8)", transition: "all 0.12s" }}>
-                  <div style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: activeMoreRef === ref.id ? ref.color : "#5a6070", textTransform: "uppercase", lineHeight: 1.2 }}>{ref.title}</div>
-                </button>
-              ))}
-            </div>
-            <div style={{ flex: 1, overflowY: "auto", padding: "16px 18px" }}>
-              {(() => {
-                const ref = MORE_REFS.find(r => r.id === activeMoreRef);
-                if (!ref) return null;
-                return (
-                  <div>
-                    <div style={{ marginBottom: 14 }}>
-                      <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: 2, color: ref.color, textTransform: "uppercase" }}>{ref.title}</div>
-                      {ref.note && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#5a6070", letterSpacing: 1, marginTop: 4 }}>{ref.note}</div>}
-                    </div>
-                    <div style={{ border: `1px solid ${ref.color}30`, borderRadius: 5, overflow: "hidden" }}>
-                      <div style={{ display: "grid", gridTemplateColumns: `repeat(${ref.cols.length}, 1fr)`, background: `${ref.color}18` }}>
-                        {ref.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, fontWeight: 700, color: ref.color, letterSpacing: 1.5, textTransform: "uppercase", padding: "8px 12px", borderRight: ci < ref.cols.length - 1 ? `1px solid ${ref.color}20` : "none" }}>{col}</div>)}
-                      </div>
-                      {ref.rows.map((row, ri) => (
-                        <div key={ri} style={{ display: "grid", gridTemplateColumns: `repeat(${ref.cols.length}, 1fr)`, background: ri % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-                          {row.map((cell, ci) => <div key={ci} style={{ fontFamily: ci === 0 ? "'Rajdhani',sans-serif" : "'Share Tech Mono',monospace", fontSize: ci === 0 ? 14 : 12, fontWeight: ci === 0 ? 600 : 400, color: ci === 0 ? "#e8e4d8" : ref.color, padding: "9px 12px", lineHeight: 1.3, borderRight: ci < ref.cols.length - 1 ? `1px solid rgba(255,255,255,0.04)` : "none" }}>{cell}</div>)}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Scratchpad overlay */}
       {scratchpadOpen && (
