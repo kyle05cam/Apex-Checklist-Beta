@@ -1602,21 +1602,21 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
           </div>
 
           {/* ── BOTTOM PERFORMANCE ACCORDIONS ── */}
-          <div style={{ flexShrink: 0, borderTop: `2px solid ${T.leftSideBorder}`, overflowY: "auto", maxHeight: "55vh", scrollbarWidth: "thin", background: lightMode ? "#c8ccd8" : "#0d0f12" }}>
+          <div style={{ flexShrink: 0, borderTop: `2px solid ${T.leftSideBorder}`, overflowY: "auto", maxHeight: "60vh", scrollbarWidth: "thin", background: lightMode ? "#c8ccd8" : "#0d0f12", display: "flex", flexDirection: "column-reverse" }}>
             {[
-              { key: "vspeeds", label: "V-SPEEDS · C172S",          color: "#4ae8c8", bg: "rgba(74,232,200,0.07)",  border: "rgba(74,232,200,0.25)"  },
-              { key: "perf",    label: "T/O & LANDING · C172S",     color: "#e8c84a", bg: "rgba(232,200,74,0.07)",  border: "rgba(232,200,74,0.25)"  },
-              { key: "climb",   label: "CLIMB PERFORMANCE · C172S", color: "#3dbe6c", bg: "rgba(61,190,108,0.07)",  border: "rgba(61,190,108,0.25)"  },
-              { key: "cruise",  label: "CRUISE PERFORMANCE · C172S",color: "#4a9fe8", bg: "rgba(74,159,232,0.07)",  border: "rgba(74,159,232,0.25)"  },
+              { key: "cruise",  label: "CRUISE PERFORMANCE · C172S",color: "#4a9fe8", bg: "rgba(74,159,232,0.09)",  border: "rgba(74,159,232,0.3)",  glow: "0 0 12px rgba(74,159,232,0.25)"  },
+              { key: "climb",   label: "CLIMB PERFORMANCE · C172S", color: "#3dbe6c", bg: "rgba(61,190,108,0.09)",  border: "rgba(61,190,108,0.3)",  glow: "0 0 12px rgba(61,190,108,0.25)"  },
+              { key: "perf",    label: "T/O & LANDING · C172S",     color: "#e8c84a", bg: "rgba(232,200,74,0.09)",  border: "rgba(232,200,74,0.3)",  glow: "0 0 12px rgba(232,200,74,0.25)"  },
+              { key: "vspeeds", label: "V-SPEEDS · C172S",          color: "#4ae8c8", bg: "rgba(74,232,200,0.09)",  border: "rgba(74,232,200,0.3)",  glow: "0 0 12px rgba(74,232,200,0.25)"  },
             ].map(acc => {
               const isOpen = activeDrawer.has(acc.key);
               const toggle = () => setActiveDrawer(prev => { const next = new Set(prev); isOpen ? next.delete(acc.key) : next.add(acc.key); return next; });
               return (
-                <div key={acc.key} style={{ borderBottom: `1px solid ${acc.border}` }}>
+                <div key={acc.key} style={{ borderTop: `1px solid ${acc.border}`, flexShrink: 0 }}>
                   {/* Accordion header */}
-                  <button onClick={toggle} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "7px 16px", cursor: "pointer", background: isOpen ? acc.bg : "transparent", border: "none", borderLeft: `4px solid ${isOpen ? acc.color : "transparent"}`, outline: "none", textAlign: "left", transition: "all 0.15s" }}>
-                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: acc.color, fontWeight: 700 }}>▲</span>
-                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: acc.color, fontWeight: 700, letterSpacing: 2, flex: 1 }}>{acc.label}</span>
+                  <button onClick={toggle} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", cursor: "pointer", background: isOpen ? acc.bg : "transparent", border: "none", borderLeft: `4px solid ${isOpen ? acc.color : "transparent"}`, outline: "none", textAlign: "left", transition: "all 0.15s" }}>
+                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: acc.color, fontWeight: 700, textShadow: isOpen ? acc.glow : "none" }}>▲</span>
+                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: acc.color, fontWeight: 700, letterSpacing: 2, flex: 1, textShadow: isOpen ? acc.glow : "none" }}>{acc.label}</span>
                     {acc.key === "vspeeds" && vspeedEditing && <button onClick={e => { e.stopPropagation(); resetVspeeds(); }} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer", marginRight: 4 }}>↺ RESET</button>}
                     {acc.key === "vspeeds" && <button onClick={e => { e.stopPropagation(); setVspeedEditing(v => !v); }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: 1, padding: "2px 10px", borderRadius: 3, cursor: "pointer", background: vspeedEditing ? `${acc.color}20` : "transparent", color: vspeedEditing ? "#e8c84a" : acc.color, border: `1px solid ${vspeedEditing ? "#e8c84a" : acc.color}`, marginRight: 8 }}>{vspeedEditing ? "✓ DONE" : "✎ EDIT"}</button>}
                     {acc.key === "perf"   && perfEditing    && <button onClick={e => { e.stopPropagation(); resetPerfData();  }} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer", marginRight: 4 }}>↺ RESET</button>}
@@ -1625,7 +1625,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                     {acc.key === "climb"  && <button onClick={e => { e.stopPropagation(); setClimbEditing(v => !v); }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: 1, padding: "2px 10px", borderRadius: 3, cursor: "pointer", background: climbEditing   ? `${acc.color}20` : "transparent", color: climbEditing   ? "#e8c84a" : acc.color, border: `1px solid ${climbEditing   ? "#e8c84a" : acc.color}`, marginRight: 8 }}>{climbEditing   ? "✓ DONE" : "✎ EDIT"}</button>}
                     {acc.key === "cruise" && cruiseEditing  && <button onClick={e => { e.stopPropagation(); resetCruiseData();}} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer", marginRight: 4 }}>↺ RESET</button>}
                     {acc.key === "cruise" && <button onClick={e => { e.stopPropagation(); setCruiseEditing(v => !v);}} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: 1, padding: "2px 10px", borderRadius: 3, cursor: "pointer", background: cruiseEditing  ? `${acc.color}20` : "transparent", color: cruiseEditing  ? "#e8c84a" : acc.color, border: `1px solid ${cruiseEditing  ? "#e8c84a" : acc.color}`, marginRight: 8 }}>{cruiseEditing  ? "✓ DONE" : "✎ EDIT"}</button>}
-                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: acc.color }}>{isOpen ? "▲" : "▼"}</span>
+                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: acc.color, textShadow: isOpen ? acc.glow : "none" }}>{isOpen ? "▲" : "▼"}</span>
                   </button>
 
                   {/* ── V-SPEEDS open ── */}
