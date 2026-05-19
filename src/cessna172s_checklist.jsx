@@ -1594,15 +1594,16 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
           </div>
         </div>
 
-        {/* Center — checklist content + bottom performance drawers */}
+        {/* Center — checklist + accordions as one unified scrollable column */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: T.centerBg }}>
-          {/* Main checklist scroll area — flex:1 shrinks as accordions grow */}
-          <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", scrollbarWidth: "thin" }}>
-            {renderChecklist(activePg)}
-          </div>
+          <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", scrollbarWidth: "thin", display: "flex", flexDirection: "column" }}>
+            {/* Checklist content — grows to fill available space */}
+            <div style={{ flex: 1 }}>
+              {renderChecklist(activePg)}
+            </div>
 
-          {/* ── BOTTOM PERFORMANCE ACCORDIONS ── */}
-          <div style={{ flexShrink: 0, borderTop: `2px solid ${T.leftSideBorder}`, background: lightMode ? "#c8ccd8" : "#0a0c10", display: "flex", flexDirection: "column-reverse" }}>
+            {/* ── BOTTOM PERFORMANCE ACCORDIONS — inside scroll, stacks upward ── */}
+            <div style={{ flexShrink: 0, borderTop: `2px solid ${T.leftSideBorder}`, background: lightMode ? "#c8ccd8" : "#0a0c10", display: "flex", flexDirection: "column-reverse" }}>
             {[
               { key: "cruise",  label: "CRUISE PERFORMANCE · C172S",color: "#4a9fe8", bg: "rgba(74,159,232,0.15)",  solidBg: "rgba(10,20,40,0.95)",  border: "#4a9fe8",  glow: "0 0 16px rgba(74,159,232,0.5)"   },
               { key: "climb",   label: "CLIMB PERFORMANCE · C172S", color: "#3dbe6c", bg: "rgba(61,190,108,0.15)",  solidBg: "rgba(6,28,18,0.95)",   border: "#3dbe6c",  glow: "0 0 16px rgba(61,190,108,0.5)"   },
@@ -1628,9 +1629,8 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                     <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: acc.color }}>{isOpen ? "▲" : "▼"}</span>
                   </button>
 
-                  {/* ── V-SPEEDS open — no maxHeight, pushes checklist up freely ── */}
                   {isOpen && acc.key === "vspeeds" && (
-                    <div style={{ background: "rgba(4,26,24,0.82)", padding: "10px 14px 14px", animation: "fadeIn 0.15s ease" }}>
+                    <div style={{ background: "rgba(4,26,24,0.82)", padding: "10px 14px 14px", animation: "fadeIn 0.15s ease", maxHeight: "340px", overflowY: "auto", scrollbarWidth: "thin" }}>
                       {vspeeds.map((group, gi) => (
                         <div key={gi} style={{ marginBottom: 8 }}>
                           <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#4ae8c8", letterSpacing: 3, marginBottom: 6, opacity: 0.6 }}>{group.group.toUpperCase()}</div>
@@ -1653,7 +1653,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
 
                   {/* ── T/O & LANDING open ── */}
                   {isOpen && acc.key === "perf" && (
-                    <div style={{ background: "rgba(24,18,2,0.82)", padding: "10px 14px 14px", animation: "fadeIn 0.15s ease" }}>
+                    <div style={{ background: "rgba(24,18,2,0.82)", padding: "10px 14px 14px", animation: "fadeIn 0.15s ease", maxHeight: "340px", overflowY: "auto", scrollbarWidth: "thin" }}>
                       {perfData.map((section, si) => (
                         <div key={si} style={{ marginBottom: 12 }}>
                           <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 11, fontWeight: 700, color: "#e8c84a", letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
@@ -1679,7 +1679,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
 
                   {/* ── CLIMB PERFORMANCE open ── */}
                   {isOpen && acc.key === "climb" && (
-                    <div style={{ background: "rgba(4,20,12,0.82)", padding: "10px 14px 14px", animation: "fadeIn 0.15s ease" }}>
+                    <div style={{ background: "rgba(4,20,12,0.82)", padding: "10px 14px 14px", animation: "fadeIn 0.15s ease", maxHeight: "340px", overflowY: "auto", scrollbarWidth: "thin" }}>
                       {climbData.map((section, si) => (
                         <div key={si} style={{ marginBottom: 12 }}>
                           <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 11, fontWeight: 700, color: "#3dbe6c", letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
@@ -1705,7 +1705,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
 
                   {/* ── CRUISE PERFORMANCE open ── */}
                   {isOpen && acc.key === "cruise" && (
-                    <div style={{ background: "rgba(4,14,28,0.82)", padding: "10px 14px 14px", animation: "fadeIn 0.15s ease" }}>
+                    <div style={{ background: "rgba(4,14,28,0.82)", padding: "10px 14px 14px", animation: "fadeIn 0.15s ease", maxHeight: "340px", overflowY: "auto", scrollbarWidth: "thin" }}>
                       {cruiseData.map((section, si) => (
                         <div key={si} style={{ marginBottom: 12 }}>
                           <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 11, fontWeight: 700, color: "#4a9fe8", letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
@@ -1731,6 +1731,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                 </div>
               );
             })}
+          </div>
           </div>
         </div>
 
