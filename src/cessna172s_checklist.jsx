@@ -1471,11 +1471,11 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                       const isDone = !!checked[key];
                       return (
                         <div key={key}>
-                          <div className="check-item" onClick={() => toggleCheck(key)} style={{ display: "flex", alignItems: "center", gap: 14, padding: "0 16px", minHeight: 48, borderBottom: `1px solid ${T.itemBorder}`, cursor: "pointer", opacity: isDone ? T.itemCheckedOp : 1, background: isDone ? T.checkboxDone : "transparent", transition: "all 0.12s", userSelect: "none" }}>
+                          <div className="check-item" onClick={() => toggleCheck(key)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "0 14px", minHeight: 42, borderBottom: `1px solid ${T.itemBorder}`, cursor: "pointer", opacity: isDone ? T.itemCheckedOp : 1, background: isDone ? T.checkboxDone : "transparent", transition: "all 0.12s", userSelect: "none" }}>
                             <div style={{ flexShrink: 0, width: 20, height: 20, borderRadius: 4, border: `2px solid ${isDone ? T.checkColor : T.checkboxBorder}`, background: isDone ? T.checkboxDone : "transparent", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.12s" }}>
                               {isDone && <svg viewBox="0 0 12 12" width={13} height={13} fill="none"><path d="M2 6l3 3 5-5" stroke={T.checkColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                             </div>
-                            <span style={{ flex: 1, fontFamily: "'Rajdhani', sans-serif", fontSize: 16, fontWeight: 600, color: T.itemLabel, textDecoration: isDone ? "line-through" : "none", lineHeight: 1.3 }}>{item.l}</span>
+                            <span style={{ flex: 1, fontFamily: "'Rajdhani', sans-serif", fontSize: 15, fontWeight: 600, color: T.itemLabel, textDecoration: isDone ? "line-through" : "none", lineHeight: 1.3 }}>{item.l}</span>
                             <span style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 12, color: T.actionColor, letterSpacing: 0.5, textAlign: "right", flexShrink: 0, maxWidth: 160 }}>{item.a}</span>
                           </div>
                           {item.notepad && openNotepads.has(key) && (
@@ -1568,28 +1568,28 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
       {/* BODY */}
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
         {/* Left sidebar — normal pages */}
-        <div style={{ width: 66, flexShrink: 0, background: T.leftSideBg, borderRight: `1px solid ${T.leftSideBorder}`, display: "flex", flexDirection: "column", overflowY: "auto", overflowX: "hidden" }}>
+        <div style={{ width: 90, flexShrink: 0, background: T.leftSideBg, borderRight: `1px solid ${T.leftSideBorder}`, display: "flex", flexDirection: "column", overflowY: "auto", overflowX: "hidden" }}>
           {PAGES.map(pg => {
             const isActive = currentPage === pg.id;
             const count = countPage(pg.id);
             const isDone = count.total > 0 && count.done === count.total;
             return (
-              <button key={pg.id} className="tab-btn" onClick={() => setCurrentPage(pg.id)} style={{ width: "100%", minHeight: 72, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, background: isActive ? T.leftTabActive : "transparent", outline: "none", borderTop: "none", borderRight: "none", borderBottom: `1px solid ${T.leftSideBorder}`, borderLeft: `3px solid ${isActive ? T.leftTabText : "transparent"}`, cursor: "pointer", padding: "10px 2px", transition: "all 0.12s" }}>
-                <div style={{ fontSize: 22, color: isActive ? T.leftTabText : T.leftTabDim, lineHeight: 1 }}>{typeof pg.icon === "string" ? pg.icon : <span style={{ color: isActive ? T.leftTabText : T.leftTabDim }}>{pg.icon}</span>}</div>
-                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, fontWeight: 700, letterSpacing: 0.5, color: isActive ? T.leftTabText : T.leftTabDim, textAlign: "center", whiteSpace: "pre-line", lineHeight: 1.2, textTransform: "uppercase" }}>{pg.label}</div>
+              <button key={pg.id} className="tab-btn" onClick={() => setCurrentPage(pg.id)} style={{ width: "100%", minHeight: 76, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5, background: isActive ? T.leftTabActive : "transparent", outline: "none", borderTop: "none", borderRight: "none", borderBottom: `1px solid ${T.leftSideBorder}`, borderLeft: `3px solid ${isActive ? T.leftTabText : "transparent"}`, cursor: "pointer", padding: "10px 4px", transition: "all 0.12s" }}>
+                <div style={{ fontSize: 26, color: isActive ? T.leftTabText : T.leftTabDim, lineHeight: 1 }}>{typeof pg.icon === "string" ? pg.icon : <span style={{ color: isActive ? T.leftTabText : T.leftTabDim }}>{pg.icon}</span>}</div>
+                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, fontWeight: 700, letterSpacing: 0.5, color: isActive ? T.leftTabText : T.leftTabDim, textAlign: "center", whiteSpace: "pre-line", lineHeight: 1.2, textTransform: "uppercase" }}>{pg.label}</div>
                 {count.total > 0 && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: isDone ? "#3dbe6c" : T.leftTabCount }}>{count.done}/{count.total}</div>}
               </button>
             );
           })}
           {/* MORE button — pinned to bottom of left sidebar */}
           <div style={{ marginTop: "auto" }}>
-            <button className="tab-btn" onClick={() => setMoreOpen(true)} style={{ width: "100%", minHeight: 56, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, background: "transparent", outline: "none", borderTop: `1px solid ${T.leftSideBorder}`, borderRight: "none", borderBottom: "none", borderLeft: "3px solid transparent", cursor: "pointer", padding: "8px 2px", transition: "all 0.12s" }}>
-              <svg viewBox="0 0 20 20" width={18} height={18} fill="none">
-                <line x1="3" y1="5" x2="17" y2="5" stroke="#8a5aaa" strokeWidth="1.8" strokeLinecap="round"/>
-                <line x1="3" y1="10" x2="17" y2="10" stroke="#8a5aaa" strokeWidth="1.8" strokeLinecap="round"/>
-                <line x1="3" y1="15" x2="17" y2="15" stroke="#8a5aaa" strokeWidth="1.8" strokeLinecap="round"/>
+            <button className="tab-btn" onClick={() => setMoreOpen(true)} style={{ width: "100%", minHeight: 60, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, background: "transparent", outline: "none", borderTop: `1px solid ${T.leftSideBorder}`, borderRight: "none", borderBottom: "none", borderLeft: "3px solid transparent", cursor: "pointer", padding: "8px 4px", transition: "all 0.12s" }}>
+              <svg viewBox="0 0 20 20" width={22} height={22} fill="none">
+                <line x1="3" y1="5" x2="17" y2="5" stroke="#8a5aaa" strokeWidth="2" strokeLinecap="round"/>
+                <line x1="3" y1="10" x2="17" y2="10" stroke="#8a5aaa" strokeWidth="2" strokeLinecap="round"/>
+                <line x1="3" y1="15" x2="17" y2="15" stroke="#8a5aaa" strokeWidth="2" strokeLinecap="round"/>
               </svg>
-              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7.5, fontWeight: 700, letterSpacing: 0.5, color: "#8a5aaa", textAlign: "center", lineHeight: 1.2, textTransform: "uppercase" }}>MORE</div>
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, fontWeight: 700, letterSpacing: 0.5, color: "#8a5aaa", textAlign: "center", lineHeight: 1.2, textTransform: "uppercase" }}>MORE</div>
             </button>
           </div>
         </div>
@@ -1614,10 +1614,10 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                 <div key={acc.key} style={{ borderBottom: `1px solid ${T.leftSideBorder}` }}>
                   {/* Accordion header row */}
                   <button onClick={() => setActiveDrawer(isOpen ? null : acc.key)}
-                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", cursor: "pointer", background: isOpen ? acc.bg : "transparent", border: "none", outline: "none", textAlign: "left", transition: "background 0.15s" }}>
-                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: acc.color, fontWeight: 700 }}>▲</span>
-                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: acc.color, fontWeight: 700, letterSpacing: 1.5, flex: 1 }}>{acc.label}</span>
-                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: acc.color }}>{isOpen ? "▲" : "▼"}</span>
+                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "4px 14px", cursor: "pointer", background: isOpen ? acc.bg : "transparent", border: "none", outline: "none", textAlign: "left", transition: "background 0.15s" }}>
+                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: acc.color, fontWeight: 700 }}>▲</span>
+                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: acc.color, fontWeight: 700, letterSpacing: 1.5, flex: 1 }}>{acc.label}</span>
+                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: acc.color }}>{isOpen ? "▲" : "▼"}</span>
                   </button>
 
                   {/* V-SPEEDS content */}
@@ -1743,20 +1743,20 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
         </div>
 
         {/* Right sidebar — emergency pages */}
-        <div style={{ width: 66, flexShrink: 0, background: "#100c0c", borderLeft: "1px solid #281818", display: "flex", flexDirection: "column", overflowY: "auto", overflowX: "hidden" }}>
+        <div style={{ width: 90, flexShrink: 0, background: "#100c0c", borderLeft: "1px solid #281818", display: "flex", flexDirection: "column", overflowY: "auto", overflowX: "hidden" }}>
           {/* EMG label header */}
-          <div style={{ width: "100%", padding: "5px 0 4px", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid #281818", flexShrink: 0 }}>
-            <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, fontWeight: 700, letterSpacing: 2, color: "#5a3030", textTransform: "uppercase" }}>EMG</span>
+          <div style={{ width: "100%", padding: "6px 0 5px", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid #281818", flexShrink: 0 }}>
+            <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, fontWeight: 700, letterSpacing: 2, color: "#5a3030", textTransform: "uppercase" }}>EMG</span>
           </div>
           {EMG_PAGES.map(pg => {
             const isActive = currentPage === pg.id;
             const count = countPage(pg.id);
             const isDone = count.total > 0 && count.done === count.total;
             return (
-              <button key={pg.id} className="tab-btn" onClick={() => setCurrentPage(pg.id)} style={{ width: "100%", minHeight: 72, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, background: isActive ? `${pg.color}18` : "transparent", outline: "none", borderTop: "none", borderLeft: "none", borderBottom: "1px solid #281818", borderRight: `3px solid ${isActive ? pg.color : "transparent"}`, cursor: "pointer", padding: "8px 2px", transition: "all 0.12s" }}>
-                <div style={{ color: isActive ? pg.color : pg.dimColor, transition: "color 0.12s" }}>{pg.icon(22)}</div>
-                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, fontWeight: 700, letterSpacing: 0.5, color: isActive ? pg.color : pg.dimColor, textAlign: "center", whiteSpace: "pre-line", lineHeight: 1.2, textTransform: "uppercase" }}>{pg.label}</div>
-                {count.total > 0 && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, color: isDone ? "#3dbe6c" : pg.dimColor }}>{count.done}/{count.total}</div>}
+              <button key={pg.id} className="tab-btn" onClick={() => setCurrentPage(pg.id)} style={{ width: "100%", minHeight: 76, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5, background: isActive ? `${pg.color}18` : "transparent", outline: "none", borderTop: "none", borderLeft: "none", borderBottom: "1px solid #281818", borderRight: `3px solid ${isActive ? pg.color : "transparent"}`, cursor: "pointer", padding: "10px 4px", transition: "all 0.12s" }}>
+                <div style={{ color: isActive ? pg.color : pg.dimColor, transition: "color 0.12s" }}>{pg.icon(28)}</div>
+                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, fontWeight: 700, letterSpacing: 0.5, color: isActive ? pg.color : pg.dimColor, textAlign: "center", whiteSpace: "pre-line", lineHeight: 1.2, textTransform: "uppercase" }}>{pg.label}</div>
+                {count.total > 0 && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: isDone ? "#3dbe6c" : pg.dimColor }}>{count.done}/{count.total}</div>}
               </button>
             );
           })}
