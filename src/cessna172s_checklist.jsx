@@ -1594,28 +1594,28 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
           </div>
         </div>
 
-        {/* Center — checklist scrolls independently, accordions fixed at bottom */}
+        {/* Center — checklist with fixed bottom accordion overlay */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: T.centerBg, position: "relative" }}>
-          {/* Main checklist scroll area — independent scroll, not affected by accordions */}
+          {/* Main checklist scroll area */}
           <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", scrollbarWidth: "thin" }}>
             {renderChecklist(activePg)}
           </div>
 
-          {/* ── BOTTOM PERFORMANCE ACCORDIONS — fixed at bottom, open UPWARD as overlay ── */}
-          <div style={{ flexShrink: 0, position: "relative", zIndex: 50, background: lightMode ? "#c8ccd8" : "#0a0c10" }}>
-            {/* The open content panels render ABOVE the header strip via absolute positioning */}
-            <div style={{ position: "absolute", bottom: "100%", left: 0, right: 0, pointerEvents: "none" }}>
-              {["vspeeds","perf","climb","cruise"].map(key => {
+          {/* ── PERFORMANCE ACCORDIONS — absolute overlay pinned to bottom, opens upward ── */}
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 40, display: "flex", flexDirection: "column", pointerEvents: "none" }}>
+            {/* Open content panels — render above headers, column-reverse so V-Speeds is topmost */}
+            <div style={{ display: "flex", flexDirection: "column", pointerEvents: "auto" }}>
+              {["vspeeds", "perf", "climb", "cruise"].map(key => {
                 if (!activeDrawer.has(key)) return null;
                 const configs = {
-                  vspeeds: { color: "#4ae8c8", bg: "rgba(4,26,24,0.96)"   },
-                  perf:    { color: "#e8c84a", bg: "rgba(24,18,2,0.96)"   },
-                  climb:   { color: "#3dbe6c", bg: "rgba(4,20,12,0.96)"   },
-                  cruise:  { color: "#4a9fe8", bg: "rgba(4,14,28,0.96)"   },
+                  vspeeds: { color: "#4ae8c8", bg: "rgba(4,26,24,0.97)"  },
+                  perf:    { color: "#e8c84a", bg: "rgba(24,18,2,0.97)"  },
+                  climb:   { color: "#3dbe6c", bg: "rgba(4,20,12,0.97)"  },
+                  cruise:  { color: "#4a9fe8", bg: "rgba(4,14,28,0.97)"  },
                 };
                 const cfg = configs[key];
                 return (
-                  <div key={key} style={{ pointerEvents: "auto", borderTop: `1px solid ${cfg.color}30`, maxHeight: "340px", overflowY: "auto", scrollbarWidth: "thin", background: cfg.bg, borderLeft: `2px solid ${cfg.color}40` }}>
+                  <div key={key} style={{ maxHeight: "340px", overflowY: "auto", scrollbarWidth: "thin", background: cfg.bg, borderTop: `1px solid ${cfg.color}40` }}>
                     {key === "vspeeds" && vspeeds.map((group, gi) => (
                       <div key={gi} style={{ padding: "10px 14px 4px" }}>
                         <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#4ae8c8", letterSpacing: 3, marginBottom: 6, opacity: 0.6 }}>{group.group.toUpperCase()}</div>
@@ -1623,7 +1623,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                           {group.items.map((item, ii) => (
                             <div key={ii} style={{ background: "rgba(10,22,20,0.7)", border: "1px solid rgba(74,232,200,0.12)", borderRadius: 10, padding: "8px 12px", display: "flex", flexDirection: "column", gap: 2 }}>
                               <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-                                <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "#4ae8c8", letterSpacing: 1 }}>{vspeedEditing ? <input value={item.code} onChange={e => updateVspeed(gi, ii, "code", e.target.value)} style={{ width: 40, background: "#141820", border: "1px solid #4ae8c8", borderRadius: 2, padding: "1px 4px", fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "#4ae8c8", outline: "none" }} /> : item.code}</span>
+                                <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "#4ae8c8" }}>{vspeedEditing ? <input value={item.code} onChange={e => updateVspeed(gi, ii, "code", e.target.value)} style={{ width: 40, background: "#141820", border: "1px solid #4ae8c8", borderRadius: 2, padding: "1px 4px", fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "#4ae8c8", outline: "none" }} /> : item.code}</span>
                                 <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#4a5068" }}>{item.unit}</span>
                               </div>
                               <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 28, fontWeight: 700, color: "#e8c84a", lineHeight: 1 }}>{vspeedEditing ? <input value={item.value} onChange={e => updateVspeed(gi, ii, "value", e.target.value)} style={{ width: 64, background: "#141820", border: "1px solid #e8c84a", borderRadius: 2, padding: "2px 4px", fontFamily: "'Oswald',sans-serif", fontSize: 22, color: "#e8c84a", outline: "none" }} /> : item.value}</div>
@@ -1636,7 +1636,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                     {key === "perf" && perfData.map((section, si) => (
                       <div key={si} style={{ padding: "10px 14px 4px" }}>
                         <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 11, fontWeight: 700, color: "#e8c84a", letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
-                        {section.note && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, color: "rgba(232,200,74,0.4)", marginBottom: 6, letterSpacing: 1 }}>{section.note}</div>}
+                        {section.note && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, color: "rgba(232,200,74,0.4)", marginBottom: 6 }}>{section.note}</div>}
                         <div style={{ border: "1px solid rgba(232,200,74,0.15)", borderRadius: 8, overflow: "hidden", marginBottom: 8 }}>
                           <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: "rgba(232,200,74,0.1)" }}>
                             {section.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e8c84a", letterSpacing: 1.5, padding: "5px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(232,200,74,0.12)" : "none", textTransform: "uppercase" }}>{col}</div>)}
@@ -1652,7 +1652,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                     {key === "climb" && climbData.map((section, si) => (
                       <div key={si} style={{ padding: "10px 14px 4px" }}>
                         <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 11, fontWeight: 700, color: "#3dbe6c", letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
-                        {section.note && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, color: "rgba(61,190,108,0.4)", marginBottom: 6, letterSpacing: 1 }}>{section.note}</div>}
+                        {section.note && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, color: "rgba(61,190,108,0.4)", marginBottom: 6 }}>{section.note}</div>}
                         <div style={{ border: "1px solid rgba(61,190,108,0.15)", borderRadius: 8, overflow: "hidden", marginBottom: 8 }}>
                           <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: "rgba(61,190,108,0.1)" }}>
                             {section.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#3dbe6c", letterSpacing: 1.5, padding: "5px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(61,190,108,0.12)" : "none", textTransform: "uppercase" }}>{col}</div>)}
@@ -1668,7 +1668,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                     {key === "cruise" && cruiseData.map((section, si) => (
                       <div key={si} style={{ padding: "10px 14px 4px" }}>
                         <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 11, fontWeight: 700, color: "#4a9fe8", letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
-                        {section.note && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, color: "rgba(74,159,232,0.4)", marginBottom: 6, letterSpacing: 1 }}>{section.note}</div>}
+                        {section.note && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, color: "rgba(74,159,232,0.4)", marginBottom: 6 }}>{section.note}</div>}
                         <div style={{ border: "1px solid rgba(74,159,232,0.15)", borderRadius: 8, overflow: "hidden", marginBottom: 8 }}>
                           <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: "rgba(74,159,232,0.1)" }}>
                             {section.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#4a9fe8", letterSpacing: 1.5, padding: "5px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(74,159,232,0.12)" : "none", textTransform: "uppercase" }}>{col}</div>)}
@@ -1686,8 +1686,8 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
               })}
             </div>
 
-            {/* Header tab strip — always visible at bottom */}
-            <div style={{ display: "flex", flexDirection: "column" }}>
+            {/* Header tab strip — always pinned, renders at very bottom */}
+            <div style={{ pointerEvents: "auto", borderTop: `2px solid ${T.leftSideBorder}`, background: lightMode ? "#c8ccd8" : "#0a0c10" }}>
               {[
                 { key: "vspeeds", label: "V-SPEEDS · C172S",          color: "#4ae8c8", bg: "rgba(74,232,200,0.15)"  },
                 { key: "perf",    label: "T/O & LANDING · C172S",     color: "#e8c84a", bg: "rgba(232,200,74,0.15)"  },
@@ -1715,7 +1715,6 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
             </div>
           </div>
         </div>
-
         {/* Right sidebar — emergency pages */}
         <div style={{ width: 90, flexShrink: 0, background: "#100c0c", borderLeft: "1px solid #281818", display: "flex", flexDirection: "column", overflowY: "auto", overflowX: "hidden" }}>
           {/* EMG label header */}
