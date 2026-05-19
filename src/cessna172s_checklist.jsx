@@ -1329,16 +1329,16 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
     if (!pg) return null;
     const isEmg = EMG_PAGES.some(p => p.id === pg.id);
     const emgMeta = isEmg ? EMG_PAGES.find(p => p.id === pg.id) : null;
-    const accentColor = emgMeta ? emgMeta.color : "#e8c84a";
+    const accentColor = emgMeta ? emgMeta.color : "#4a9fe8";
     const pageCount = countPage(pg.id);
     const isComplete = pageCount.total > 0 && pageCount.done === pageCount.total;
 
     return (
       <div key={pg.id} style={{ animation: "fadeIn 0.15s ease" }}>
         {/* Page header */}
-        <div style={{ background: lightMode ? "#dde2ee" : "#1a1f2a", borderBottom: `2px solid ${isEmg ? accentColor : T.centerBorder}`, padding: "7px 10px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 10 }}>
+        <div style={{ background: lightMode ? "#dde2ee" : "#1a1f2a", borderBottom: `2px solid ${isEmg ? accentColor : "#4a9fe8"}`, padding: "8px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 10 }}>
           <div>
-            <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: isEmg ? accentColor : T.sectionTitle }}>
+            <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 15, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: isEmg ? accentColor : "#4a9fe8" }}>
               {pg.id === "approach" ? "APPROACH & LANDING" : pg.id === "engine_fail" ? "ENGINE FAILURES" : pg.id === "spin" ? "SPIN RECOVERY" : pg.id === "fires" ? "FIRES" : pg.id === "icing" ? "ICING" : pg.id === "electrical" ? "ELEC FAILURE" : pg.label || pg.id.toUpperCase()}
             </div>
             <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 8, color: lightMode ? "#607090" : "#7a8090", marginTop: 1 }}>
@@ -1363,9 +1363,9 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
             <div key={si}>
               {/* Section header */}
               {section.title && (
-                <div style={{ padding: "9px 10px 8px", background: T.sectionBg, borderBottom: `2px solid ${T.sectionBorder}`, borderTop: `1px solid ${lightMode ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.04)"}`, marginTop: 2, display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ padding: "10px 14px 9px", background: T.sectionBg, borderBottom: `2px solid ${isEmg ? accentColor : "#4a9fe8"}`, borderTop: `1px solid ${lightMode ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.04)"}`, borderLeft: `4px solid ${isEmg ? accentColor : "#4a9fe8"}`, marginTop: 2, display: "flex", alignItems: "center", gap: 8 }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 16, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", color: T.sectionTitle, lineHeight: 1.15 }}>{section.title}</div>
+                    <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", color: isEmg ? accentColor : "#4a9fe8", lineHeight: 1.15 }}>{section.title}</div>
                   </div>
                   {!isEditing && (ttsActive && ttsActive.sectionKey === sectionKey ? (
                     <div style={{ display: "flex", gap: 4 }}>
@@ -1461,8 +1461,8 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                 return (
                   <>
                     {nonCheckable.map((item, idx) => {
-                      if (item.type === "note") return <div key={"nc-" + idx} style={{ padding: "5px 10px 5px 12px", borderBottom: `1px solid ${T.itemBorder}`, borderLeft: "2px solid rgba(232,200,74,0.35)", background: T.noteBg }}><span style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 12, color: T.noteColor, fontStyle: "italic" }}>★ {item.l}</span></div>;
-                      if (item.type === "caution") return <div key={"nc-" + idx} style={{ padding: "5px 10px 5px 12px", borderBottom: `1px solid ${T.itemBorder}`, borderLeft: "2px solid rgba(232,90,74,0.5)", background: T.cautionBg }}><span style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 12, color: T.cautionColor, fontStyle: "italic" }}>⚠ {item.l}</span></div>;
+                      if (item.type === "note") return <div key={"nc-" + idx} style={{ padding: "7px 16px 7px 16px", borderBottom: `1px solid ${T.itemBorder}`, borderLeft: "3px solid rgba(232,200,74,0.45)", background: T.noteBg }}><span style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 13, color: T.noteColor, fontStyle: "italic" }}>★ {item.l}</span></div>;
+                      if (item.type === "caution") return <div key={"nc-" + idx} style={{ padding: "7px 16px 7px 16px", borderBottom: `1px solid ${T.itemBorder}`, borderLeft: "3px solid rgba(232,90,74,0.6)", background: T.cautionBg }}><span style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 13, color: T.cautionColor, fontStyle: "italic" }}>⚠ {item.l}</span></div>;
                       return null;
                     })}
                     {merged.map((item, idx) => {
@@ -1471,12 +1471,12 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                       const isDone = !!checked[key];
                       return (
                         <div key={key}>
-                          <div className="check-item" onClick={() => toggleCheck(key)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 10px", minHeight: 38, borderBottom: `1px solid ${T.itemBorder}`, cursor: "pointer", opacity: isDone ? T.itemCheckedOp : 1, background: isDone ? T.checkboxDone : "transparent", transition: "all 0.12s", userSelect: "none" }}>
-                            <div style={{ flexShrink: 0, width: 16, height: 16, borderRadius: 3, border: `1.5px solid ${isDone ? T.checkColor : T.checkboxBorder}`, background: isDone ? T.checkboxDone : "transparent", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.12s" }}>
-                              {isDone && <svg viewBox="0 0 12 12" width={10} height={10} fill="none"><path d="M2 6l3 3 5-5" stroke={T.checkColor} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                          <div className="check-item" onClick={() => toggleCheck(key)} style={{ display: "flex", alignItems: "center", gap: 14, padding: "0 16px", minHeight: 48, borderBottom: `1px solid ${T.itemBorder}`, cursor: "pointer", opacity: isDone ? T.itemCheckedOp : 1, background: isDone ? T.checkboxDone : "transparent", transition: "all 0.12s", userSelect: "none" }}>
+                            <div style={{ flexShrink: 0, width: 20, height: 20, borderRadius: 4, border: `2px solid ${isDone ? T.checkColor : T.checkboxBorder}`, background: isDone ? T.checkboxDone : "transparent", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.12s" }}>
+                              {isDone && <svg viewBox="0 0 12 12" width={13} height={13} fill="none"><path d="M2 6l3 3 5-5" stroke={T.checkColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                             </div>
-                            <span style={{ flex: 1, fontFamily: "'Rajdhani', sans-serif", fontSize: 14, fontWeight: 500, color: T.itemLabel, textDecoration: isDone ? "line-through" : "none", lineHeight: 1.3 }}>{item.l}</span>
-                            <span style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 11, color: T.actionColor, letterSpacing: 0.5, textAlign: "right", flexShrink: 0, maxWidth: 120 }}>{item.a}</span>
+                            <span style={{ flex: 1, fontFamily: "'Rajdhani', sans-serif", fontSize: 16, fontWeight: 600, color: T.itemLabel, textDecoration: isDone ? "line-through" : "none", lineHeight: 1.3 }}>{item.l}</span>
+                            <span style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 12, color: T.actionColor, letterSpacing: 0.5, textAlign: "right", flexShrink: 0, maxWidth: 160 }}>{item.a}</span>
                           </div>
                           {item.notepad && openNotepads.has(key) && (
                             <DrawingNotepad title={item.notepadLabel || "NOTEPAD"} footer={item.notepadFooter} storageKey={`notepad-${key}`} initialImage={notepadImages[`notepad-${key}`]} onSave={(dataUrl) => setNotepadImages(prev => ({ ...prev, [`notepad-${key}`]: dataUrl }))} onClose={() => setOpenNotepads(prev => { const next = new Set(prev); next.delete(key); return next; })} />
@@ -1574,10 +1574,10 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
             const count = countPage(pg.id);
             const isDone = count.total > 0 && count.done === count.total;
             return (
-              <button key={pg.id} className="tab-btn" onClick={() => setCurrentPage(pg.id)} style={{ width: "100%", minHeight: 64, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, background: isActive ? T.leftTabActive : "transparent", outline: "none", borderTop: "none", borderRight: "none", borderBottom: "none", borderLeft: `3px solid ${isActive ? T.leftTabText : "transparent"}`, cursor: "pointer", padding: "8px 2px", transition: "all 0.12s" }}>
-                <div style={{ fontSize: 18, color: isActive ? T.leftTabText : T.leftTabDim, lineHeight: 1 }}>{typeof pg.icon === "string" ? pg.icon : <span style={{ color: isActive ? T.leftTabText : T.leftTabDim }}>{pg.icon}</span>}</div>
-                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7.5, fontWeight: 700, letterSpacing: 0.5, color: isActive ? T.leftTabText : T.leftTabDim, textAlign: "center", whiteSpace: "pre-line", lineHeight: 1.2, textTransform: "uppercase" }}>{pg.label}</div>
-                {count.total > 0 && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, color: isDone ? "#3dbe6c" : T.leftTabCount }}>{count.done}/{count.total}</div>}
+              <button key={pg.id} className="tab-btn" onClick={() => setCurrentPage(pg.id)} style={{ width: "100%", minHeight: 72, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, background: isActive ? T.leftTabActive : "transparent", outline: "none", borderTop: "none", borderRight: "none", borderBottom: `1px solid ${T.leftSideBorder}`, borderLeft: `3px solid ${isActive ? T.leftTabText : "transparent"}`, cursor: "pointer", padding: "10px 2px", transition: "all 0.12s" }}>
+                <div style={{ fontSize: 22, color: isActive ? T.leftTabText : T.leftTabDim, lineHeight: 1 }}>{typeof pg.icon === "string" ? pg.icon : <span style={{ color: isActive ? T.leftTabText : T.leftTabDim }}>{pg.icon}</span>}</div>
+                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, fontWeight: 700, letterSpacing: 0.5, color: isActive ? T.leftTabText : T.leftTabDim, textAlign: "center", whiteSpace: "pre-line", lineHeight: 1.2, textTransform: "uppercase" }}>{pg.label}</div>
+                {count.total > 0 && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: isDone ? "#3dbe6c" : T.leftTabCount }}>{count.done}/{count.total}</div>}
               </button>
             );
           })}
@@ -1603,22 +1603,21 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
 
           {/* ── BOTTOM PERFORMANCE ACCORDIONS ── */}
           <div style={{ flexShrink: 0, borderTop: `2px solid ${T.leftSideBorder}`, background: lightMode ? "#c8ccd8" : "#0d0f12" }}>
-            {/* V-SPEEDS accordion */}
             {[
-              { key: "vspeeds", label: "V-SPEEDS · C172S",         color: "#4a9fe8" },
-              { key: "perf",    label: "T/O & LANDING · C172S",    color: "#4a9fe8" },
-              { key: "climb",   label: "CLIMB PERFORMANCE · C172S", color: "#4a9fe8" },
-              { key: "cruise",  label: "CRUISE PERFORMANCE · C172S",color: "#4a9fe8" },
+              { key: "vspeeds", label: "V-SPEEDS · C172S",          color: "#4ae8c8", bg: "rgba(74,232,200,0.08)"  },
+              { key: "perf",    label: "T/O & LANDING · C172S",     color: "#e8c84a", bg: "rgba(232,200,74,0.08)"  },
+              { key: "climb",   label: "CLIMB PERFORMANCE · C172S", color: "#3dbe6c", bg: "rgba(61,190,108,0.08)"  },
+              { key: "cruise",  label: "CRUISE PERFORMANCE · C172S",color: "#4a9fe8", bg: "rgba(74,159,232,0.08)"  },
             ].map(acc => {
               const isOpen = activeDrawer === acc.key;
               return (
                 <div key={acc.key} style={{ borderBottom: `1px solid ${T.leftSideBorder}` }}>
                   {/* Accordion header row */}
                   <button onClick={() => setActiveDrawer(isOpen ? null : acc.key)}
-                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "5px 12px", cursor: "pointer", background: isOpen ? "rgba(74,159,232,0.07)" : "transparent", border: "none", outline: "none", textAlign: "left", transition: "background 0.15s" }}>
-                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: acc.color, fontWeight: 700 }}>▲</span>
-                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: acc.color, fontWeight: 700, letterSpacing: 1.5, flex: 1 }}>{acc.label}</span>
-                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: acc.color }}>{isOpen ? "▲" : "▼"}</span>
+                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", cursor: "pointer", background: isOpen ? acc.bg : "transparent", border: "none", outline: "none", textAlign: "left", transition: "background 0.15s" }}>
+                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: acc.color, fontWeight: 700 }}>▲</span>
+                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: acc.color, fontWeight: 700, letterSpacing: 1.5, flex: 1 }}>{acc.label}</span>
+                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: acc.color }}>{isOpen ? "▲" : "▼"}</span>
                   </button>
 
                   {/* V-SPEEDS content */}
