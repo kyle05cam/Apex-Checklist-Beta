@@ -1507,7 +1507,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
         ::-webkit-scrollbar-thumb{background:#2a3040;border-radius:2px;}
         .check-item:hover{background:rgba(74,159,232,0.07)!important;}
         .tab-btn:hover{background:rgba(255,255,255,0.05)!important;}
-        @keyframes fadeIn{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:translateY(0);}}
+        @keyframes slideUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
       `}</style>
 
       {/* HEADER */}
@@ -1602,20 +1602,20 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
           </div>
 
           {/* ── PERFORMANCE ACCORDIONS — absolute overlay pinned to bottom, opens upward ── */}
-          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 40, display: "flex", flexDirection: "column", pointerEvents: "none" }}>
-            {/* Open content panels — render above headers, column-reverse so V-Speeds is topmost */}
-            <div style={{ display: "flex", flexDirection: "column", pointerEvents: "auto" }}>
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 40, display: "flex", flexDirection: "column", justifyContent: "flex-end", pointerEvents: "none" }}>
+            {/* Open content panels stack upward in order */}
+            <div style={{ display: "flex", flexDirection: "column", pointerEvents: "auto", boxShadow: activeDrawer.size > 0 ? "0 -8px 40px rgba(0,0,0,0.8)" : "none" }}>
               {["vspeeds", "perf", "climb", "cruise"].map(key => {
                 if (!activeDrawer.has(key)) return null;
                 const configs = {
-                  vspeeds: { color: "#4ae8c8", bg: "rgba(4,26,24,0.97)"  },
-                  perf:    { color: "#e8c84a", bg: "rgba(24,18,2,0.97)"  },
-                  climb:   { color: "#3dbe6c", bg: "rgba(4,20,12,0.97)"  },
-                  cruise:  { color: "#4a9fe8", bg: "rgba(4,14,28,0.97)"  },
+                  vspeeds: { color: "#4ae8c8", bg: "#040e0c"  },
+                  perf:    { color: "#e8c84a", bg: "#0e0a00"  },
+                  climb:   { color: "#3dbe6c", bg: "#020e06"  },
+                  cruise:  { color: "#4a9fe8", bg: "#020810"  },
                 };
                 const cfg = configs[key];
                 return (
-                  <div key={key} style={{ maxHeight: "340px", overflowY: "auto", scrollbarWidth: "thin", background: cfg.bg, borderTop: `1px solid ${cfg.color}40` }}>
+                  <div key={key} style={{ maxHeight: "340px", overflowY: "auto", scrollbarWidth: "thin", background: cfg.bg, borderTop: `2px solid ${cfg.color}60`, animation: "slideUp 0.2s ease" }}>
                     {key === "vspeeds" && vspeeds.map((group, gi) => (
                       <div key={gi} style={{ padding: "10px 14px 4px" }}>
                         <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#4ae8c8", letterSpacing: 3, marginBottom: 6, opacity: 0.6 }}>{group.group.toUpperCase()}</div>
@@ -1687,7 +1687,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
             </div>
 
             {/* Header tab strip — always pinned, renders at very bottom */}
-            <div style={{ pointerEvents: "auto", borderTop: `2px solid ${T.leftSideBorder}`, background: lightMode ? "#c8ccd8" : "#0a0c10" }}>
+            <div style={{ pointerEvents: "auto", borderTop: `2px solid ${T.leftSideBorder}`, background: lightMode ? "#c8ccd8" : "#0d0f12" }}>
               {[
                 { key: "vspeeds", label: "V-SPEEDS · C172S",          color: "#4ae8c8", bg: "rgba(74,232,200,0.15)"  },
                 { key: "perf",    label: "T/O & LANDING · C172S",     color: "#e8c84a", bg: "rgba(232,200,74,0.15)"  },
