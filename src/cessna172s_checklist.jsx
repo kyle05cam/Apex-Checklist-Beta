@@ -1613,24 +1613,24 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
               const toggle = () => setActiveDrawer(prev => { const next = new Set(prev); isOpen ? next.delete(acc.key) : next.add(acc.key); return next; });
               return (
                 <div key={acc.key} style={{ flexShrink: 0 }}>
-                  {/* Accordion header — subtle always-on glow */}
-                  <button onClick={toggle} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", cursor: "pointer", background: `linear-gradient(90deg, ${acc.bg} 0%, rgba(0,0,0,0.4) 100%)`, border: "none", borderTop: `1px solid ${acc.border}40`, borderLeft: `3px solid ${acc.color}`, outline: "none", textAlign: "left", transition: "all 0.15s" }}>
-                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 13, color: acc.color, fontWeight: 700, textShadow: acc.glow }}>▲</span>
-                    <span style={{ fontFamily: "'Oswald',monospace", fontSize: 14, color: acc.color, fontWeight: 700, letterSpacing: 2.5, flex: 1, textShadow: acc.glow }}>{acc.label}</span>
+                  {/* Accordion header — matches screenshot 4: gradient bg, no left bar, chevron right only */}
+                  <button onClick={toggle} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", cursor: "pointer", background: `linear-gradient(90deg, ${acc.bg} 0%, rgba(8,10,14,0.9) 65%)`, border: "none", borderTop: `1px solid ${acc.color}18`, outline: "none", textAlign: "left", transition: "all 0.15s" }}>
+                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: acc.color, fontWeight: 700 }}>▲</span>
+                    <span style={{ fontFamily: "'Oswald',sans-serif", fontSize: 13, color: acc.color, fontWeight: 700, letterSpacing: 2, flex: 1 }}>{acc.label}</span>
                     {acc.key === "vspeeds" && vspeedEditing && <button onClick={e => { e.stopPropagation(); resetVspeeds(); }} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer", marginRight: 4 }}>↺ RESET</button>}
-                    {acc.key === "vspeeds" && <button onClick={e => { e.stopPropagation(); setVspeedEditing(v => !v); }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "3px 12px", borderRadius: 3, cursor: "pointer", background: vspeedEditing ? `${acc.color}25` : "transparent", color: vspeedEditing ? "#e8c84a" : acc.color, border: `1px solid ${vspeedEditing ? "#e8c84a" : acc.color}`, marginRight: 8 }}>{vspeedEditing ? "✓ DONE" : "✎ EDIT"}</button>}
+                    {acc.key === "vspeeds" && <button onClick={e => { e.stopPropagation(); setVspeedEditing(v => !v); }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "3px 12px", borderRadius: 3, cursor: "pointer", background: vspeedEditing ? `${acc.color}25` : "transparent", color: vspeedEditing ? "#e8c84a" : acc.color, border: `1px solid ${vspeedEditing ? "#e8c84a" : acc.color}`, marginRight: 6 }}>{vspeedEditing ? "✓ DONE" : "✎ EDIT"}</button>}
                     {acc.key === "perf"   && perfEditing    && <button onClick={e => { e.stopPropagation(); resetPerfData();  }} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer", marginRight: 4 }}>↺ RESET</button>}
-                    {acc.key === "perf"   && <button onClick={e => { e.stopPropagation(); setPerfEditing(v => !v);  }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "3px 12px", borderRadius: 3, cursor: "pointer", background: perfEditing    ? `${acc.color}25` : "transparent", color: perfEditing    ? "#e8c84a" : acc.color, border: `1px solid ${perfEditing    ? "#e8c84a" : acc.color}`, marginRight: 8 }}>{perfEditing    ? "✓ DONE" : "✎ EDIT"}</button>}
+                    {acc.key === "perf"   && <button onClick={e => { e.stopPropagation(); setPerfEditing(v => !v);  }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "3px 12px", borderRadius: 3, cursor: "pointer", background: perfEditing    ? `${acc.color}25` : "transparent", color: perfEditing    ? "#e8c84a" : acc.color, border: `1px solid ${perfEditing    ? "#e8c84a" : acc.color}`, marginRight: 6 }}>{perfEditing    ? "✓ DONE" : "✎ EDIT"}</button>}
                     {acc.key === "climb"  && climbEditing   && <button onClick={e => { e.stopPropagation(); resetClimbData(); }} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer", marginRight: 4 }}>↺ RESET</button>}
-                    {acc.key === "climb"  && <button onClick={e => { e.stopPropagation(); setClimbEditing(v => !v); }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "3px 12px", borderRadius: 3, cursor: "pointer", background: climbEditing   ? `${acc.color}25` : "transparent", color: climbEditing   ? "#e8c84a" : acc.color, border: `1px solid ${climbEditing   ? "#e8c84a" : acc.color}`, marginRight: 8 }}>{climbEditing   ? "✓ DONE" : "✎ EDIT"}</button>}
+                    {acc.key === "climb"  && <button onClick={e => { e.stopPropagation(); setClimbEditing(v => !v); }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "3px 12px", borderRadius: 3, cursor: "pointer", background: climbEditing   ? `${acc.color}25` : "transparent", color: climbEditing   ? "#e8c84a" : acc.color, border: `1px solid ${climbEditing   ? "#e8c84a" : acc.color}`, marginRight: 6 }}>{climbEditing   ? "✓ DONE" : "✎ EDIT"}</button>}
                     {acc.key === "cruise" && cruiseEditing  && <button onClick={e => { e.stopPropagation(); resetCruiseData();}} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer", marginRight: 4 }}>↺ RESET</button>}
-                    {acc.key === "cruise" && <button onClick={e => { e.stopPropagation(); setCruiseEditing(v => !v);}} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "3px 12px", borderRadius: 3, cursor: "pointer", background: cruiseEditing  ? `${acc.color}25` : "transparent", color: cruiseEditing  ? "#e8c84a" : acc.color, border: `1px solid ${cruiseEditing  ? "#e8c84a" : acc.color}`, marginRight: 8 }}>{cruiseEditing  ? "✓ DONE" : "✎ EDIT"}</button>}
-                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: acc.color, textShadow: acc.glow }}>{isOpen ? "▲" : "▼"}</span>
+                    {acc.key === "cruise" && <button onClick={e => { e.stopPropagation(); setCruiseEditing(v => !v);}} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "3px 12px", borderRadius: 3, cursor: "pointer", background: cruiseEditing  ? `${acc.color}25` : "transparent", color: cruiseEditing  ? "#e8c84a" : acc.color, border: `1px solid ${cruiseEditing  ? "#e8c84a" : acc.color}`, marginRight: 6 }}>{cruiseEditing  ? "✓ DONE" : "✎ EDIT"}</button>}
+                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: acc.color }}>{isOpen ? "▲" : "▼"}</span>
                   </button>
 
-                  {/* ── V-SPEEDS open ── */}
+                  {/* ── V-SPEEDS open — no maxHeight, pushes checklist up freely ── */}
                   {isOpen && acc.key === "vspeeds" && (
-                    <div style={{ background: "rgba(4,26,24,0.82)", padding: "10px 14px 14px", animation: "fadeIn 0.15s ease", maxHeight: "320px", overflowY: "auto", scrollbarWidth: "thin" }}>
+                    <div style={{ background: "rgba(4,26,24,0.82)", padding: "10px 14px 14px", animation: "fadeIn 0.15s ease" }}>
                       {vspeeds.map((group, gi) => (
                         <div key={gi} style={{ marginBottom: 8 }}>
                           <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#4ae8c8", letterSpacing: 3, marginBottom: 6, opacity: 0.6 }}>{group.group.toUpperCase()}</div>
@@ -1653,7 +1653,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
 
                   {/* ── T/O & LANDING open ── */}
                   {isOpen && acc.key === "perf" && (
-                    <div style={{ background: "rgba(24,18,2,0.82)", padding: "10px 14px 14px", animation: "fadeIn 0.15s ease", maxHeight: "280px", overflowY: "auto", scrollbarWidth: "thin" }}>
+                    <div style={{ background: "rgba(24,18,2,0.82)", padding: "10px 14px 14px", animation: "fadeIn 0.15s ease" }}>
                       {perfData.map((section, si) => (
                         <div key={si} style={{ marginBottom: 12 }}>
                           <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 11, fontWeight: 700, color: "#e8c84a", letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
@@ -1679,7 +1679,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
 
                   {/* ── CLIMB PERFORMANCE open ── */}
                   {isOpen && acc.key === "climb" && (
-                    <div style={{ background: "rgba(4,20,12,0.82)", padding: "10px 14px 14px", animation: "fadeIn 0.15s ease", maxHeight: "280px", overflowY: "auto", scrollbarWidth: "thin" }}>
+                    <div style={{ background: "rgba(4,20,12,0.82)", padding: "10px 14px 14px", animation: "fadeIn 0.15s ease" }}>
                       {climbData.map((section, si) => (
                         <div key={si} style={{ marginBottom: 12 }}>
                           <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 11, fontWeight: 700, color: "#3dbe6c", letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
@@ -1705,7 +1705,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
 
                   {/* ── CRUISE PERFORMANCE open ── */}
                   {isOpen && acc.key === "cruise" && (
-                    <div style={{ background: "rgba(4,14,28,0.82)", padding: "10px 14px 14px", animation: "fadeIn 0.15s ease", maxHeight: "280px", overflowY: "auto", scrollbarWidth: "thin" }}>
+                    <div style={{ background: "rgba(4,14,28,0.82)", padding: "10px 14px 14px", animation: "fadeIn 0.15s ease" }}>
                       {cruiseData.map((section, si) => (
                         <div key={si} style={{ marginBottom: 12 }}>
                           <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 11, fontWeight: 700, color: "#4a9fe8", letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
