@@ -1596,41 +1596,41 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
 
         {/* Center — checklist content + bottom performance drawers */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: T.centerBg }}>
-          {/* Main checklist scroll area */}
+          {/* Main checklist scroll area — flex:1 shrinks as accordions grow */}
           <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", scrollbarWidth: "thin" }}>
             {renderChecklist(activePg)}
           </div>
 
           {/* ── BOTTOM PERFORMANCE ACCORDIONS ── */}
-          <div style={{ flexShrink: 0, borderTop: `2px solid ${T.leftSideBorder}`, overflowY: "auto", maxHeight: "60vh", scrollbarWidth: "thin", background: lightMode ? "#c8ccd8" : "#0d0f12", display: "flex", flexDirection: "column-reverse" }}>
+          <div style={{ flexShrink: 0, borderTop: `2px solid ${T.leftSideBorder}`, overflowY: "auto", maxHeight: "70vh", scrollbarWidth: "thin", background: lightMode ? "#c8ccd8" : "#0a0c10", display: "flex", flexDirection: "column-reverse" }}>
             {[
-              { key: "cruise",  label: "CRUISE PERFORMANCE · C172S",color: "#4a9fe8", bg: "rgba(74,159,232,0.09)",  border: "rgba(74,159,232,0.3)",  glow: "0 0 12px rgba(74,159,232,0.25)"  },
-              { key: "climb",   label: "CLIMB PERFORMANCE · C172S", color: "#3dbe6c", bg: "rgba(61,190,108,0.09)",  border: "rgba(61,190,108,0.3)",  glow: "0 0 12px rgba(61,190,108,0.25)"  },
-              { key: "perf",    label: "T/O & LANDING · C172S",     color: "#e8c84a", bg: "rgba(232,200,74,0.09)",  border: "rgba(232,200,74,0.3)",  glow: "0 0 12px rgba(232,200,74,0.25)"  },
-              { key: "vspeeds", label: "V-SPEEDS · C172S",          color: "#4ae8c8", bg: "rgba(74,232,200,0.09)",  border: "rgba(74,232,200,0.3)",  glow: "0 0 12px rgba(74,232,200,0.25)"  },
+              { key: "cruise",  label: "CRUISE PERFORMANCE · C172S",color: "#4a9fe8", bg: "rgba(74,159,232,0.15)",  solidBg: "rgba(10,20,40,0.95)",  border: "#4a9fe8",  glow: "0 0 16px rgba(74,159,232,0.5)"   },
+              { key: "climb",   label: "CLIMB PERFORMANCE · C172S", color: "#3dbe6c", bg: "rgba(61,190,108,0.15)",  solidBg: "rgba(6,28,18,0.95)",   border: "#3dbe6c",  glow: "0 0 16px rgba(61,190,108,0.5)"   },
+              { key: "perf",    label: "T/O & LANDING · C172S",     color: "#e8c84a", bg: "rgba(232,200,74,0.15)",  solidBg: "rgba(28,22,4,0.95)",   border: "#e8c84a",  glow: "0 0 16px rgba(232,200,74,0.5)"   },
+              { key: "vspeeds", label: "V-SPEEDS · C172S",          color: "#4ae8c8", bg: "rgba(74,232,200,0.15)",  solidBg: "rgba(4,26,24,0.95)",   border: "#4ae8c8",  glow: "0 0 16px rgba(74,232,200,0.5)"   },
             ].map(acc => {
               const isOpen = activeDrawer.has(acc.key);
               const toggle = () => setActiveDrawer(prev => { const next = new Set(prev); isOpen ? next.delete(acc.key) : next.add(acc.key); return next; });
               return (
-                <div key={acc.key} style={{ borderTop: `1px solid ${acc.border}`, flexShrink: 0 }}>
-                  {/* Accordion header */}
-                  <button onClick={toggle} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", cursor: "pointer", background: isOpen ? acc.bg : "transparent", border: "none", borderLeft: `4px solid ${isOpen ? acc.color : "transparent"}`, outline: "none", textAlign: "left", transition: "all 0.15s" }}>
-                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: acc.color, fontWeight: 700, textShadow: isOpen ? acc.glow : "none" }}>▲</span>
-                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: acc.color, fontWeight: 700, letterSpacing: 2, flex: 1, textShadow: isOpen ? acc.glow : "none" }}>{acc.label}</span>
+                <div key={acc.key} style={{ flexShrink: 0 }}>
+                  {/* Accordion header — full glowing band */}
+                  <button onClick={toggle} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 18px", cursor: "pointer", background: isOpen ? acc.bg : "rgba(255,255,255,0.02)", border: "none", borderTop: `1px solid ${isOpen ? acc.border : "rgba(255,255,255,0.06)"}`, borderLeft: `4px solid ${acc.color}`, outline: "none", textAlign: "left", transition: "all 0.15s", boxShadow: isOpen ? `inset 0 0 40px ${acc.bg}, ${acc.glow}` : "none" }}>
+                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 13, color: acc.color, fontWeight: 700, textShadow: acc.glow }}>▲</span>
+                    <span style={{ fontFamily: "'Oswald',monospace", fontSize: 14, color: acc.color, fontWeight: 700, letterSpacing: 2.5, flex: 1, textShadow: acc.glow }}>{acc.label}</span>
                     {acc.key === "vspeeds" && vspeedEditing && <button onClick={e => { e.stopPropagation(); resetVspeeds(); }} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer", marginRight: 4 }}>↺ RESET</button>}
-                    {acc.key === "vspeeds" && <button onClick={e => { e.stopPropagation(); setVspeedEditing(v => !v); }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: 1, padding: "2px 10px", borderRadius: 3, cursor: "pointer", background: vspeedEditing ? `${acc.color}20` : "transparent", color: vspeedEditing ? "#e8c84a" : acc.color, border: `1px solid ${vspeedEditing ? "#e8c84a" : acc.color}`, marginRight: 8 }}>{vspeedEditing ? "✓ DONE" : "✎ EDIT"}</button>}
+                    {acc.key === "vspeeds" && <button onClick={e => { e.stopPropagation(); setVspeedEditing(v => !v); }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "3px 12px", borderRadius: 3, cursor: "pointer", background: vspeedEditing ? `${acc.color}25` : "transparent", color: vspeedEditing ? "#e8c84a" : acc.color, border: `1px solid ${vspeedEditing ? "#e8c84a" : acc.color}`, marginRight: 8 }}>{vspeedEditing ? "✓ DONE" : "✎ EDIT"}</button>}
                     {acc.key === "perf"   && perfEditing    && <button onClick={e => { e.stopPropagation(); resetPerfData();  }} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer", marginRight: 4 }}>↺ RESET</button>}
-                    {acc.key === "perf"   && <button onClick={e => { e.stopPropagation(); setPerfEditing(v => !v);  }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: 1, padding: "2px 10px", borderRadius: 3, cursor: "pointer", background: perfEditing    ? `${acc.color}20` : "transparent", color: perfEditing    ? "#e8c84a" : acc.color, border: `1px solid ${perfEditing    ? "#e8c84a" : acc.color}`, marginRight: 8 }}>{perfEditing    ? "✓ DONE" : "✎ EDIT"}</button>}
+                    {acc.key === "perf"   && <button onClick={e => { e.stopPropagation(); setPerfEditing(v => !v);  }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "3px 12px", borderRadius: 3, cursor: "pointer", background: perfEditing    ? `${acc.color}25` : "transparent", color: perfEditing    ? "#e8c84a" : acc.color, border: `1px solid ${perfEditing    ? "#e8c84a" : acc.color}`, marginRight: 8 }}>{perfEditing    ? "✓ DONE" : "✎ EDIT"}</button>}
                     {acc.key === "climb"  && climbEditing   && <button onClick={e => { e.stopPropagation(); resetClimbData(); }} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer", marginRight: 4 }}>↺ RESET</button>}
-                    {acc.key === "climb"  && <button onClick={e => { e.stopPropagation(); setClimbEditing(v => !v); }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: 1, padding: "2px 10px", borderRadius: 3, cursor: "pointer", background: climbEditing   ? `${acc.color}20` : "transparent", color: climbEditing   ? "#e8c84a" : acc.color, border: `1px solid ${climbEditing   ? "#e8c84a" : acc.color}`, marginRight: 8 }}>{climbEditing   ? "✓ DONE" : "✎ EDIT"}</button>}
+                    {acc.key === "climb"  && <button onClick={e => { e.stopPropagation(); setClimbEditing(v => !v); }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "3px 12px", borderRadius: 3, cursor: "pointer", background: climbEditing   ? `${acc.color}25` : "transparent", color: climbEditing   ? "#e8c84a" : acc.color, border: `1px solid ${climbEditing   ? "#e8c84a" : acc.color}`, marginRight: 8 }}>{climbEditing   ? "✓ DONE" : "✎ EDIT"}</button>}
                     {acc.key === "cruise" && cruiseEditing  && <button onClick={e => { e.stopPropagation(); resetCruiseData();}} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer", marginRight: 4 }}>↺ RESET</button>}
-                    {acc.key === "cruise" && <button onClick={e => { e.stopPropagation(); setCruiseEditing(v => !v);}} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: 1, padding: "2px 10px", borderRadius: 3, cursor: "pointer", background: cruiseEditing  ? `${acc.color}20` : "transparent", color: cruiseEditing  ? "#e8c84a" : acc.color, border: `1px solid ${cruiseEditing  ? "#e8c84a" : acc.color}`, marginRight: 8 }}>{cruiseEditing  ? "✓ DONE" : "✎ EDIT"}</button>}
-                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: acc.color, textShadow: isOpen ? acc.glow : "none" }}>{isOpen ? "▲" : "▼"}</span>
+                    {acc.key === "cruise" && <button onClick={e => { e.stopPropagation(); setCruiseEditing(v => !v);}} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "3px 12px", borderRadius: 3, cursor: "pointer", background: cruiseEditing  ? `${acc.color}25` : "transparent", color: cruiseEditing  ? "#e8c84a" : acc.color, border: `1px solid ${cruiseEditing  ? "#e8c84a" : acc.color}`, marginRight: 8 }}>{cruiseEditing  ? "✓ DONE" : "✎ EDIT"}</button>}
+                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: acc.color, textShadow: acc.glow }}>{isOpen ? "▲" : "▼"}</span>
                   </button>
 
                   {/* ── V-SPEEDS open ── */}
                   {isOpen && acc.key === "vspeeds" && (
-                    <div style={{ background: "rgba(74,232,200,0.04)", padding: "14px 18px 18px", animation: "fadeIn 0.15s ease" }}>
+                    <div style={{ background: "rgba(4,26,24,0.97)", padding: "16px 20px 20px", animation: "fadeIn 0.15s ease", borderLeft: "4px solid #4ae8c8" }}>
                       {vspeeds.map((group, gi) => (
                         <div key={gi} style={{ marginBottom: 16 }}>
                           <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#4ae8c8", letterSpacing: 3, marginBottom: 10, opacity: 0.8 }}>{group.group.toUpperCase()}</div>
@@ -1653,7 +1653,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
 
                   {/* ── T/O & LANDING open ── */}
                   {isOpen && acc.key === "perf" && (
-                    <div style={{ background: "rgba(232,200,74,0.04)", padding: "14px 18px 18px", animation: "fadeIn 0.15s ease" }}>
+                    <div style={{ background: "rgba(28,22,4,0.97)", padding: "16px 20px 20px", animation: "fadeIn 0.15s ease", borderLeft: "4px solid #e8c84a" }}>
                       {perfData.map((section, si) => (
                         <div key={si} style={{ marginBottom: 18 }}>
                           <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 13, fontWeight: 700, color: "#e8c84a", letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
@@ -1679,7 +1679,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
 
                   {/* ── CLIMB PERFORMANCE open ── */}
                   {isOpen && acc.key === "climb" && (
-                    <div style={{ background: "rgba(61,190,108,0.04)", padding: "14px 18px 18px", animation: "fadeIn 0.15s ease" }}>
+                    <div style={{ background: "rgba(6,28,18,0.97)", padding: "16px 20px 20px", animation: "fadeIn 0.15s ease", borderLeft: "4px solid #3dbe6c" }}>
                       {climbData.map((section, si) => (
                         <div key={si} style={{ marginBottom: 18 }}>
                           <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 13, fontWeight: 700, color: "#3dbe6c", letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
@@ -1705,7 +1705,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
 
                   {/* ── CRUISE PERFORMANCE open ── */}
                   {isOpen && acc.key === "cruise" && (
-                    <div style={{ background: "rgba(74,159,232,0.04)", padding: "14px 18px 18px", animation: "fadeIn 0.15s ease" }}>
+                    <div style={{ background: "rgba(10,20,40,0.97)", padding: "16px 20px 20px", animation: "fadeIn 0.15s ease", borderLeft: "4px solid #4a9fe8" }}>
                       {cruiseData.map((section, si) => (
                         <div key={si} style={{ marginBottom: 18 }}>
                           <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 13, fontWeight: 700, color: "#4a9fe8", letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
