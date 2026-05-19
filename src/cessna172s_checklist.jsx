@@ -611,49 +611,220 @@ export const CRUISE_DATA = [
 
 export const MORE_REFS = [
   {
-    id: "light_gun", title: "ATC Light Gun Signals", color: "#e8c84a",
+    id: "light_gun", title: "ATC Light Gun Signals", color: "#c87ae8",
     cols: ["Signal", "On Ground", "In Flight"],
     rows: [
-      ["Steady Green",    "Cleared for Takeoff",   "Cleared to Land"],
-      ["Flashing Green",  "Cleared to Taxi",        "Return for Landing"],
-      ["Steady Red",      "Stop",                   "Give Way / Continue"],
-      ["Flashing Red",    "Taxi Clear of Runway",   "Airport Unsafe"],
-      ["Flashing White",  "Return to Start",        "N/A"],
-      ["Alternating R/G", "Exercise Extreme Caution","Exercise Extreme Caution"],
+      ["Steady GREEN",    "Cleared for Takeoff",        "Cleared to Land"],
+      ["Flashing GREEN",  "Cleared to Taxi",             "Return for Landing"],
+      ["Steady RED",      "Stop",                        "Give Way — Continue"],
+      ["Flashing RED",    "Taxi Clear of Runway",        "Airport Unsafe — Do Not Land"],
+      ["Flashing WHITE",  "Return to Start",             "—"],
+      ["Alternating R/G", "Exercise Extreme Caution",    "Exercise Extreme Caution"],
     ],
   },
   {
-    id: "wx_minimums", title: "VFR Weather Minimums", color: "#4a9fe8",
+    id: "transponder", title: "Transponder Codes", color: "#c87ae8",
+    note: "14 CFR 91.215 — ATC transponder requirements",
+    cols: ["Code", "Meaning / Use"],
+    rows: [
+      ["1200", "VFR — Standard discrete VFR code (US)"],
+      ["7700", "EMERGENCY — Declare emergency (all personnel alerted)"],
+      ["7600", "LOST COMMS — Radio failure (NORDO)"],
+      ["7500", "HIJACK — Unlawful interference / hijacking"],
+      ["0000", "Military use / not assigned to civil aircraft"],
+      ["7777", "Military interceptor operations — do not use"],
+      ["MODE C", "Altitude encoding — required above Class A/B/C"],
+      ["ADS-B", "Required above 10,000 MSL, Class B/C, Mode C veil"],
+    ],
+  },
+  {
+    id: "wx_minimums", title: "VFR Weather Minimums", color: "#c87ae8",
     note: "14 CFR 91.155 — Basic VFR minimums",
     cols: ["Airspace", "Visibility", "Cloud Clearance"],
     rows: [
-      ["Class A",           "N/A (IFR only)", "N/A"],
-      ["Class B",           "3 SM",           "Clear of clouds"],
-      ["Class C",           "3 SM",           "500 below · 1000 above · 2000 horiz"],
-      ["Class D",           "3 SM",           "500 below · 1000 above · 2000 horiz"],
-      ["Class E (< 10k)",   "3 SM",           "500 below · 1000 above · 2000 horiz"],
-      ["Class E (≥ 10k)",   "5 SM",           "1000 below · 1000 above · 1 SM horiz"],
-      ["Class G (< 1200 AGL day)", "1 SM",    "Clear of clouds"],
-      ["Class G (< 1200 AGL night)","3 SM",   "500 below · 1000 above · 2000 horiz"],
+      ["Class A",                    "N/A (IFR only)",  "N/A"],
+      ["Class B",                    "3 SM",            "Clear of clouds"],
+      ["Class C",                    "3 SM",            "500 below · 1000 above · 2000 horiz"],
+      ["Class D",                    "3 SM",            "500 below · 1000 above · 2000 horiz"],
+      ["Class E (< 10,000 MSL)",     "3 SM",            "500 below · 1000 above · 2000 horiz"],
+      ["Class E (≥ 10,000 MSL)",     "5 SM",            "1000 below · 1000 above · 1 SM horiz"],
+      ["Class G (< 1200 AGL, Day)",  "1 SM",            "Clear of clouds"],
+      ["Class G (< 1200 AGL, Night)","3 SM",            "500 below · 1000 above · 2000 horiz"],
+      ["Class G (> 1200 AGL, Day)",  "1 SM",            "500 below · 1000 above · 2000 horiz"],
+      ["Class G (> 1200 AGL, Night)","3 SM",            "500 below · 1000 above · 2000 horiz"],
     ],
   },
   {
-    id: "phonetic", title: "ICAO Phonetic Alphabet", color: "#4ae8c8",
-    cols: ["Letter", "Word", "Letter", "Word"],
+    id: "airspeed_limits", title: "Airspeed Limits (§91.117)", color: "#c87ae8",
+    note: "14 CFR 91.117 — Aircraft speed",
+    cols: ["Location / Condition", "Max Speed"],
     rows: [
-      ["A","Alpha",   "N","November"],
-      ["B","Bravo",   "O","Oscar"],
-      ["C","Charlie", "P","Papa"],
-      ["D","Delta",   "Q","Quebec"],
-      ["E","Echo",    "R","Romeo"],
-      ["F","Foxtrot", "S","Sierra"],
-      ["G","Golf",    "T","Tango"],
-      ["H","Hotel",   "U","Uniform"],
-      ["I","India",   "V","Victor"],
-      ["J","Juliet",  "W","Whiskey"],
-      ["K","Kilo",    "X","X-ray"],
-      ["L","Lima",    "Y","Yankee"],
-      ["M","Mike",    "Z","Zulu"],
+      ["Below 10,000 ft MSL",           "250 KIAS"],
+      ["Class B airspace",               "250 KIAS"],
+      ["Class C airspace",               "200 KIAS (below 2500 AGL, within 4 NM)"],
+      ["Class D airspace",               "200 KIAS (below 2500 AGL, within 4 NM)"],
+      ["In tunnel / airspace corridor",  "200 KIAS"],
+      ["Underlying Class B (2–4 NM)",    "200 KIAS"],
+      ["No speed limit above 10,000 ft", "See aircraft Vmo/Mmo"],
+    ],
+  },
+  {
+    id: "vfr_altitudes", title: "VFR Cruising Altitudes (§91.159)", color: "#c87ae8",
+    note: "14 CFR 91.159 — Applies above 3000 ft AGL in level cruising flight",
+    cols: ["Magnetic Course", "Altitude"],
+    rows: [
+      ["0° – 179° (Eastbound)",   "Odd thousands + 500 ft  (3500, 5500, 7500, 9500...)"],
+      ["180° – 359° (Westbound)", "Even thousands + 500 ft  (4500, 6500, 8500, 10500...)"],
+    ],
+  },
+  {
+    id: "airspace_entry", title: "Airspace Entry Requirements", color: "#c87ae8",
+    note: "VFR requirements — 14 CFR 91 Subpart B",
+    cols: ["Airspace", "Equipment Required", "Clearance / Contact"],
+    rows: [
+      ["Class A", "IFR equipment, IFR flight plan", "ATC clearance required"],
+      ["Class B", "Two-way radio, Mode C transponder, ADS-B Out", "ATC clearance required"],
+      ["Class C", "Two-way radio, Mode C transponder, ADS-B Out", "Two-way comms established"],
+      ["Class D", "Two-way radio", "Two-way comms established"],
+      ["Class E", "None for VFR", "None for VFR"],
+      ["Class G", "None for VFR", "None"],
+      ["ADIZ",    "Two-way radio, transponder, DVFR/IFR flight plan", "ATC notification required"],
+    ],
+  },
+  {
+    id: "c172_engine", title: "C172S Engine Specifications", color: "#c87ae8",
+    note: "Lycoming IO-360-L2A — Fuel Injected",
+    cols: ["Parameter", "Value"],
+    rows: [
+      ["Engine",            "Lycoming IO-360-L2A"],
+      ["Type",              "4-cylinder, horizontally opposed, fuel injected"],
+      ["Horsepower",        "180 HP @ 2700 RPM"],
+      ["Displacement",      "361 cubic inches"],
+      ["Compression Ratio", "8.7:1"],
+      ["Oil Capacity",      "8 quarts (min 6 for flight)"],
+      ["Oil Spec",          "Aeroshell W80 / W100 or equiv multigrade"],
+      ["Fuel Grade",        "100LL Avgas (blue)"],
+      ["Max RPM",           "2700 RPM"],
+      ["TBO",               "2000 hours"],
+      ["Alternator",        "60 amp, belt-driven"],
+      ["Starter",           "12V direct-drive"],
+    ],
+  },
+  {
+    id: "c172_electrical", title: "C172S Electrical System", color: "#c87ae8",
+    note: "28V DC single-bus electrical system",
+    cols: ["Component", "Specification / Notes"],
+    rows: [
+      ["System Voltage",    "28V DC"],
+      ["Battery",           "24V, 17.2 Ah lead-acid"],
+      ["Alternator",        "60 amp, engine-driven"],
+      ["Alternator CB",     "60A circuit breaker on main bus"],
+      ["Main Bus",          "Single bus — all loads connected here"],
+      ["Avionics Bus",      "Switched via Avionics Master relay"],
+      ["Avionics Master",   "Isolates avionics from start surge — turn OFF before start"],
+      ["Essential Bus",     "Master contactor feeds: ignition, alt field, start"],
+      ["External Power",    "GPU receptacle — 28V, polarity protected"],
+      ["Low Voltage Light", "Illuminates below ~25V — check alternator"],
+    ],
+  },
+  {
+    id: "runway_markings", title: "Runway Markings & Lighting", color: "#c87ae8",
+    cols: ["Marking / Light", "Description / Meaning"],
+    rows: [
+      ["Runway Designation",       "Magnetic heading ÷ 10, rounded (e.g. 28 = 280°)"],
+      ["Threshold Markings",       "8 longitudinal stripes — identifies runway start"],
+      ["Aiming Point Markings",    "Large rectangular marks ~1000 ft from threshold"],
+      ["Touchdown Zone Markings",  "Pairs of rectangles — first 3000 ft of runway"],
+      ["Displaced Threshold",      "Yellow arrows leading to threshold — landing only beyond"],
+      ["Blast Pad / Stopway",      "Chevrons — NOT usable for takeoff, landing, or taxi"],
+      ["Hold Short Lines",         "2 solid + 2 dashed — never cross without clearance"],
+      ["ILS Critical Area",        "Ladder markings — hold clear during ILS approaches"],
+      ["PAPI (4 lights)",          "All red = too low · 2R/2W = on glidepath · All white = too high"],
+      ["VASI (2 bars)",            "Red over white = on path · All white = high · All red = low"],
+      ["REIL",                     "Runway End Identifier Lights — flashing white strobes"],
+      ["MALSR / ALSF",             "Approach lighting — extends visual guidance to threshold"],
+      ["Taxiway Blue Lights",      "Edge lights marking taxi routes"],
+      ["Green Centerline Lights",  "Taxiway centerline — follow to runway"],
+      ["Amber Guard Lights",       "Runway guard lights — stop before crossing hold short"],
+    ],
+  },
+  {
+    id: "fuel_oil", title: "C172S Fuel & Oil Quick Ref", color: "#c87ae8",
+    note: "Cessna 172S — Standard fuel system",
+    cols: ["Parameter", "Value / Specification"],
+    rows: [
+      ["Fuel Type",              "100LL Avgas (blue) — primary"],
+      ["Fuel Type (alternate)",  "100 (green) Avgas — permitted"],
+      ["Total Fuel Capacity",    "56 gallons (28 gal each wing)"],
+      ["Usable Fuel",            "53 gallons total"],
+      ["Unusable Fuel",          "3 gallons (1.5 per tank)"],
+      ["Fuel Flow (cruise 75%)", "~9.0 GPH"],
+      ["Fuel Flow (cruise 55%)", "~6.5 GPH"],
+      ["Fuel Selector",          "BOTH for takeoff/landing; either for cruise"],
+      ["Fuel Sumps",             "Drain all 7 sumps (6 wing + 1 gascolator) before first flight"],
+      ["Oil Type",               "SAE 50W or 15W-50 multigrade (Aeroshell/Phillips)"],
+      ["Oil Capacity",           "8 quarts — do not operate below 6 quarts"],
+      ["Oil Change Interval",    "Every 50 hours or 4 months"],
+    ],
+  },
+  {
+    id: "weight_cg", title: "C172S Weight & CG Limits", color: "#c87ae8",
+    note: "Normal category — 14 CFR 23 certified",
+    cols: ["Parameter", "Value"],
+    rows: [
+      ["Max Gross Weight",       "2,550 lbs"],
+      ["Max Ramp Weight",        "2,558 lbs"],
+      ["Empty Weight (typical)", "~1,663 lbs (varies by equipment)"],
+      ["Max Useful Load",        "~887 lbs (gross − empty)"],
+      ["CG Range — Fwd Limit",   "35.0 in aft of datum @ ≤ 2,550 lbs"],
+      ["CG Range — Aft Limit",   "47.3 in aft of datum @ ≤ 2,550 lbs"],
+      ["Max Baggage (fwd shelf)", "120 lbs"],
+      ["Max Baggage (aft shelf)", "50 lbs"],
+      ["Utility Category limit", "1,950 lbs (spins, steep turns to 60°)"],
+      ["Max Occupants",          "4 (pilot + 3 passengers)"],
+    ],
+  },
+  {
+    id: "tire_pressures", title: "C172S Tire Pressures", color: "#c87ae8",
+    note: "Goodyear / Michelin — check cold inflation",
+    cols: ["Tire", "Size", "Pressure"],
+    rows: [
+      ["Nose Gear",      "5.00-5, 6-ply",   "30 PSI"],
+      ["Main Gear",      "6.00-6, 6-ply",   "30 PSI"],
+      ["Nose Tube Type", "Standard tube",    "Check for chafing at valve stem"],
+      ["Main Tube Type", "Standard tube",    "Inspect sidewalls each preflight"],
+    ],
+  },
+  {
+    id: "phonetic", title: "NATO Phonetic Alphabet", color: "#c87ae8",
+    cols: ["Letter", "Word", "Pronunciation"],
+    rows: [
+      ["A", "Alpha",    "AL-fah"],
+      ["B", "Bravo",    "BRAH-voh"],
+      ["C", "Charlie",  "CHAR-lee"],
+      ["D", "Delta",    "DEL-tah"],
+      ["E", "Echo",     "EK-oh"],
+      ["F", "Foxtrot",  "FOKS-trot"],
+      ["G", "Golf",     "GOLF"],
+      ["H", "Hotel",    "HOH-tel"],
+      ["I", "India",    "IN-dee-ah"],
+      ["J", "Juliet",   "JEW-lee-ET"],
+      ["K", "Kilo",     "KEY-loh"],
+      ["L", "Lima",     "LEE-mah"],
+      ["M", "Mike",     "MIKE"],
+      ["N", "November", "no-VEM-ber"],
+      ["O", "Oscar",    "OSS-kah"],
+      ["P", "Papa",     "pah-PAH"],
+      ["Q", "Quebec",   "keh-BECK"],
+      ["R", "Romeo",    "ROW-me-oh"],
+      ["S", "Sierra",   "see-AIR-ah"],
+      ["T", "Tango",    "TANG-go"],
+      ["U", "Uniform",  "YOU-ni-form"],
+      ["V", "Victor",   "VIK-tah"],
+      ["W", "Whiskey",  "WISS-key"],
+      ["X", "X-ray",    "ECKS-ray"],
+      ["Y", "Yankee",   "YANG-key"],
+      ["Z", "Zulu",     "ZOO-loo"],
     ],
   },
 ];
@@ -1443,11 +1614,11 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
           <div style={{ marginTop: "auto" }}>
             <button className="tab-btn" onClick={() => setMoreOpen(true)} style={{ width: "100%", minHeight: 56, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, background: "transparent", outline: "none", borderTop: `1px solid ${T.leftSideBorder}`, borderRight: "none", borderBottom: "none", borderLeft: "3px solid transparent", cursor: "pointer", padding: "8px 2px", transition: "all 0.12s" }}>
               <svg viewBox="0 0 20 20" width={18} height={18} fill="none">
-                <line x1="3" y1="5" x2="17" y2="5" stroke={T.leftTabDim} strokeWidth="1.8" strokeLinecap="round"/>
-                <line x1="3" y1="10" x2="17" y2="10" stroke={T.leftTabDim} strokeWidth="1.8" strokeLinecap="round"/>
-                <line x1="3" y1="15" x2="17" y2="15" stroke={T.leftTabDim} strokeWidth="1.8" strokeLinecap="round"/>
+                <line x1="3" y1="5" x2="17" y2="5" stroke="#8a5aaa" strokeWidth="1.8" strokeLinecap="round"/>
+                <line x1="3" y1="10" x2="17" y2="10" stroke="#8a5aaa" strokeWidth="1.8" strokeLinecap="round"/>
+                <line x1="3" y1="15" x2="17" y2="15" stroke="#8a5aaa" strokeWidth="1.8" strokeLinecap="round"/>
               </svg>
-              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7.5, fontWeight: 700, letterSpacing: 0.5, color: T.leftTabDim, textAlign: "center", lineHeight: 1.2, textTransform: "uppercase" }}>MORE</div>
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7.5, fontWeight: 700, letterSpacing: 0.5, color: "#8a5aaa", textAlign: "center", lineHeight: 1.2, textTransform: "uppercase" }}>MORE</div>
             </button>
           </div>
         </div>
@@ -1635,15 +1806,22 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
       {/* More refs overlay */}
       {moreOpen && (
         <div style={{ position: "absolute", inset: 0, zIndex: 200, background: "rgba(8,10,14,0.96)", display: "flex", flexDirection: "column", animation: "fadeIn 0.15s ease" }}>
-          <div style={{ background: "linear-gradient(135deg,#0a0c10,#141820)", borderBottom: "2px solid #4a9fe8", padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-            <span style={{ fontFamily: "'Oswald',sans-serif", fontSize: 15, fontWeight: 700, letterSpacing: 3, color: "#4a9fe8" }}>REFERENCE TABLES</span>
+          <div style={{ background: "linear-gradient(135deg,#0a0c10,#141820)", borderBottom: "2px solid #c87ae8", padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <svg viewBox="0 0 20 20" width={16} height={16} fill="none">
+                <line x1="2" y1="5" x2="18" y2="5" stroke="#c87ae8" strokeWidth="1.8" strokeLinecap="round"/>
+                <line x1="2" y1="10" x2="18" y2="10" stroke="#c87ae8" strokeWidth="1.8" strokeLinecap="round"/>
+                <line x1="2" y1="15" x2="18" y2="15" stroke="#c87ae8" strokeWidth="1.8" strokeLinecap="round"/>
+              </svg>
+              <span style={{ fontFamily: "'Oswald',sans-serif", fontSize: 15, fontWeight: 700, letterSpacing: 3, color: "#c87ae8" }}>QUICK REFERENCE</span>
+            </div>
             <button onClick={() => setMoreOpen(false)} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: 1, padding: "4px 14px", borderRadius: 4, cursor: "pointer", background: "rgba(232,90,74,0.1)", color: "#e85a4a", border: "1px solid #e85a4a" }}>✕ CLOSE</button>
           </div>
           <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-            <div style={{ width: 160, flexShrink: 0, background: "#0a0c10", borderRight: "1px solid #1e2430", overflowY: "auto" }}>
+            <div style={{ width: 160, flexShrink: 0, background: "#0a0c10", borderRight: "1px solid #2a1e3a", overflowY: "auto" }}>
               {MORE_REFS.map(ref => (
-                <button key={ref.id} onClick={() => setActiveMoreRef(ref.id)} style={{ width: "100%", textAlign: "left", padding: "10px 12px", cursor: "pointer", background: activeMoreRef === ref.id ? `${ref.color}10` : "transparent", border: "none", borderLeft: `3px solid ${activeMoreRef === ref.id ? ref.color : "transparent"}`, borderBottom: "1px solid rgba(30,32,48,0.8)", transition: "all 0.12s" }}>
-                  <div style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: activeMoreRef === ref.id ? ref.color : "#5a6070", textTransform: "uppercase", lineHeight: 1.2 }}>{ref.title}</div>
+                <button key={ref.id} onClick={() => setActiveMoreRef(ref.id)} style={{ width: "100%", textAlign: "left", padding: "10px 12px", cursor: "pointer", background: activeMoreRef === ref.id ? "rgba(200,122,232,0.1)" : "transparent", border: "none", borderLeft: `3px solid ${activeMoreRef === ref.id ? "#c87ae8" : "transparent"}`, borderBottom: "1px solid rgba(42,30,58,0.8)", transition: "all 0.12s" }}>
+                  <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, fontWeight: 700, letterSpacing: 0.5, color: activeMoreRef === ref.id ? "#c87ae8" : "#6a5878", textTransform: "uppercase", lineHeight: 1.3 }}>{ref.title}</div>
                 </button>
               ))}
             </div>
@@ -1654,16 +1832,16 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                 return (
                   <div>
                     <div style={{ marginBottom: 14 }}>
-                      <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: 2, color: ref.color, textTransform: "uppercase" }}>{ref.title}</div>
-                      {ref.note && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#5a6070", letterSpacing: 1, marginTop: 4 }}>{ref.note}</div>}
+                      <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: 2, color: "#c87ae8", textTransform: "uppercase" }}>{ref.title}</div>
+                      {ref.note && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#6a5878", letterSpacing: 1, marginTop: 4 }}>{ref.note}</div>}
                     </div>
-                    <div style={{ border: `1px solid ${ref.color}30`, borderRadius: 5, overflow: "hidden" }}>
-                      <div style={{ display: "grid", gridTemplateColumns: `repeat(${ref.cols.length}, 1fr)`, background: `${ref.color}18` }}>
-                        {ref.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, fontWeight: 700, color: ref.color, letterSpacing: 1.5, textTransform: "uppercase", padding: "8px 12px", borderRight: ci < ref.cols.length - 1 ? `1px solid ${ref.color}20` : "none" }}>{col}</div>)}
+                    <div style={{ border: "1px solid rgba(200,122,232,0.2)", borderRadius: 5, overflow: "hidden" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: `repeat(${ref.cols.length}, 1fr)`, background: "rgba(200,122,232,0.1)" }}>
+                        {ref.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, fontWeight: 700, color: "#c87ae8", letterSpacing: 1.5, textTransform: "uppercase", padding: "8px 12px", borderRight: ci < ref.cols.length - 1 ? "1px solid rgba(200,122,232,0.15)" : "none" }}>{col}</div>)}
                       </div>
                       {ref.rows.map((row, ri) => (
-                        <div key={ri} style={{ display: "grid", gridTemplateColumns: `repeat(${ref.cols.length}, 1fr)`, background: ri % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-                          {row.map((cell, ci) => <div key={ci} style={{ fontFamily: ci === 0 ? "'Rajdhani',sans-serif" : "'Share Tech Mono',monospace", fontSize: ci === 0 ? 14 : 12, fontWeight: ci === 0 ? 600 : 400, color: ci === 0 ? "#e8e4d8" : ref.color, padding: "9px 12px", lineHeight: 1.3, borderRight: ci < ref.cols.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>{cell}</div>)}
+                        <div key={ri} style={{ display: "grid", gridTemplateColumns: `repeat(${ref.cols.length}, 1fr)`, background: ri % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent", borderTop: "1px solid rgba(200,122,232,0.07)" }}>
+                          {row.map((cell, ci) => <div key={ci} style={{ fontFamily: ci === 0 ? "'Rajdhani',sans-serif" : "'Share Tech Mono',monospace", fontSize: ci === 0 ? 14 : 12, fontWeight: ci === 0 ? 600 : 400, color: ci === 0 ? "#e8e4d8" : "#c87ae8", padding: "9px 12px", lineHeight: 1.3, borderRight: ci < ref.cols.length - 1 ? "1px solid rgba(200,122,232,0.07)" : "none" }}>{cell}</div>)}
                         </div>
                       ))}
                     </div>
