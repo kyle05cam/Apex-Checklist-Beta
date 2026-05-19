@@ -1613,8 +1613,8 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
               const toggle = () => setActiveDrawer(prev => { const next = new Set(prev); isOpen ? next.delete(acc.key) : next.add(acc.key); return next; });
               return (
                 <div key={acc.key} style={{ flexShrink: 0 }}>
-                  {/* Accordion header — always glowing band */}
-                  <button onClick={toggle} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 18px", cursor: "pointer", background: acc.bg, border: "none", borderTop: `1px solid ${acc.border}`, borderLeft: `4px solid ${acc.color}`, outline: "none", textAlign: "left", transition: "all 0.15s", boxShadow: `inset 0 0 60px ${acc.bg}` }}>
+                  {/* Accordion header — subtle always-on glow */}
+                  <button onClick={toggle} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", cursor: "pointer", background: `linear-gradient(90deg, ${acc.bg} 0%, rgba(0,0,0,0.4) 100%)`, border: "none", borderTop: `1px solid ${acc.border}40`, borderLeft: `3px solid ${acc.color}`, outline: "none", textAlign: "left", transition: "all 0.15s" }}>
                     <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 13, color: acc.color, fontWeight: 700, textShadow: acc.glow }}>▲</span>
                     <span style={{ fontFamily: "'Oswald',monospace", fontSize: 14, color: acc.color, fontWeight: 700, letterSpacing: 2.5, flex: 1, textShadow: acc.glow }}>{acc.label}</span>
                     {acc.key === "vspeeds" && vspeedEditing && <button onClick={e => { e.stopPropagation(); resetVspeeds(); }} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer", marginRight: 4 }}>↺ RESET</button>}
@@ -1630,19 +1630,19 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
 
                   {/* ── V-SPEEDS open ── */}
                   {isOpen && acc.key === "vspeeds" && (
-                    <div style={{ background: "rgba(4,26,24,0.97)", padding: "16px 20px 20px", animation: "fadeIn 0.15s ease", borderLeft: "4px solid #4ae8c8", maxHeight: "280px", overflowY: "auto", scrollbarWidth: "thin" }}>
+                    <div style={{ background: "rgba(4,26,24,0.82)", padding: "10px 14px 14px", animation: "fadeIn 0.15s ease", maxHeight: "320px", overflowY: "auto", scrollbarWidth: "thin" }}>
                       {vspeeds.map((group, gi) => (
-                        <div key={gi} style={{ marginBottom: 16 }}>
-                          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#4ae8c8", letterSpacing: 3, marginBottom: 10, opacity: 0.8 }}>{group.group.toUpperCase()}</div>
-                          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                        <div key={gi} style={{ marginBottom: 8 }}>
+                          <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#4ae8c8", letterSpacing: 3, marginBottom: 6, opacity: 0.6 }}>{group.group.toUpperCase()}</div>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 5 }}>
                             {group.items.map((item, ii) => (
-                              <div key={ii} style={{ background: "rgba(74,232,200,0.07)", border: "1px solid rgba(74,232,200,0.2)", borderRadius: 6, padding: "12px 16px", display: "flex", flexDirection: "column", gap: 4 }}>
+                              <div key={ii} style={{ background: "rgba(10,22,20,0.7)", border: "1px solid rgba(74,232,200,0.12)", borderRadius: 10, padding: "8px 12px", display: "flex", flexDirection: "column", gap: 2 }}>
                                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-                                  <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "#4ae8c8", letterSpacing: 1 }}>{vspeedEditing ? <input value={item.code} onChange={e => updateVspeed(gi, ii, "code", e.target.value)} style={{ width: 44, background: "#141820", border: "1px solid #4ae8c8", borderRadius: 2, padding: "1px 4px", fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "#4ae8c8", outline: "none" }} /> : item.code}</span>
-                                  <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#7a8090" }}>{item.unit}</span>
+                                  <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: "#4ae8c8", letterSpacing: 1 }}>{vspeedEditing ? <input value={item.code} onChange={e => updateVspeed(gi, ii, "code", e.target.value)} style={{ width: 40, background: "#141820", border: "1px solid #4ae8c8", borderRadius: 2, padding: "1px 4px", fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "#4ae8c8", outline: "none" }} /> : item.code}</span>
+                                  <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#4a5068" }}>{item.unit}</span>
                                 </div>
-                                <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 36, fontWeight: 700, color: "#e8c84a", lineHeight: 1 }}>{vspeedEditing ? <input value={item.value} onChange={e => updateVspeed(gi, ii, "value", e.target.value)} style={{ width: 80, background: "#141820", border: "1px solid #e8c84a", borderRadius: 2, padding: "2px 4px", fontFamily: "'Oswald',sans-serif", fontSize: 28, color: "#e8c84a", outline: "none" }} /> : item.value}</div>
-                                <div style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 13, color: "#e8e4d8", opacity: 0.8 }}>{vspeedEditing ? <input value={item.desc} onChange={e => updateVspeed(gi, ii, "desc", e.target.value)} style={{ width: "100%", background: "#141820", border: "1px solid #2a3040", borderRadius: 2, padding: "1px 4px", fontFamily: "'Rajdhani',sans-serif", fontSize: 12, color: "#e8e4d8", outline: "none" }} /> : item.desc}</div>
+                                <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 28, fontWeight: 700, color: "#e8c84a", lineHeight: 1 }}>{vspeedEditing ? <input value={item.value} onChange={e => updateVspeed(gi, ii, "value", e.target.value)} style={{ width: 64, background: "#141820", border: "1px solid #e8c84a", borderRadius: 2, padding: "2px 4px", fontFamily: "'Oswald',sans-serif", fontSize: 22, color: "#e8c84a", outline: "none" }} /> : item.value}</div>
+                                <div style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, color: "#8a9098" }}>{vspeedEditing ? <input value={item.desc} onChange={e => updateVspeed(gi, ii, "desc", e.target.value)} style={{ width: "100%", background: "#141820", border: "1px solid #2a3040", borderRadius: 2, padding: "1px 4px", fontFamily: "'Rajdhani',sans-serif", fontSize: 10, color: "#e8e4d8", outline: "none" }} /> : item.desc}</div>
                               </div>
                             ))}
                           </div>
@@ -1653,19 +1653,19 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
 
                   {/* ── T/O & LANDING open ── */}
                   {isOpen && acc.key === "perf" && (
-                    <div style={{ background: "rgba(28,22,4,0.97)", padding: "16px 20px 20px", animation: "fadeIn 0.15s ease", borderLeft: "4px solid #e8c84a", maxHeight: "280px", overflowY: "auto", scrollbarWidth: "thin" }}>
+                    <div style={{ background: "rgba(24,18,2,0.82)", padding: "10px 14px 14px", animation: "fadeIn 0.15s ease", maxHeight: "280px", overflowY: "auto", scrollbarWidth: "thin" }}>
                       {perfData.map((section, si) => (
-                        <div key={si} style={{ marginBottom: 18 }}>
-                          <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 13, fontWeight: 700, color: "#e8c84a", letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
-                          {section.note && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "rgba(232,200,74,0.5)", marginBottom: 8, letterSpacing: 1 }}>{section.note}</div>}
-                          <div style={{ border: "1px solid rgba(232,200,74,0.2)", borderRadius: 5, overflow: "hidden" }}>
-                            <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: "rgba(232,200,74,0.12)" }}>
-                              {section.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#e8c84a", letterSpacing: 1.5, padding: "6px 12px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(232,200,74,0.15)" : "none", textTransform: "uppercase" }}>{col}</div>)}
+                        <div key={si} style={{ marginBottom: 12 }}>
+                          <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 11, fontWeight: 700, color: "#e8c84a", letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
+                          {section.note && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, color: "rgba(232,200,74,0.4)", marginBottom: 6, letterSpacing: 1 }}>{section.note}</div>}
+                          <div style={{ border: "1px solid rgba(232,200,74,0.15)", borderRadius: 8, overflow: "hidden" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: "rgba(232,200,74,0.1)" }}>
+                              {section.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e8c84a", letterSpacing: 1.5, padding: "5px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(232,200,74,0.12)" : "none", textTransform: "uppercase" }}>{col}</div>)}
                             </div>
                             {section.rows.map((row, ri) => (
-                              <div key={ri} style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: ri % 2 === 0 ? "rgba(232,200,74,0.03)" : "transparent", borderTop: "1px solid rgba(232,200,74,0.08)" }}>
+                              <div key={ri} style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: ri % 2 === 0 ? "rgba(232,200,74,0.03)" : "transparent", borderTop: "1px solid rgba(232,200,74,0.07)" }}>
                                 {row.map((cell, ci) => (
-                                  <div key={ci} style={{ fontFamily: ci === 0 ? "'Rajdhani',sans-serif" : "'Share Tech Mono',monospace", fontSize: ci === 0 ? 14 : 13, fontWeight: ci === 0 ? 600 : 400, color: ci === 0 ? "#e8e4d8" : "#e8c84a", padding: "8px 12px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(232,200,74,0.08)" : "none" }}>
+                                  <div key={ci} style={{ fontFamily: ci === 0 ? "'Rajdhani',sans-serif" : "'Share Tech Mono',monospace", fontSize: ci === 0 ? 13 : 12, fontWeight: ci === 0 ? 600 : 400, color: ci === 0 ? "#e8e4d8" : "#e8c84a", padding: "6px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(232,200,74,0.07)" : "none" }}>
                                     {perfEditing ? <input value={cell} onChange={e => updatePerfCell(si, ri, ci, e.target.value)} style={{ width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #2a3040", fontFamily: "inherit", fontSize: "inherit", color: "inherit", outline: "none", padding: 0 }} /> : cell}
                                   </div>
                                 ))}
@@ -1679,19 +1679,19 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
 
                   {/* ── CLIMB PERFORMANCE open ── */}
                   {isOpen && acc.key === "climb" && (
-                    <div style={{ background: "rgba(6,28,18,0.97)", padding: "16px 20px 20px", animation: "fadeIn 0.15s ease", borderLeft: "4px solid #3dbe6c", maxHeight: "280px", overflowY: "auto", scrollbarWidth: "thin" }}>
+                    <div style={{ background: "rgba(4,20,12,0.82)", padding: "10px 14px 14px", animation: "fadeIn 0.15s ease", maxHeight: "280px", overflowY: "auto", scrollbarWidth: "thin" }}>
                       {climbData.map((section, si) => (
-                        <div key={si} style={{ marginBottom: 18 }}>
-                          <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 13, fontWeight: 700, color: "#3dbe6c", letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
-                          {section.note && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "rgba(61,190,108,0.5)", marginBottom: 8, letterSpacing: 1 }}>{section.note}</div>}
-                          <div style={{ border: "1px solid rgba(61,190,108,0.2)", borderRadius: 5, overflow: "hidden" }}>
-                            <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: "rgba(61,190,108,0.12)" }}>
-                              {section.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#3dbe6c", letterSpacing: 1.5, padding: "6px 12px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(61,190,108,0.15)" : "none", textTransform: "uppercase" }}>{col}</div>)}
+                        <div key={si} style={{ marginBottom: 12 }}>
+                          <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 11, fontWeight: 700, color: "#3dbe6c", letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
+                          {section.note && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, color: "rgba(61,190,108,0.4)", marginBottom: 6, letterSpacing: 1 }}>{section.note}</div>}
+                          <div style={{ border: "1px solid rgba(61,190,108,0.15)", borderRadius: 8, overflow: "hidden" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: "rgba(61,190,108,0.1)" }}>
+                              {section.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#3dbe6c", letterSpacing: 1.5, padding: "5px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(61,190,108,0.12)" : "none", textTransform: "uppercase" }}>{col}</div>)}
                             </div>
                             {section.rows.map((row, ri) => (
-                              <div key={ri} style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: ri % 2 === 0 ? "rgba(61,190,108,0.03)" : "transparent", borderTop: "1px solid rgba(61,190,108,0.08)" }}>
+                              <div key={ri} style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: ri % 2 === 0 ? "rgba(61,190,108,0.03)" : "transparent", borderTop: "1px solid rgba(61,190,108,0.07)" }}>
                                 {row.map((cell, ci) => (
-                                  <div key={ci} style={{ fontFamily: ci === 0 ? "'Rajdhani',sans-serif" : "'Share Tech Mono',monospace", fontSize: ci === 0 ? 14 : 13, fontWeight: ci === 0 ? 600 : 400, color: ci === 0 ? "#e8e4d8" : "#3dbe6c", padding: "8px 12px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(61,190,108,0.08)" : "none" }}>
+                                  <div key={ci} style={{ fontFamily: ci === 0 ? "'Rajdhani',sans-serif" : "'Share Tech Mono',monospace", fontSize: ci === 0 ? 13 : 12, fontWeight: ci === 0 ? 600 : 400, color: ci === 0 ? "#e8e4d8" : "#3dbe6c", padding: "6px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(61,190,108,0.07)" : "none" }}>
                                     {climbEditing ? <input value={cell} onChange={e => updateClimbCell(si, ri, ci, e.target.value)} style={{ width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #2a3040", fontFamily: "inherit", fontSize: "inherit", color: "inherit", outline: "none", padding: 0 }} /> : cell}
                                   </div>
                                 ))}
@@ -1705,19 +1705,19 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
 
                   {/* ── CRUISE PERFORMANCE open ── */}
                   {isOpen && acc.key === "cruise" && (
-                    <div style={{ background: "rgba(10,20,40,0.97)", padding: "16px 20px 20px", animation: "fadeIn 0.15s ease", borderLeft: "4px solid #4a9fe8", maxHeight: "280px", overflowY: "auto", scrollbarWidth: "thin" }}>
+                    <div style={{ background: "rgba(4,14,28,0.82)", padding: "10px 14px 14px", animation: "fadeIn 0.15s ease", maxHeight: "280px", overflowY: "auto", scrollbarWidth: "thin" }}>
                       {cruiseData.map((section, si) => (
-                        <div key={si} style={{ marginBottom: 18 }}>
-                          <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 13, fontWeight: 700, color: "#4a9fe8", letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
-                          {section.note && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "rgba(74,159,232,0.5)", marginBottom: 8, letterSpacing: 1 }}>{section.note}</div>}
-                          <div style={{ border: "1px solid rgba(74,159,232,0.2)", borderRadius: 5, overflow: "hidden" }}>
-                            <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: "rgba(74,159,232,0.12)" }}>
-                              {section.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#4a9fe8", letterSpacing: 1.5, padding: "6px 12px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(74,159,232,0.15)" : "none", textTransform: "uppercase" }}>{col}</div>)}
+                        <div key={si} style={{ marginBottom: 12 }}>
+                          <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 11, fontWeight: 700, color: "#4a9fe8", letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
+                          {section.note && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, color: "rgba(74,159,232,0.4)", marginBottom: 6, letterSpacing: 1 }}>{section.note}</div>}
+                          <div style={{ border: "1px solid rgba(74,159,232,0.15)", borderRadius: 8, overflow: "hidden" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: "rgba(74,159,232,0.1)" }}>
+                              {section.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#4a9fe8", letterSpacing: 1.5, padding: "5px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(74,159,232,0.12)" : "none", textTransform: "uppercase" }}>{col}</div>)}
                             </div>
                             {section.rows.map((row, ri) => (
-                              <div key={ri} style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: ri % 2 === 0 ? "rgba(74,159,232,0.03)" : "transparent", borderTop: "1px solid rgba(74,159,232,0.08)" }}>
+                              <div key={ri} style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: ri % 2 === 0 ? "rgba(74,159,232,0.03)" : "transparent", borderTop: "1px solid rgba(74,159,232,0.07)" }}>
                                 {row.map((cell, ci) => (
-                                  <div key={ci} style={{ fontFamily: ci === 0 ? "'Rajdhani',sans-serif" : "'Share Tech Mono',monospace", fontSize: ci === 0 ? 14 : 13, fontWeight: ci === 0 ? 600 : 400, color: ci === 0 ? "#e8e4d8" : "#4a9fe8", padding: "8px 12px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(74,159,232,0.08)" : "none" }}>
+                                  <div key={ci} style={{ fontFamily: ci === 0 ? "'Rajdhani',sans-serif" : "'Share Tech Mono',monospace", fontSize: ci === 0 ? 13 : 12, fontWeight: ci === 0 ? 600 : 400, color: ci === 0 ? "#e8e4d8" : "#4a9fe8", padding: "6px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(74,159,232,0.07)" : "none" }}>
                                     {cruiseEditing ? <input value={cell} onChange={e => updateCruiseCell(si, ri, ci, e.target.value)} style={{ width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #2a3040", fontFamily: "inherit", fontSize: "inherit", color: "inherit", outline: "none", padding: 0 }} /> : cell}
                                   </div>
                                 ))}
