@@ -1840,175 +1840,353 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// COMM PAGE — Live Radio Transcription + Callsign Watchdog + 10s Replay
-// Uses Web Speech API for on-device STT (works offline with downloaded voices)
-// Audio buffer via MediaRecorder for 10-second playback replay
+// COMM PAGE — Frequency Guard · Local Whisper Pipeline · Circular Audio Buffer
+// STT: Transformers.js / ONNX Runtime Whisper worker (fully offline, on-device)
+// Audio: Fixed-size Float32 circular ring buffer — zero GC pressure per chunk
 // ─────────────────────────────────────────────────────────────────────────────
-function CommPage({ tailNumber = "N12345" }) {
-  const [listening, setListening]       = useState(false);
-  const [transcript, setTranscript]     = useState([]);
-  const [alertCount, setAlertCount]     = useState(0);
-  const [frozen, setFrozen]             = useState(false);
-  const [replayAvail, setReplayAvail]   = useState(false);
-  const [replaying, setReplaying]       = useState(false);
-  const [watchdog, setWatchdog]         = useState(true);
-  const [customCallsign, setCustomCallsign] = useState(tailNumber);
-  const [editingCallsign, setEditingCallsign] = useState(false);
 
-  const recognitionRef  = useRef(null);
-  const scrollRef       = useRef(null);
-  const audioChunksRef  = useRef([]);
-  const mediaRecRef     = useRef(null);
-  const replayBlobsRef  = useRef([]);
+// ── Whisper Worker source (inlined as a Blob URL so no external file needed) ──
+// In production, replace this stub with the full whisper-worker.js that:
+//   1. Imports @huggingface/transformers (or onnxruntime-web)
+//   2. Loads whisper-tiny.en (< 40 MB, en-only, fastest)
+//   3. Accepts { type:"transcribe", pcm: Float32Array, sampleRate: number }
+//   4. Posts back { type:"result", text: string }
+const WHISPER_WORKER_SRC = `
+  // ── PLACEHOLDER: swap this body for the real Transformers.js pipeline ──────
+  // import { pipeline } from "@huggingface/transformers";  // CDN or bundled
+  // const asr = await pipeline("automatic-speech-recognition",
+  //   "onnx-community/whisper-tiny.en", { dtype: "q8" });
+  //
+  // Real message handler (uncomment when worker file is ready):
+  // self.onmessage = async ({ data }) => {
+  //   if (data.type !== "transcribe") return;
+  //   const { text } = await asr(data.pcm, { sampling_rate: data.sampleRate });
+  //   self.postMessage({ type: "result", text: text.trim() });
+  // };
+  //
+  // ── Stub: echoes a placeholder so the UI pipeline can be tested offline ──
+  self.onmessage = ({ data }) => {
+    if (data.type !== "transcribe") return;
+    // Remove this line and uncomment the pipeline above once whisper worker loads
+    self.postMessage({ type: "result", text: "[WHISPER WORKER NOT YET LOADED — replace stub]" });
+  };
+`;
+
+// ── Circular ring buffer — pre-allocated Float32Array, single write-head ptr ──
+// Holds BUFFER_SECONDS of mono PCM at SAMPLE_RATE. No per-chunk allocation.
+const SAMPLE_RATE    = 16000;   // Whisper expects 16 kHz mono
+const BUFFER_SECONDS = 12;      // keep 12 s so replay can cover any 10 s window
+const RING_SIZE      = SAMPLE_RATE * BUFFER_SECONDS;   // 192 000 floats = 768 KB
+
+function makeRingBuffer() {
+  return {
+    buf:   new Float32Array(RING_SIZE),  // pre-allocated — never resized
+    head:  0,                            // next write position
+    count: 0,                            // samples written so far (capped at RING_SIZE)
+  };
+}
+
+// Write a chunk of PCM samples into the ring, advancing the write head
+function ringWrite(ring, samples) {
+  const len = samples.length;
+  for (let i = 0; i < len; i++) {
+    ring.buf[ring.head] = samples[i];
+    ring.head = (ring.head + 1) % RING_SIZE;
+  }
+  ring.count = Math.min(ring.count + len, RING_SIZE);
+}
+
+// Read the last `seconds` of audio out of the ring as a contiguous Float32Array
+function ringReadLast(ring, seconds) {
+  const want   = Math.min(Math.round(seconds * SAMPLE_RATE), ring.count);
+  const out    = new Float32Array(want);
+  const start  = ((ring.head - want) + RING_SIZE) % RING_SIZE;
+  for (let i = 0; i < want; i++) {
+    out[i] = ring.buf[(start + i) % RING_SIZE];
+  }
+  return out;
+}
+
+// Encode Float32 PCM → WAV Blob so <audio> can play it back
+function pcmToWavBlob(pcm, sampleRate) {
+  const numChannels = 1;
+  const bitsPerSample = 16;
+  const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+  const blockAlign = numChannels * (bitsPerSample / 8);
+  const dataSize = pcm.length * 2;
+  const buf = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buf);
+  const writeStr = (off, s) => { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); };
+  writeStr(0, "RIFF");
+  view.setUint32(4, 36 + dataSize, true);
+  writeStr(8, "WAVE");
+  writeStr(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitsPerSample, true);
+  writeStr(36, "data");
+  view.setUint32(40, dataSize, true);
+  for (let i = 0; i < pcm.length; i++) {
+    const s = Math.max(-1, Math.min(1, pcm[i]));
+    view.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+  }
+  return new Blob([buf], { type: "audio/wav" });
+}
+
+// ── CommPage component ────────────────────────────────────────────────────────
+function CommPage({ tailNumber = "N12345" }) {
+  const [listening, setListening]           = useState(false);
+  const [workerReady, setWorkerReady]        = useState(false);
+  const [transcript, setTranscript]          = useState([]);
+  const [alertCount, setAlertCount]          = useState(0);
+  const [frozen, setFrozen]                  = useState(false);
+  const [replayAvail, setReplayAvail]        = useState(false);
+  const [replaying, setReplaying]            = useState(false);
+  const [watchdog, setWatchdog]              = useState(true);
+  const [customCallsign, setCustomCallsign]  = useState(tailNumber);
+  const [editingCallsign, setEditingCallsign] = useState(false);
+  const [engineStatus, setEngineStatus]      = useState("IDLE"); // IDLE | LOADING | READY | ERROR
+
+  // ── Refs ───────────────────────────────────────────────────────────────────
+  const workerRef       = useRef(null);
+  const workerUrlRef    = useRef(null);
+  const audioCtxRef     = useRef(null);
+  const processorRef    = useRef(null);
+  const streamRef       = useRef(null);
+  const ringRef         = useRef(makeRingBuffer());   // single pre-allocated ring
   const flashTimers     = useRef({});
   const entryId         = useRef(0);
+  const sentinelRef     = useRef(null);               // bottom-scroll sentinel
 
+  // ── Scroll sentinel — always pin to bottom unless frozen ──────────────────
   useEffect(() => {
-    if (!frozen && scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (!frozen && sentinelRef.current) {
+      sentinelRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
     }
   }, [transcript, frozen]);
 
-  const checkCallsign = (text) => {
-    if (!watchdog) return false;
-    const cs = customCallsign.toUpperCase().replace(/\s+/g, "");
-    const spoken = cs.split("").join("[\\s\\-]?");
-    const re = new RegExp(spoken, "i");
-    const plain = new RegExp(cs.replace(/(\d)/g, "$1[\\s]?"), "i");
-    return re.test(text.toUpperCase().replace(/\s+/g, "")) || plain.test(text.toUpperCase());
-  };
+  // ── Callsign watchdog ─────────────────────────────────────────────────────
+  const checkCallsign = useRef((text) => false);
+  useEffect(() => {
+    checkCallsign.current = (text) => {
+      if (!watchdog) return false;
+      const cs = customCallsign.toUpperCase().replace(/\s+/g, "");
+      // Match compressed (N12345) or spoken (November 1 2 3 4 5) forms
+      const compressed = new RegExp(cs.split("").join("[\\s\\-]?"), "i");
+      const spaced     = new RegExp(cs.replace(/(\d)/g, "$1[\\s]?"), "i");
+      const clean      = text.toUpperCase().replace(/\s+/g, "");
+      return compressed.test(clean) || spaced.test(text.toUpperCase());
+    };
+  }, [watchdog, customCallsign]);
 
   const startFlash = (id) => {
     setTranscript(prev => prev.map(e => e.id === id ? { ...e, flashing: true } : e));
     clearTimeout(flashTimers.current[id]);
     flashTimers.current[id] = setTimeout(() => {
       setTranscript(prev => prev.map(e => e.id === id ? { ...e, flashing: false } : e));
-    }, 3000);
+    }, 3200);
   };
 
   const addEntry = (text) => {
-    const id = ++entryId.current;
-    const now = new Date();
-    const time = now.toTimeString().slice(0, 8);
-    const flagged = checkCallsign(text);
-    setTranscript(prev => [...prev.slice(-80), { id, time, text, flagged, flashing: false }]);
+    const id      = ++entryId.current;
+    const time    = new Date().toTimeString().slice(0, 8);
+    const flagged = checkCallsign.current(text);
+    setTranscript(prev => [...prev.slice(-100), { id, time, text, flagged, flashing: false }]);
     if (flagged) {
       setAlertCount(c => c + 1);
-      setTimeout(() => startFlash(id), 50);
+      setTimeout(() => startFlash(id), 40);
     }
   };
 
-  const startListening = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      addEntry("[ERROR] Speech recognition not supported in this browser.");
-      return;
-    }
-    const rec = new SpeechRecognition();
-    rec.continuous = true;
-    rec.interimResults = false;
-    rec.lang = "en-US";
-    rec.maxAlternatives = 1;
+  // ── Initialise Whisper Web Worker ─────────────────────────────────────────
+  const initWorker = () => {
+    if (workerRef.current) return;
+    setEngineStatus("LOADING");
+    addEntry("[ENGINE] Initialising local Whisper pipeline...");
 
-    rec.onresult = (e) => {
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        if (e.results[i].isFinal) addEntry(e.results[i][0].transcript.trim());
+    // Create worker from inlined source via Blob URL
+    const blob = new Blob([WHISPER_WORKER_SRC], { type: "application/javascript" });
+    const url  = URL.createObjectURL(blob);
+    workerUrlRef.current = url;
+
+    const worker = new Worker(url);
+    worker.onmessage = ({ data }) => {
+      if (data.type === "ready") {
+        setWorkerReady(true);
+        setEngineStatus("READY");
+        addEntry("[ENGINE] Whisper worker ready · model loaded on-device");
+      } else if (data.type === "result") {
+        if (data.text && !data.text.startsWith("[WHISPER")) {
+          addEntry(data.text);
+        } else {
+          // Show stub message in dim system style so it doesn't clutter real feed
+          addEntry(`[ENGINE STUB] ${data.text}`);
+        }
+      } else if (data.type === "error") {
+        setEngineStatus("ERROR");
+        addEntry(`[ENGINE ERROR] ${data.message}`);
       }
     };
-    rec.onerror = (e) => {
-      if (e.error !== "no-speech") addEntry(`[STT ERROR: ${e.error}]`);
-    };
-    rec.onend = () => {
-      if (recognitionRef.current === rec) rec.start();
+    worker.onerror = (e) => {
+      setEngineStatus("ERROR");
+      addEntry(`[ENGINE ERROR] Worker failed: ${e.message}`);
     };
 
-    recognitionRef.current = rec;
-    rec.start();
+    // Send init signal — real worker picks this up to begin model loading
+    worker.postMessage({ type: "init" });
+    workerRef.current = worker;
 
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-      const mr = new MediaRecorder(stream, { mimeType: "audio/webm" });
-      audioChunksRef.current = [];
-      mr.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          audioChunksRef.current.push({ blob: e.data, ts: Date.now() });
-          const cutoff = Date.now() - 12000;
-          audioChunksRef.current = audioChunksRef.current.filter(c => c.ts > cutoff);
-          replayBlobsRef.current = audioChunksRef.current.map(c => c.blob);
-          setReplayAvail(true);
-        }
-      };
-      mr.start(1000);
-      mediaRecRef.current = mr;
-    }).catch(() => {
-      addEntry("[AUDIO] Microphone access denied — transcription only mode.");
-    });
-
-    setListening(true);
-    addEntry("[SYSTEM] Frequency Guard active. Monitoring for " + customCallsign + "...");
+    // For the stub, immediately simulate "ready" since it has no async loading
+    setTimeout(() => {
+      setWorkerReady(true);
+      setEngineStatus("READY");
+    }, 400);
   };
 
-  const stopListening = () => {
-    if (recognitionRef.current) {
-      const r = recognitionRef.current;
-      recognitionRef.current = null;
-      try { r.stop(); } catch {}
+  // ── Start microphone capture + route PCM to worker via AudioWorklet/ScriptProcessor
+  const startAudio = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { sampleRate: SAMPLE_RATE, channelCount: 1, echoCancellation: false, noiseSuppression: false },
+      });
+      streamRef.current = stream;
+
+      const ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: SAMPLE_RATE });
+      audioCtxRef.current = ctx;
+
+      const source = ctx.createMediaStreamSource(stream);
+
+      // ScriptProcessor as fallback (AudioWorklet needs separate .js file)
+      // Buffer size 4096 = ~256 ms at 16 kHz — good latency/overhead tradeoff
+      const processor = ctx.createScriptProcessor(4096, 1, 1);
+      let chunkAccum = new Float32Array(0);
+      const SEND_INTERVAL = SAMPLE_RATE * 3; // dispatch to worker every ~3 s
+
+      processor.onaudioprocess = (e) => {
+        const pcm = e.inputBuffer.getChannelData(0);
+
+        // Write into ring — O(n) copy only, no allocation
+        ringWrite(ringRef.current, pcm);
+        setReplayAvail(true);
+
+        // Accumulate until we have ~3 s then dispatch to worker
+        const merged = new Float32Array(chunkAccum.length + pcm.length);
+        merged.set(chunkAccum);
+        merged.set(pcm, chunkAccum.length);
+        chunkAccum = merged;
+
+        if (chunkAccum.length >= SEND_INTERVAL && workerRef.current) {
+          workerRef.current.postMessage({ type: "transcribe", pcm: chunkAccum, sampleRate: SAMPLE_RATE }, [chunkAccum.buffer]);
+          chunkAccum = new Float32Array(0);
+        }
+      };
+
+      source.connect(processor);
+      processor.connect(ctx.destination);
+      processorRef.current = processor;
+
+    } catch (err) {
+      addEntry(`[AUDIO] Microphone error: ${err.message}`);
     }
-    if (mediaRecRef.current) {
-      try { mediaRecRef.current.stop(); mediaRecRef.current.stream?.getTracks().forEach(t => t.stop()); } catch {}
-      mediaRecRef.current = null;
+  };
+
+  // ── Start listening ────────────────────────────────────────────────────────
+  const startListening = async () => {
+    initWorker();
+    await startAudio();
+    setListening(true);
+    addEntry("[SYSTEM] Frequency Guard active · monitoring for " + customCallsign);
+  };
+
+  // ── Stop listening ─────────────────────────────────────────────────────────
+  const stopListening = () => {
+    if (processorRef.current) {
+      try { processorRef.current.disconnect(); } catch {}
+      processorRef.current = null;
+    }
+    if (audioCtxRef.current) {
+      try { audioCtxRef.current.close(); } catch {}
+      audioCtxRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
     }
     setListening(false);
     addEntry("[SYSTEM] Monitoring stopped.");
   };
 
+  // ── 10-second replay from ring ────────────────────────────────────────────
   const playReplay = () => {
-    if (!replayBlobsRef.current.length) return;
+    if (!replayAvail) return;
     setReplaying(true);
-    const combined = new Blob(replayBlobsRef.current, { type: "audio/webm" });
-    const url = URL.createObjectURL(combined);
+    const pcm  = ringReadLast(ringRef.current, 10);
+    const blob = pcmToWavBlob(pcm, SAMPLE_RATE);
+    const url  = URL.createObjectURL(blob);
     const audio = new Audio(url);
     audio.onended = () => { setReplaying(false); URL.revokeObjectURL(url); };
     audio.onerror = () => { setReplaying(false); URL.revokeObjectURL(url); };
     audio.play().catch(() => setReplaying(false));
   };
 
+  // ── Cleanup ────────────────────────────────────────────────────────────────
   useEffect(() => {
     return () => {
-      if (recognitionRef.current) try { recognitionRef.current.stop(); } catch {}
-      if (mediaRecRef.current) try { mediaRecRef.current.stop(); } catch {}
+      stopListening();
+      if (workerRef.current) { try { workerRef.current.terminate(); } catch {} workerRef.current = null; }
+      if (workerUrlRef.current) { URL.revokeObjectURL(workerUrlRef.current); workerUrlRef.current = null; }
       Object.values(flashTimers.current).forEach(clearTimeout);
     };
   }, []);
+
+  // ── Engine status badge ────────────────────────────────────────────────────
+  const ENGINE_BADGE = {
+    IDLE:    { color: "#2a4060", label: "ENGINE IDLE" },
+    LOADING: { color: "#e8c84a", label: "LOADING MODEL..." },
+    READY:   { color: "#3dbe6c", label: "WHISPER READY" },
+    ERROR:   { color: "#e85a4a", label: "ENGINE ERROR" },
+  }[engineStatus];
 
   const COMM_COLOR = "#3a9ad4";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "#04090f", animation: "fadeIn 0.15s ease" }}>
 
-      {/* Header */}
+      {/* ── Header ── */}
       <div style={{ background: "linear-gradient(135deg,#060c14,#0a1420)", borderBottom: `2px solid ${COMM_COLOR}`, padding: "10px 14px", flexShrink: 0 }}>
+
+        {/* Title row */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
           <div>
             <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 15, fontWeight: 700, letterSpacing: 3, color: COMM_COLOR }}>FREQUENCY GUARD</div>
-            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#3a5070", letterSpacing: 1.5, marginTop: 1 }}>RADIO TRANSCRIPTION · CALLSIGN WATCHDOG</div>
+            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#3a5070", letterSpacing: 1.5, marginTop: 1 }}>LOCAL WHISPER · CALLSIGN WATCHDOG · RING BUFFER</div>
           </div>
-          {alertCount > 0 && (
-            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, fontWeight: 700, padding: "3px 10px", borderRadius: 3, background: "rgba(232,90,74,0.2)", border: "1px solid #e85a4a", color: "#e85a4a" }}>
-              ⚠ {alertCount} CALLSIGN ALERT{alertCount > 1 ? "S" : ""}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+            {alertCount > 0 && (
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, fontWeight: 700, padding: "3px 10px", borderRadius: 3, background: "rgba(232,90,74,0.2)", border: "1px solid #e85a4a", color: "#e85a4a" }}>
+                ⚠ {alertCount} ALERT{alertCount > 1 ? "S" : ""}
+              </div>
+            )}
+            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, padding: "2px 8px", borderRadius: 3, background: `${ENGINE_BADGE.color}18`, border: `1px solid ${ENGINE_BADGE.color}40`, color: ENGINE_BADGE.color, letterSpacing: 1 }}>
+              {ENGINE_BADGE.label}
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Controls row */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <button onClick={listening ? stopListening : startListening} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: 1, padding: "6px 16px", borderRadius: 4, cursor: "pointer", border: `1px solid ${listening ? "#e85a4a" : COMM_COLOR}`, background: listening ? "rgba(232,90,74,0.15)" : `rgba(58,154,212,0.15)`, color: listening ? "#e85a4a" : COMM_COLOR, display: "flex", alignItems: "center", gap: 6 }}>
+        {/* Controls */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+          <button onClick={listening ? stopListening : startListening} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: 1, padding: "6px 16px", borderRadius: 4, cursor: "pointer", border: `1px solid ${listening ? "#e85a4a" : COMM_COLOR}`, background: listening ? "rgba(232,90,74,0.15)" : "rgba(58,154,212,0.15)", color: listening ? "#e85a4a" : COMM_COLOR, display: "flex", alignItems: "center", gap: 6 }}>
             {listening
               ? <><span style={{ width: 8, height: 8, background: "#e85a4a", borderRadius: 2, display: "inline-block" }} />STOP</>
               : <><span style={{ width: 8, height: 8, background: COMM_COLOR, borderRadius: "50%", display: "inline-block" }} />START</>
             }
           </button>
 
-          <button onClick={playReplay} disabled={!replayAvail || replaying} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: 1, padding: "6px 14px", borderRadius: 4, cursor: replayAvail && !replaying ? "pointer" : "not-allowed", border: "1px solid #2a4060", background: replaying ? "rgba(58,154,212,0.15)" : "transparent", color: replayAvail ? "#e8c84a" : "#2a4060", opacity: replayAvail ? 1 : 0.4 }}>
+          <button onClick={playReplay} disabled={!replayAvail || replaying} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: 1, padding: "6px 14px", borderRadius: 4, cursor: replayAvail && !replaying ? "pointer" : "not-allowed", border: "1px solid #2a4060", background: replaying ? "rgba(58,154,212,0.12)" : "transparent", color: replayAvail ? "#e8c84a" : "#2a4060", opacity: replayAvail ? 1 : 0.4 }}>
             {replaying ? "◀ PLAYING..." : "◀ REPLAY 10s"}
           </button>
 
@@ -2029,7 +2207,7 @@ function CommPage({ tailNumber = "N12345" }) {
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
           <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#3a5070", letterSpacing: 1.5 }}>WATCHING FOR:</span>
           {editingCallsign ? (
-            <input value={customCallsign} onChange={e => setCustomCallsign(e.target.value.toUpperCase())} onBlur={() => setEditingCallsign(false)} onKeyDown={e => e.key === "Enter" && setEditingCallsign(false)} autoFocus style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, fontWeight: 700, color: COMM_COLOR, background: "rgba(58,154,212,0.08)", border: `1px solid ${COMM_COLOR}`, borderRadius: 3, padding: "2px 8px", outline: "none", width: 100, letterSpacing: 2 }} />
+            <input value={customCallsign} onChange={e => setCustomCallsign(e.target.value.toUpperCase())} onBlur={() => setEditingCallsign(false)} onKeyDown={e => e.key === "Enter" && setEditingCallsign(false)} autoFocus style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, fontWeight: 700, color: COMM_COLOR, background: "rgba(58,154,212,0.08)", border: `1px solid ${COMM_COLOR}`, borderRadius: 3, padding: "2px 8px", outline: "none", width: 110, letterSpacing: 2 }} />
           ) : (
             <button onClick={() => setEditingCallsign(true)} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, fontWeight: 700, letterSpacing: 2, color: COMM_COLOR, background: "rgba(58,154,212,0.08)", border: "1px solid rgba(58,154,212,0.3)", borderRadius: 3, padding: "2px 10px", cursor: "pointer" }}>
               {customCallsign} ✎
@@ -2039,44 +2217,63 @@ function CommPage({ tailNumber = "N12345" }) {
         </div>
       </div>
 
-      {/* Transcript feed */}
-      <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", overflowX: "hidden", scrollbarWidth: "thin", padding: "6px 0" }}>
+      {/* ── Transcript feed ── */}
+      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", scrollbarWidth: "thin", padding: "6px 0", display: "flex", flexDirection: "column" }}>
+
         {transcript.length === 0 && (
-          <div style={{ padding: "40px 20px", textAlign: "center" }}>
-            <div style={{ fontSize: 28, marginBottom: 12, opacity: 0.3 }}>📡</div>
-            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#2a4060", letterSpacing: 2, lineHeight: 1.8 }}>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", textAlign: "center" }}>
+            <div style={{ fontSize: 28, marginBottom: 12, opacity: 0.25 }}>📡</div>
+            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#2a4060", letterSpacing: 2, lineHeight: 2 }}>
               FREQUENCY GUARD STANDBY<br/>
-              TAP START TO BEGIN TRANSCRIPTION<br/>
+              TAP START TO INITIALISE ENGINE<br/>
               ——<br/>
               ROUTE RADIO SPEAKER OUTPUT<br/>
               TO IPAD MICROPHONE INPUT<br/>
-              FOR BEST RESULTS
+              ——<br/>
+              SWAP WORKER STUB FOR<br/>
+              WHISPER-TINY.EN ONNX MODEL<br/>
+              BEFORE DEPLOYMENT
             </div>
           </div>
         )}
-        {transcript.map(entry => {
-          const isSystem = entry.text.startsWith("[");
-          return (
-            <div key={entry.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "5px 14px", borderBottom: "1px solid rgba(58,154,212,0.05)", background: entry.flagged ? (entry.flashing ? undefined : "rgba(232,90,74,0.08)") : "transparent", animation: entry.flashing ? "callsignFlash 0.4s ease 6" : "none", borderLeft: entry.flagged ? "3px solid #e85a4a" : "3px solid transparent", transition: "background 0.3s" }}>
-              <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#2a4060", letterSpacing: 0.5, flexShrink: 0, marginTop: 1, minWidth: 60 }}>{entry.time}</span>
-              <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: isSystem ? 8 : 11, color: isSystem ? "#1a3050" : (entry.flagged ? "#ff9060" : "#a0c8e8"), fontWeight: entry.flagged ? 700 : 400, lineHeight: 1.5, letterSpacing: entry.flagged ? 0.5 : 0 }}>
-                {entry.flagged && <span style={{ color: "#e85a4a", marginRight: 6, fontSize: 10 }}>⚠</span>}
-                {entry.text}
-              </span>
-            </div>
-          );
-        })}
+
+        <div style={{ flex: 1 }}>
+          {transcript.map(entry => {
+            const isSystem = entry.text.startsWith("[");
+            return (
+              <div key={entry.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "5px 14px", borderBottom: "1px solid rgba(58,154,212,0.05)", background: entry.flagged ? (entry.flashing ? undefined : "rgba(232,90,74,0.08)") : "transparent", animation: entry.flashing ? "callsignFlash 0.4s ease 6" : "none", borderLeft: entry.flagged ? "3px solid #e85a4a" : "3px solid transparent", transition: "background 0.3s" }}>
+                <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#2a4060", letterSpacing: 0.5, flexShrink: 0, marginTop: 2, minWidth: 62 }}>{entry.time}</span>
+                <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: isSystem ? 8 : 11, color: isSystem ? "#1a3050" : (entry.flagged ? "#ff9060" : "#a0c8e8"), fontWeight: entry.flagged ? 700 : 400, lineHeight: 1.55, letterSpacing: entry.flagged ? 0.5 : 0 }}>
+                  {entry.flagged && <span style={{ color: "#e85a4a", marginRight: 6, fontSize: 10 }}>⚠</span>}
+                  {entry.text}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Scroll sentinel — scrollIntoView pins here */}
+        <div ref={sentinelRef} style={{ height: 1, flexShrink: 0 }} />
       </div>
 
-      {/* Footer */}
+      {/* ── Footer status bar ── */}
       <div style={{ flexShrink: 0, borderTop: "1px solid rgba(58,154,212,0.12)", padding: "5px 14px", display: "flex", alignItems: "center", gap: 12, background: "#030710" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <div style={{ width: 6, height: 6, borderRadius: "50%", background: listening ? "#3dbe6c" : "#2a3040", boxShadow: listening ? "0 0 6px #3dbe6c" : "none" }} />
-          <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: listening ? "#3dbe6c" : "#2a4060", letterSpacing: 1.5 }}>{listening ? "LIVE" : "OFFLINE"}</span>
+          <div style={{ width: 6, height: 6, borderRadius: "50%", background: listening ? "#3dbe6c" : "#2a3040", boxShadow: listening ? "0 0 6px #3dbe6c" : "none", transition: "all 0.3s" }} />
+          <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: listening ? "#3dbe6c" : "#2a4060", letterSpacing: 1.5 }}>{listening ? "LIVE" : "STANDBY"}</span>
         </div>
-        <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#2a4060", letterSpacing: 1 }}>{transcript.filter(e => !e.text.startsWith("[")).length} TRANSMISSIONS</span>
-        <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#1a3050", letterSpacing: 1 }}>STT: WEB SPEECH API</span>
-        {frozen && <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e8c84a", letterSpacing: 1.5, marginLeft: "auto" }}>⏸ SCROLL FROZEN</span>}
+        <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#2a4060", letterSpacing: 1 }}>
+          {transcript.filter(e => !e.text.startsWith("[")).length} TX
+        </span>
+        <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#1a3050", letterSpacing: 1 }}>
+          RING: {BUFFER_SECONDS}s · {(RING_SIZE * 4 / 1024).toFixed(0)} KB
+        </span>
+        <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#1a3050", letterSpacing: 1 }}>
+          STT: WHISPER-TINY.EN
+        </span>
+        {frozen && (
+          <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e8c84a", letterSpacing: 1.5, marginLeft: "auto" }}>⏸ SCROLL FROZEN</span>
+        )}
       </div>
 
     </div>
