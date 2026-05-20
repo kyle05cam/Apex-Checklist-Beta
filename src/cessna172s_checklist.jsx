@@ -1507,7 +1507,8 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
         ::-webkit-scrollbar-thumb{background:#2a3040;border-radius:2px;}
         .check-item:hover{background:rgba(74,159,232,0.07)!important;}
         .tab-btn:hover{background:rgba(255,255,255,0.05)!important;}
-        @keyframes slideUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+        @keyframes slideUp{from{opacity:0;transform:translateY(100%);}to{opacity:1;transform:translateY(0);}}
+        @keyframes slideUpFast{from{opacity:0;transform:translateY(60%);}to{opacity:1;transform:translateY(0);}}
       `}</style>
 
       {/* HEADER */}
@@ -1615,7 +1616,8 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                 };
                 const cfg = configs[key];
                 return (
-                  <div key={key} style={{ maxHeight: "340px", overflowY: "auto", scrollbarWidth: "thin", background: cfg.bg, borderTop: `2px solid ${cfg.color}60`, animation: "slideUp 0.2s ease" }}>
+                  <div key={key} style={{ overflow: "hidden", animation: "slideUp 0.28s cubic-bezier(0.22,1,0.36,1)" }}>
+                  <div style={{ maxHeight: "340px", overflowY: "auto", scrollbarWidth: "thin", background: cfg.bg, borderTop: `2px solid ${cfg.color}60` }}>
                     {key === "vspeeds" && vspeeds.map((group, gi) => (
                       <div key={gi} style={{ padding: "10px 14px 4px" }}>
                         <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#4ae8c8", letterSpacing: 3, marginBottom: 6, opacity: 0.6 }}>{group.group.toUpperCase()}</div>
@@ -1682,6 +1684,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                       </div>
                     ))}
                   </div>
+                  </div>
                 );
               })}
             </div>
@@ -1697,8 +1700,8 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                 const isOpen = activeDrawer.has(acc.key);
                 const toggle = () => setActiveDrawer(prev => { const next = new Set(prev); isOpen ? next.delete(acc.key) : next.add(acc.key); return next; });
                 return (
-                  <button key={acc.key} onClick={toggle} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", cursor: "pointer", background: `linear-gradient(90deg, ${acc.bg} 0%, rgba(8,10,14,0.9) 65%)`, border: "none", borderTop: `1px solid ${acc.color}18`, outline: "none", textAlign: "left", transition: "all 0.15s" }}>
-                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: acc.color, fontWeight: 700 }}>▲</span>
+                  <button key={acc.key} onClick={toggle} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", cursor: "pointer", background: isOpen ? `linear-gradient(90deg, ${acc.color}22 0%, ${acc.color}08 65%)` : `linear-gradient(90deg, ${acc.bg} 0%, rgba(8,10,14,0.9) 65%)`, border: "none", borderTop: `1px solid ${acc.color}${isOpen ? "40" : "18"}`, outline: "none", textAlign: "left", transition: "background 0.2s, border-color 0.2s" }}>
+                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: acc.color, fontWeight: 700, transition: "transform 0.2s", display: "inline-block", transform: isOpen ? "rotate(0deg)" : "rotate(0deg)" }}>▲</span>
                     <span style={{ fontFamily: "'Oswald',sans-serif", fontSize: 13, color: acc.color, fontWeight: 700, letterSpacing: 2, flex: 1 }}>{acc.label}</span>
                     {acc.key === "vspeeds" && vspeedEditing && <button onClick={e => { e.stopPropagation(); resetVspeeds(); }} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer", marginRight: 4 }}>↺ RESET</button>}
                     {acc.key === "vspeeds" && <button onClick={e => { e.stopPropagation(); setVspeedEditing(v => !v); }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "3px 10px", borderRadius: 3, cursor: "pointer", background: vspeedEditing ? `${acc.color}25` : "transparent", color: vspeedEditing ? "#e8c84a" : acc.color, border: `1px solid ${vspeedEditing ? "#e8c84a" : acc.color}`, marginRight: 6 }}>{vspeedEditing ? "✓ DONE" : "✎ EDIT"}</button>}
