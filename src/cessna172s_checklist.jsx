@@ -1602,8 +1602,8 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
           </div>
 
           {/* ── PERFORMANCE DRAWERS — Pinned to bottom, grows smoothly upward ── */}
-          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 40, pointerEvents: "none", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 4px" }}>
-            <div style={{ pointerEvents: "auto", display: "flex", flexDirection: "column", gap: "2px" }}>
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 40, pointerEvents: "none", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 4px 4px 4px" }}>
+            <div style={{ pointerEvents: "auto", display: "flex", flexDirection: "column", gap: "3px" }}>
               {[
                 { key: "vspeeds", label: "V-SPEEDS · C172S",           color: "#3a9ad4", headerBg: "rgba(58,154,212,0.14)",  contentBg: "rgba(5,17,24,0.96)"  },
                 { key: "perf",    label: "T/O & LANDING · C172S",      color: "#e8c84a", headerBg: "rgba(232,200,74,0.14)",  contentBg: "rgba(14,10,0,0.96)"  },
@@ -1613,9 +1613,9 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                 const isOpen = activeDrawer.has(acc.key);
                 const toggle = () => setActiveDrawer(prev => { const next = new Set(prev); isOpen ? next.delete(acc.key) : next.add(acc.key); return next; });
                 return (
-                  <div key={acc.key} style={{ display: "flex", flexDirection: "column", borderRadius: "6px", overflow: "hidden", boxShadow: isOpen ? `0 0 16px ${acc.color}35, 0 4px 20px rgba(0,0,0,0.8)` : "none", border: `1px solid ${isOpen ? acc.color : `${acc.color}35`}`, transition: "all 0.25s ease" }}>
+                  <div key={acc.key} style={{ display: "flex", flexDirection: "column", borderRadius: "6px", overflow: "hidden", boxShadow: `0 0 12px ${acc.color}${isOpen ? "45" : "25"}, 0 4px 15px rgba(0,0,0,0.75)`, border: `1px solid ${isOpen ? acc.color : `${acc.color}60`}`, transition: "all 0.2s ease" }}>
                     {/* Header Row */}
-                    <button onClick={toggle} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "11px 16px", cursor: "pointer", background: `linear-gradient(90deg, ${acc.headerBg} 0%, rgba(13,15,18,0.95) 75%)`, backgroundColor: "#0d0f12", border: "none", outline: "none", textAlign: "left", flexShrink: 0, userSelect: "none" }}>
+                    <button onClick={toggle} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "6px 14px", cursor: "pointer", background: `linear-gradient(90deg, ${acc.headerBg} 0%, rgba(13,15,18,0.95) 75%)`, backgroundColor: "#0d0f12", border: "none", outline: "none", textAlign: "left", flexShrink: 0, userSelect: "none" }}>
                       <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: acc.color, fontWeight: 700, display: "inline-block", transform: isOpen ? "rotate(180deg)" : "rotate(90deg)", transition: "transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)" }}>▲</span>
                       <span style={{ fontFamily: "'Oswald',sans-serif", fontSize: 13, color: acc.color, fontWeight: 700, letterSpacing: 2, flex: 1 }}>{acc.label}</span>
                       {acc.key === "vspeeds" && vspeedEditing && <button onClick={e => { e.stopPropagation(); resetVspeeds(); }} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer", marginRight: 4 }}>↺ RESET</button>}
