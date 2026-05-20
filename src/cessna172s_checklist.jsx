@@ -1707,6 +1707,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
               })}
             </div>
           </div>
+        </div>
         {/* Right sidebar — emergency pages */}
         <div style={{ width: 90, flexShrink: 0, background: "#100c0c", borderLeft: "1px solid #281818", display: "flex", flexDirection: "column", overflowY: "auto", overflowX: "hidden" }}>
           {/* EMG label header */}
