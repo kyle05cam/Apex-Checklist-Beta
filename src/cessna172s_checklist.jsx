@@ -1603,17 +1603,18 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
 
           {/* ── PERFORMANCE DRAWERS — Pinned to bottom, grows smoothly upward ── */}
           <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 40, pointerEvents: "none", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 4px 4px 4px" }}>
-            <div style={{ pointerEvents: "auto", display: "flex", flexDirection: "column", gap: "4px" }}>
+            <div style={{ pointerEvents: "auto", display: "flex", flexDirection: "column", gap: "0px" }}>
               {[
                 { key: "vspeeds", label: "V-SPEEDS · C172S",           color: "#3a9ad4", headerBg: "rgba(58,154,212,0.12)",  contentBg: "rgba(5,17,24,0.96)"  },
                 { key: "perf",    label: "T/O & LANDING · C172S",      color: "#e8c84a", headerBg: "rgba(232,200,74,0.12)",  contentBg: "rgba(14,10,0,0.96)"  },
                 { key: "climb",   label: "CLIMB PERFORMANCE · C172S",  color: "#3dbe6c", headerBg: "rgba(61,190,108,0.12)",  contentBg: "rgba(2,14,6,0.96)"   },
                 { key: "cruise",  label: "CRUISE PERFORMANCE · C172S", color: "#3a9ad4", headerBg: "rgba(58,154,212,0.12)",  contentBg: "rgba(5,17,24,0.96)"  },
-              ].map((acc) => {
+              ].map((acc, index) => {
                 const isOpen = activeDrawer.has(acc.key);
                 const toggle = () => setActiveDrawer(prev => { const next = new Set(prev); isOpen ? next.delete(acc.key) : next.add(acc.key); return next; });
+                const isFirst = index === 0;
                 return (
-                  <div key={acc.key} style={{ display: "flex", flexDirection: "column", borderRadius: "6px", overflow: "hidden", boxShadow: `0 0 10px ${acc.color}${isOpen ? "40" : "20"}, 0 4px 12px rgba(0,0,0,0.8)`, border: `1px solid ${isOpen ? acc.color : `${acc.color}55`}`, backgroundColor: isOpen ? acc.contentBg : "rgba(13,17,22,0.65)", backdropFilter: "blur(4px)", transition: "all 0.2s ease" }}>
+                  <div key={acc.key} style={{ display: "flex", flexDirection: "column", borderRadius: "6px", overflow: "hidden", marginTop: isFirst ? "0px" : "-6px", boxShadow: `0 -4px 10px ${acc.color}${isOpen ? "40" : "20"}, 0 4px 12px rgba(0,0,0,0.8)`, borderTop: `1px solid ${isOpen ? acc.color : `${acc.color}55`}`, borderLeft: `1px solid ${isOpen ? acc.color : `${acc.color}55`}`, borderRight: `1px solid ${isOpen ? acc.color : `${acc.color}55`}`, borderBottom: isOpen ? `1px solid ${acc.color}` : "none", backgroundColor: isOpen ? acc.contentBg : "rgba(13,17,22,0.65)", backdropFilter: "blur(4px)", position: "relative", zIndex: isOpen ? 45 : 40 - index, transition: "all 0.2s ease" }}>
                     {/* Header Row */}
                     <button onClick={toggle} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "6px 14px", cursor: "pointer", background: `linear-gradient(90deg, ${acc.headerBg} 0%, rgba(13,15,18,0.2) 60%, transparent 100%)`, backgroundColor: "transparent", border: "none", outline: "none", textAlign: "left", flexShrink: 0, userSelect: "none" }}>
                       <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: acc.color, fontWeight: 700, display: "inline-block", transform: isOpen ? "rotate(180deg)" : "rotate(90deg)", transition: "transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)" }}>▲</span>
