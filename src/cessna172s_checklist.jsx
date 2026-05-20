@@ -1508,6 +1508,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
         .check-item:hover{background:rgba(74,159,232,0.07)!important;}
         .tab-btn:hover{background:rgba(255,255,255,0.05)!important;}
         @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+        @keyframes callsignFlash{0%,100%{background:rgba(232,90,74,0.0);}20%,60%{background:rgba(232,90,74,0.35);}40%,80%{background:rgba(232,200,74,0.25);}}
       `}</style>
 
       {/* HEADER */}
@@ -1598,7 +1599,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: T.centerBg, position: "relative" }}>
           {/* Main checklist scroll area */}
           <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", scrollbarWidth: "thin" }}>
-            {renderChecklist(activePg)}
+            {currentPage === "comm" ? <CommPage tailNumber={aircraft?.tailNumber || "N12345"} /> : renderChecklist(activePg)}
           </div>
 
           {/* ── PERFORMANCE DRAWERS — Pinned to bottom, grows smoothly upward ── */}
@@ -1727,6 +1728,19 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
               </button>
             );
           })}
+          {/* COMM tab — Radio Transcription */}
+          <div style={{ borderTop: "2px solid #1a2030", marginTop: "auto" }}>
+            <button className="tab-btn" onClick={() => setCurrentPage("comm")} style={{ width: "100%", minHeight: 76, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5, background: currentPage === "comm" ? "rgba(58,154,212,0.15)" : "transparent", outline: "none", border: "none", borderRight: `3px solid ${currentPage === "comm" ? "#3a9ad4" : "transparent"}`, cursor: "pointer", padding: "10px 4px", transition: "all 0.12s" }}>
+              <svg viewBox="0 0 24 24" width={26} height={26} fill="none">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" stroke={currentPage === "comm" ? "#3a9ad4" : "#2a4060"} strokeWidth="1.5" fill="none"/>
+                <path d="M8 8 Q12 5 16 8" stroke={currentPage === "comm" ? "#3a9ad4" : "#2a4060"} strokeWidth="1.5" strokeLinecap="round" fill="none"/>
+                <path d="M6 11 Q12 7 18 11" stroke={currentPage === "comm" ? "#3a9ad4" : "#2a4060"} strokeWidth="1.5" strokeLinecap="round" fill="none"/>
+                <circle cx="12" cy="15" r="2.5" fill={currentPage === "comm" ? "#3a9ad4" : "#2a4060"}/>
+                <line x1="12" y1="17.5" x2="12" y2="21" stroke={currentPage === "comm" ? "#3a9ad4" : "#2a4060"} strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, fontWeight: 700, letterSpacing: 0.5, color: currentPage === "comm" ? "#3a9ad4" : "#2a4060", textAlign: "center", lineHeight: 1.2, textTransform: "uppercase" }}>COMM</div>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1821,6 +1835,250 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMM PAGE — Live Radio Transcription + Callsign Watchdog + 10s Replay
+// Uses Web Speech API for on-device STT (works offline with downloaded voices)
+// Audio buffer via MediaRecorder for 10-second playback replay
+// ─────────────────────────────────────────────────────────────────────────────
+function CommPage({ tailNumber = "N12345" }) {
+  const [listening, setListening]       = useState(false);
+  const [transcript, setTranscript]     = useState([]);
+  const [alertCount, setAlertCount]     = useState(0);
+  const [frozen, setFrozen]             = useState(false);
+  const [replayAvail, setReplayAvail]   = useState(false);
+  const [replaying, setReplaying]       = useState(false);
+  const [watchdog, setWatchdog]         = useState(true);
+  const [customCallsign, setCustomCallsign] = useState(tailNumber);
+  const [editingCallsign, setEditingCallsign] = useState(false);
+
+  const recognitionRef  = useRef(null);
+  const scrollRef       = useRef(null);
+  const audioChunksRef  = useRef([]);
+  const mediaRecRef     = useRef(null);
+  const replayBlobsRef  = useRef([]);
+  const flashTimers     = useRef({});
+  const entryId         = useRef(0);
+
+  useEffect(() => {
+    if (!frozen && scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [transcript, frozen]);
+
+  const checkCallsign = (text) => {
+    if (!watchdog) return false;
+    const cs = customCallsign.toUpperCase().replace(/\s+/g, "");
+    const spoken = cs.split("").join("[\\s\\-]?");
+    const re = new RegExp(spoken, "i");
+    const plain = new RegExp(cs.replace(/(\d)/g, "$1[\\s]?"), "i");
+    return re.test(text.toUpperCase().replace(/\s+/g, "")) || plain.test(text.toUpperCase());
+  };
+
+  const startFlash = (id) => {
+    setTranscript(prev => prev.map(e => e.id === id ? { ...e, flashing: true } : e));
+    clearTimeout(flashTimers.current[id]);
+    flashTimers.current[id] = setTimeout(() => {
+      setTranscript(prev => prev.map(e => e.id === id ? { ...e, flashing: false } : e));
+    }, 3000);
+  };
+
+  const addEntry = (text) => {
+    const id = ++entryId.current;
+    const now = new Date();
+    const time = now.toTimeString().slice(0, 8);
+    const flagged = checkCallsign(text);
+    setTranscript(prev => [...prev.slice(-80), { id, time, text, flagged, flashing: false }]);
+    if (flagged) {
+      setAlertCount(c => c + 1);
+      setTimeout(() => startFlash(id), 50);
+    }
+  };
+
+  const startListening = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      addEntry("[ERROR] Speech recognition not supported in this browser.");
+      return;
+    }
+    const rec = new SpeechRecognition();
+    rec.continuous = true;
+    rec.interimResults = false;
+    rec.lang = "en-US";
+    rec.maxAlternatives = 1;
+
+    rec.onresult = (e) => {
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) addEntry(e.results[i][0].transcript.trim());
+      }
+    };
+    rec.onerror = (e) => {
+      if (e.error !== "no-speech") addEntry(`[STT ERROR: ${e.error}]`);
+    };
+    rec.onend = () => {
+      if (recognitionRef.current === rec) rec.start();
+    };
+
+    recognitionRef.current = rec;
+    rec.start();
+
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+      const mr = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      audioChunksRef.current = [];
+      mr.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push({ blob: e.data, ts: Date.now() });
+          const cutoff = Date.now() - 12000;
+          audioChunksRef.current = audioChunksRef.current.filter(c => c.ts > cutoff);
+          replayBlobsRef.current = audioChunksRef.current.map(c => c.blob);
+          setReplayAvail(true);
+        }
+      };
+      mr.start(1000);
+      mediaRecRef.current = mr;
+    }).catch(() => {
+      addEntry("[AUDIO] Microphone access denied — transcription only mode.");
+    });
+
+    setListening(true);
+    addEntry("[SYSTEM] Frequency Guard active. Monitoring for " + customCallsign + "...");
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      const r = recognitionRef.current;
+      recognitionRef.current = null;
+      try { r.stop(); } catch {}
+    }
+    if (mediaRecRef.current) {
+      try { mediaRecRef.current.stop(); mediaRecRef.current.stream?.getTracks().forEach(t => t.stop()); } catch {}
+      mediaRecRef.current = null;
+    }
+    setListening(false);
+    addEntry("[SYSTEM] Monitoring stopped.");
+  };
+
+  const playReplay = () => {
+    if (!replayBlobsRef.current.length) return;
+    setReplaying(true);
+    const combined = new Blob(replayBlobsRef.current, { type: "audio/webm" });
+    const url = URL.createObjectURL(combined);
+    const audio = new Audio(url);
+    audio.onended = () => { setReplaying(false); URL.revokeObjectURL(url); };
+    audio.onerror = () => { setReplaying(false); URL.revokeObjectURL(url); };
+    audio.play().catch(() => setReplaying(false));
+  };
+
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) try { recognitionRef.current.stop(); } catch {}
+      if (mediaRecRef.current) try { mediaRecRef.current.stop(); } catch {}
+      Object.values(flashTimers.current).forEach(clearTimeout);
+    };
+  }, []);
+
+  const COMM_COLOR = "#3a9ad4";
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "#04090f", animation: "fadeIn 0.15s ease" }}>
+
+      {/* Header */}
+      <div style={{ background: "linear-gradient(135deg,#060c14,#0a1420)", borderBottom: `2px solid ${COMM_COLOR}`, padding: "10px 14px", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+          <div>
+            <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 15, fontWeight: 700, letterSpacing: 3, color: COMM_COLOR }}>FREQUENCY GUARD</div>
+            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#3a5070", letterSpacing: 1.5, marginTop: 1 }}>RADIO TRANSCRIPTION · CALLSIGN WATCHDOG</div>
+          </div>
+          {alertCount > 0 && (
+            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, fontWeight: 700, padding: "3px 10px", borderRadius: 3, background: "rgba(232,90,74,0.2)", border: "1px solid #e85a4a", color: "#e85a4a" }}>
+              ⚠ {alertCount} CALLSIGN ALERT{alertCount > 1 ? "S" : ""}
+            </div>
+          )}
+        </div>
+
+        {/* Controls row */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <button onClick={listening ? stopListening : startListening} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: 1, padding: "6px 16px", borderRadius: 4, cursor: "pointer", border: `1px solid ${listening ? "#e85a4a" : COMM_COLOR}`, background: listening ? "rgba(232,90,74,0.15)" : `rgba(58,154,212,0.15)`, color: listening ? "#e85a4a" : COMM_COLOR, display: "flex", alignItems: "center", gap: 6 }}>
+            {listening
+              ? <><span style={{ width: 8, height: 8, background: "#e85a4a", borderRadius: 2, display: "inline-block" }} />STOP</>
+              : <><span style={{ width: 8, height: 8, background: COMM_COLOR, borderRadius: "50%", display: "inline-block" }} />START</>
+            }
+          </button>
+
+          <button onClick={playReplay} disabled={!replayAvail || replaying} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: 1, padding: "6px 14px", borderRadius: 4, cursor: replayAvail && !replaying ? "pointer" : "not-allowed", border: "1px solid #2a4060", background: replaying ? "rgba(58,154,212,0.15)" : "transparent", color: replayAvail ? "#e8c84a" : "#2a4060", opacity: replayAvail ? 1 : 0.4 }}>
+            {replaying ? "◀ PLAYING..." : "◀ REPLAY 10s"}
+          </button>
+
+          <button onClick={() => setFrozen(f => !f)} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: 1, padding: "6px 14px", borderRadius: 4, cursor: "pointer", border: `1px solid ${frozen ? "#e8c84a" : "#2a4060"}`, background: frozen ? "rgba(232,200,74,0.1)" : "transparent", color: frozen ? "#e8c84a" : "#4a6080" }}>
+            {frozen ? "⏸ FROZEN" : "⏸ FREEZE"}
+          </button>
+
+          <button onClick={() => setWatchdog(w => !w)} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: 1, padding: "6px 14px", borderRadius: 4, cursor: "pointer", border: `1px solid ${watchdog ? "#3dbe6c" : "#2a4060"}`, background: watchdog ? "rgba(61,190,108,0.1)" : "transparent", color: watchdog ? "#3dbe6c" : "#4a6080" }}>
+            {watchdog ? "👁 GUARD ON" : "👁 GUARD OFF"}
+          </button>
+
+          <button onClick={() => { setTranscript([]); setAlertCount(0); }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: 1, padding: "6px 14px", borderRadius: 4, cursor: "pointer", border: "1px solid #2a3040", background: "transparent", color: "#4a5068", marginLeft: "auto" }}>
+            ↺ CLEAR
+          </button>
+        </div>
+
+        {/* Callsign config */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+          <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#3a5070", letterSpacing: 1.5 }}>WATCHING FOR:</span>
+          {editingCallsign ? (
+            <input value={customCallsign} onChange={e => setCustomCallsign(e.target.value.toUpperCase())} onBlur={() => setEditingCallsign(false)} onKeyDown={e => e.key === "Enter" && setEditingCallsign(false)} autoFocus style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, fontWeight: 700, color: COMM_COLOR, background: "rgba(58,154,212,0.08)", border: `1px solid ${COMM_COLOR}`, borderRadius: 3, padding: "2px 8px", outline: "none", width: 100, letterSpacing: 2 }} />
+          ) : (
+            <button onClick={() => setEditingCallsign(true)} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, fontWeight: 700, letterSpacing: 2, color: COMM_COLOR, background: "rgba(58,154,212,0.08)", border: "1px solid rgba(58,154,212,0.3)", borderRadius: 3, padding: "2px 10px", cursor: "pointer" }}>
+              {customCallsign} ✎
+            </button>
+          )}
+          <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#2a4050", letterSpacing: 1 }}>tap to edit</span>
+        </div>
+      </div>
+
+      {/* Transcript feed */}
+      <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", overflowX: "hidden", scrollbarWidth: "thin", padding: "6px 0" }}>
+        {transcript.length === 0 && (
+          <div style={{ padding: "40px 20px", textAlign: "center" }}>
+            <div style={{ fontSize: 28, marginBottom: 12, opacity: 0.3 }}>📡</div>
+            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#2a4060", letterSpacing: 2, lineHeight: 1.8 }}>
+              FREQUENCY GUARD STANDBY<br/>
+              TAP START TO BEGIN TRANSCRIPTION<br/>
+              ——<br/>
+              ROUTE RADIO SPEAKER OUTPUT<br/>
+              TO IPAD MICROPHONE INPUT<br/>
+              FOR BEST RESULTS
+            </div>
+          </div>
+        )}
+        {transcript.map(entry => {
+          const isSystem = entry.text.startsWith("[");
+          return (
+            <div key={entry.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "5px 14px", borderBottom: "1px solid rgba(58,154,212,0.05)", background: entry.flagged ? (entry.flashing ? undefined : "rgba(232,90,74,0.08)") : "transparent", animation: entry.flashing ? "callsignFlash 0.4s ease 6" : "none", borderLeft: entry.flagged ? "3px solid #e85a4a" : "3px solid transparent", transition: "background 0.3s" }}>
+              <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#2a4060", letterSpacing: 0.5, flexShrink: 0, marginTop: 1, minWidth: 60 }}>{entry.time}</span>
+              <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: isSystem ? 8 : 11, color: isSystem ? "#1a3050" : (entry.flagged ? "#ff9060" : "#a0c8e8"), fontWeight: entry.flagged ? 700 : 400, lineHeight: 1.5, letterSpacing: entry.flagged ? 0.5 : 0 }}>
+                {entry.flagged && <span style={{ color: "#e85a4a", marginRight: 6, fontSize: 10 }}>⚠</span>}
+                {entry.text}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Footer */}
+      <div style={{ flexShrink: 0, borderTop: "1px solid rgba(58,154,212,0.12)", padding: "5px 14px", display: "flex", alignItems: "center", gap: 12, background: "#030710" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <div style={{ width: 6, height: 6, borderRadius: "50%", background: listening ? "#3dbe6c" : "#2a3040", boxShadow: listening ? "0 0 6px #3dbe6c" : "none" }} />
+          <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: listening ? "#3dbe6c" : "#2a4060", letterSpacing: 1.5 }}>{listening ? "LIVE" : "OFFLINE"}</span>
+        </div>
+        <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#2a4060", letterSpacing: 1 }}>{transcript.filter(e => !e.text.startsWith("[")).length} TRANSMISSIONS</span>
+        <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#1a3050", letterSpacing: 1 }}>STT: WEB SPEECH API</span>
+        {frozen && <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e8c84a", letterSpacing: 1.5, marginLeft: "auto" }}>⏸ SCROLL FROZEN</span>}
+      </div>
+
     </div>
   );
 }
