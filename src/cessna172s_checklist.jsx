@@ -1699,7 +1699,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                       </div>
                     )}
                     {/* Header row — always visible, sits at the bottom of its own panel unit */}
-                    <button onClick={toggle} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", cursor: "pointer", background: `linear-gradient(90deg, ${acc.headerBg} 0%, rgba(8,10,14,0.9) 65%)`, border: "none", borderTop: `1px solid ${acc.color}18`, outline: "none", textAlign: "left", transition: "all 0.15s", flexShrink: 0 }}>
+                    <button onClick={toggle} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", cursor: "pointer", background: `linear-gradient(90deg, ${acc.headerBg} 0%, #0d0f12 65%)`, border: "none", borderTop: `1px solid ${acc.color}18`, outline: "none", textAlign: "left", transition: "all 0.15s", flexShrink: 0, backgroundColor: "#0d0f12" }}>
                       <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, color: acc.color, fontWeight: 700 }}>▲</span>
                       <span style={{ fontFamily: "'Oswald',sans-serif", fontSize: 13, color: acc.color, fontWeight: 700, letterSpacing: 2, flex: 1 }}>{acc.label}</span>
                       {acc.key === "vspeeds" && vspeedEditing && <button onClick={e => { e.stopPropagation(); resetVspeeds(); }} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer", marginRight: 4 }}>↺ RESET</button>}
