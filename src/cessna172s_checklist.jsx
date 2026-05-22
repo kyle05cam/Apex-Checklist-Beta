@@ -4,6 +4,7 @@
 // live here. Import { ChecklistApp } into apex_kneeboard.jsx to use.
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState, useEffect, useRef } from "react";
+import { CommPage } from "./comm_page.jsx";
 
 export const PAGES = [
   {
@@ -1597,8 +1598,11 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
         {/* Center — checklist with fixed bottom accordion overlay */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: T.centerBg, position: "relative" }}>
           {/* Main checklist scroll area */}
-          <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", scrollbarWidth: "thin" }}>
-            {renderChecklist(activePg)}
+          <div style={{ flex: 1, overflowY: currentPage === "comm" ? "hidden" : "auto", overflowX: "hidden", scrollbarWidth: "thin", display: "flex", flexDirection: "column" }}>
+            {currentPage === "comm"
+              ? <CommPage aircraft={aircraft} />
+              : renderChecklist(activePg)
+            }
           </div>
 
           {/* ── PERFORMANCE DRAWERS — Pinned to bottom, grows smoothly upward ── */}
@@ -1727,6 +1731,32 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
               </button>
             );
           })}
+          {/* COMM — bottom of right sidebar */}
+          <div style={{ marginTop: "auto" }}>
+            <button
+              className="tab-btn"
+              onClick={() => setCurrentPage("comm")}
+              style={{
+                width: "100%", minHeight: 76, display: "flex", flexDirection: "column",
+                alignItems: "center", justifyContent: "center", gap: 5,
+                background: currentPage === "comm" ? "rgba(74,232,200,0.1)" : "transparent",
+                outline: "none", borderTop: "1px solid #1a2a28", borderLeft: "none",
+                borderBottom: "none",
+                borderRight: `3px solid ${currentPage === "comm" ? "#4ae8c8" : "transparent"}`,
+                cursor: "pointer", padding: "10px 4px", transition: "all 0.12s",
+              }}
+            >
+              <svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="3" fill={currentPage==="comm"?"#4ae8c8":"#2a4a48"}/>
+                <path d="M12 12 Q8 7 4 3" stroke={currentPage==="comm"?"#4ae8c8":"#2a4a48"} strokeWidth="1.5" strokeLinecap="round"/>
+                <path d="M12 12 Q16 7 20 3" stroke={currentPage==="comm"?"#4ae8c8":"#2a4a48"} strokeWidth="1.5" strokeLinecap="round"/>
+                <line x1="12" y1="15" x2="12" y2="22" stroke={currentPage==="comm"?"#4ae8c8":"#2a4a48"} strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, fontWeight:700, letterSpacing:0.5, color: currentPage==="comm"?"#4ae8c8":"#2a4a48", textAlign:"center", lineHeight:1.2, textTransform:"uppercase" }}>
+                COMM{"\n"}WATCH
+              </div>
+            </button>
+          </div>
         </div>
       </div>
 
