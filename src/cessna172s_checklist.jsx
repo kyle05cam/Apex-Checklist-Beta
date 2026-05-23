@@ -2062,11 +2062,11 @@ moreSidebarBdr:"#2a1e3a",
            </div>
           </div>}
         </div>
-        {/* Right sidebar — emergency pages */}
-<div style={{ width: 90, flexShrink: 0, background: T.emgSidebarBg, borderLeft: 1px solid ${T.emgSidebarBdr}, display: "flex", flexDirection: "column", overflowY: "auto", overflowX: "hidden", transition: "all 0.2s ease" }}>
-{/* EMG label header */}
-<div style={{ width: "100%", padding: "6px 0 5px", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: 1px solid ${T.emgSidebarBdr}, flexShrink: 0 }}>
-<span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, fontWeight: 700, letterSpacing: 2, color: T.emgLabelColor, textTransform: "uppercase" }}>EMG</span>
+{/* Right sidebar — emergency pages */}
+        <div style={{ width: 90, flexShrink: 0, background: T.emgSidebarBg, borderLeft: `1px solid ${T.emgSidebarBdr}`, display: "flex", flexDirection: "column", overflowY: "auto", overflowX: "hidden", transition: "all 0.2s ease" }}>
+          {/* EMG label header */}
+          <div style={{ width: "100%", padding: "6px 0 5px", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: `1px solid ${T.emgSidebarBdr}`, flexShrink: 0 }}>
+            <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, fontWeight: 700, letterSpacing: 2, color: T.emgLabelColor, textTransform: "uppercase" }}>EMG</span>
           </div>
           {EMG_PAGES.map(pg => {
             const isActive = currentPage === pg.id;
