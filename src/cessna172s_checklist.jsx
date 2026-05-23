@@ -2230,152 +2230,130 @@ return (
           </div>
         </div>
       )}
-      {/* Scratchpad overlay */}
+ {/* Scratchpad overlay */}
       {scratchpadOpen && (
-        <ScratchpadModal
-          onClose={() => setScratchpadOpen(false)}
-          linesRef={scratchpadLinesRef}
-        />
+        <div style={{ position: "absolute", inset: 0, zIndex: 200, background: "rgba(8,10,14,0.96)", display: "flex", flexDirection: "column", animation: "fadeIn 0.15s ease" }}>
+          {/* Header */}
+          <div style={{ background: "linear-gradient(135deg,#0a0c10,#141820)", borderBottom: "2px solid #e8c84a", padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+            <span style={{ fontFamily: "'Oswald',sans-serif", fontSize: 15, fontWeight: 700, letterSpacing: 3, color: "#e8c84a", textTransform: "uppercase" }}>PILOT SCRATCHPAD</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ display: "flex", background: "#0d0f12", border: "1px solid #2a3040", borderRadius: 4, overflow: "hidden" }}>
+                {["draw","type"].map(mode => (
+                  <button key={mode} onClick={() => setScratchpadMode(mode)} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "5px 14px", cursor: "pointer", border: "none", background: scratchpadMode === mode ? "rgba(232,200,74,0.15)" : "transparent", color: scratchpadMode === mode ? "#e8c84a" : "#4a5068", borderRight: mode === "draw" ? "1px solid #2a3040" : "none", textTransform: "uppercase", transition: "all 0.15s" }}>{mode === "draw" ? "✏ DRAW" : "⌨ TYPE"}</button>
+                ))}
+              </div>
+              <button onClick={() => setScratchpadOpen(false)} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: 1, padding: "5px 14px", borderRadius: 4, cursor: "pointer", background: "rgba(232,90,74,0.1)", color: "#e85a4a", border: "1px solid #e85a4a" }}>✕ CLOSE</button>
+            </div>
+          </div>
+          {/* Body */}
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", padding: "10px 14px 14px" }}>
+            {scratchpadMode === "draw" ? (
+              <div style={{ flex: 1, position: "relative", background: "#050e09", border: "1px solid #1e3528", borderRadius: 6, overflow: "hidden", cursor: "crosshair" }}>
+                <PersistentCanvas linesRef={scratchpadLinesRef} />
+              </div>
+            ) : (
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#4a5068", letterSpacing: 1.5 }}>✎ FREE TEXT · AUTO-SAVED · {scratchpadText.length} CHARS</div>
+                <textarea value={scratchpadText} onChange={e => { setScratchpadText(e.target.value); try { window.storage.set("scratchpad-text", e.target.value); } catch {} }} placeholder="ATIS · CLEARANCES · FREQUENCIES · WEATHER · NOTAMS · PIREPS..." style={{ flex: 1, resize: "none", outline: "none", background: "#0a0e0a", border: "1px solid #1e3528", borderRadius: 6, color: "#e8e4d8", fontFamily: "'Share Tech Mono',monospace", fontSize: 14, lineHeight: 1.7, padding: "14px 16px", caretColor: "#e8c84a" }} />
+                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                  <button onClick={() => { setScratchpadText(""); try { window.storage.delete("scratchpad-text"); } catch {}; }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "4px 12px", borderRadius: 3, cursor: "pointer", background: "transparent", color: "#6a3030", border: "1px solid #3a2020" }}>↺ CLEAR TEXT</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// STANDALONE HIGH-PERFORMANCE PERSISTENT SCRATCHPAD MOTOR LAYER
-// ─────────────────────────────────────────────────────────────────────────────
-function ScratchpadModal({ onClose, linesRef }) {
+function PersistentCanvas({ linesRef }) {
   const canvasRef = React.useRef(null);
-  const [isDrawing, setIsDrawing] = React.useState(false);
+  const isDrawingRef = React.useRef(false);
 
-  // WARM LOAD: Immediately redraw cached lines from parent reference when opened
   React.useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    
-    // Force direct absolute window pixel dimensions to bypass container collapse bugs
-    const headerHeight = 48;
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight - headerHeight;
-    
-    // Fixed drawing style rules
-    ctx.strokeStyle = "#4ae8c8"; // Avionics tactical teal
-    ctx.lineWidth = 3;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
+    const container = canvas.parentElement;
+    canvas.width  = container.clientWidth;
+    canvas.height = container.clientHeight;
+    redraw(canvas);
+  }, []);
 
-    // Instantly redraw historical line steps from the persistent parent ref array vault
-    if (linesRef.current && linesRef.current.length > 0) {
-      linesRef.current.forEach(stroke => {
-        if (stroke.length < 1) return;
-        ctx.beginPath();
-        ctx.moveTo(stroke[0].x, stroke[0].y);
-        for (let i = 1; i < stroke.length; i++) {
-          ctx.lineTo(stroke[i].x, stroke[i].y);
-        }
-        ctx.stroke();
-      });
-    }
-  }, [linesRef]);
-
-  // DRAW ACTION HANDLERS
-  const startDrawing = (e) => {
-    if (e.cancelable) e.preventDefault?.(); // Stop iOS gesture hijacking
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
-
-    const ctx = canvas.getContext("2d");
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    setIsDrawing(true);
-
-    // Initialize a new stroke trace route safely inside our master array cache
-    linesRef.current.push([{ x, y }]);
-  };
-
-  const draw = (e) => {
-    if (!isDrawing) return;
-    if (e.cancelable) e.preventDefault?.(); // Stop iOS gesture hijacking
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
-
-    const ctx = canvas.getContext("2d");
-    ctx.lineTo(x, y);
-    ctx.stroke();
-
-    // High Performance direct mutation: pushes coordinates smoothly without copy lag
-    if (linesRef.current.length > 0) {
-      linesRef.current[linesRef.current.length - 1].push({ x, y });
-    }
-  };
-
-  const stopDrawing = () => {
-    setIsDrawing(false);
-  };
-
-  const clearCanvas = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+  function redraw(canvas) {
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Purge master persistent memory lines completely
+    ctx.strokeStyle = "#4ae8c8";
+    ctx.lineWidth   = 3;
+    ctx.lineCap     = "round";
+    ctx.lineJoin    = "round";
+    linesRef.current.forEach(stroke => {
+      if (stroke.length < 2) return;
+      ctx.beginPath();
+      ctx.moveTo(stroke[0].x, stroke[0].y);
+      for (let i = 1; i < stroke.length; i++) ctx.lineTo(stroke[i].x, stroke[i].y);
+      ctx.stroke();
+    });
+  }
+
+  function getXY(e) {
+    const rect = canvasRef.current.getBoundingClientRect();
+    const src  = e.touches ? e.touches[0] : e;
+    return { x: src.clientX - rect.left, y: src.clientY - rect.top };
+  }
+
+  function startDrawing(e) {
+    if (e.cancelable) e.preventDefault();
+    const { x, y } = getXY(e);
+    const ctx = canvasRef.current.getContext("2d");
+    ctx.strokeStyle = "#4ae8c8";
+    ctx.lineWidth   = 3;
+    ctx.lineCap     = "round";
+    ctx.lineJoin    = "round";
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    isDrawingRef.current = true;
+    linesRef.current.push([{ x, y }]);
+  }
+
+  function draw(e) {
+    if (!isDrawingRef.current) return;
+    if (e.cancelable) e.preventDefault();
+    const { x, y } = getXY(e);
+    const ctx = canvasRef.current.getContext("2d");
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    linesRef.current[linesRef.current.length - 1].push({ x, y });
+  }
+
+  function stopDrawing() { isDrawingRef.current = false; }
+
+  function clearCanvas() {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     linesRef.current = [];
-  };
+  }
 
   return (
-    <div style={{ 
-      position: "fixed", 
-      top: 0, 
-      left: 0, 
-      right: 0,
-      bottom: 0,
-      width: "100vw", 
-      height: "100vh", 
-      zIndex: 9999, // Force it to sit over every single background sidebar layer
-      background: "#0a0d14", 
-      display: "flex", 
-      flexDirection: "column", 
-      animation: "fadeIn 0.12s ease" 
-    }}>
-      {/* Header Panel */}
-      <div style={{ height: "48px", background: "linear-gradient(135deg,#0a0c10,#141820)", borderBottom: "2px solid #4ae8c8", padding: "0 14px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontFamily: "'Oswald',sans-serif", fontSize: 14, fontWeight: 700, letterSpacing: 3, color: "#4ae8c8" }}>✦ SCRATCHPAD NOTEBOOK</span>
-        </div>
-        <div style={{ display: "flex", gap: 10 }}>
-          <button onClick={clearCanvas} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 11, padding: "4px 14px", borderRadius: 4, cursor: "pointer", background: "transparent", color: "#e85a4a", border: "1px solid rgba(232,90,74,0.4)" }}>↺ WIPE</button>
-          <button onClick={onClose} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "4px 14px", borderRadius: 4, cursor: "pointer", background: "rgba(74,232,200,0.1)", color: "#4ae8c8", border: "1px solid #4ae8c8" }}>✕ CLOSE</button>
-        </div>
-      </div>
-
-      {/* Canvas Interaction Field */}
-      <div style={{ flex: 1, position: "relative", cursor: "crosshair", background: "#0a0d14", width: "100%" }}>
-        <canvas
-          ref={canvasRef}
-          onMouseDown={startDrawing}
-          onMouseMove={draw}
-          onMouseUp={stopDrawing}
-          onMouseLeave={stopDrawing}
-          onTouchStart={e => { if (e.cancelable) e.preventDefault(); startDrawing(e); }}
-          onTouchMove={e => { if (e.cancelable) e.preventDefault(); draw(e); }}
-          onTouchEnd={stopDrawing}
-          style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "block" }}
-        />
-      </div>
-    </div>
+    <>
+      <button
+        onClick={clearCanvas}
+        style={{ position:"absolute", top:8, right:8, zIndex:10, fontFamily:"'Share Tech Mono',monospace", fontSize:9, padding:"3px 10px", borderRadius:3, cursor:"pointer", background:"rgba(8,14,10,0.8)", color:"#e85a4a", border:"1px solid rgba(232,90,74,0.4)" }}
+      >
+        ↺ WIPE
+      </button>
+      <canvas
+        ref={canvasRef}
+        onMouseDown={startDrawing}
+        onMouseMove={draw}
+        onMouseUp={stopDrawing}
+        onMouseLeave={stopDrawing}
+        onTouchStart={e => { if (e.cancelable) e.preventDefault(); startDrawing(e); }}
+        onTouchMove={e => { if (e.cancelable) e.preventDefault(); draw(e); }}
+        onTouchEnd={stopDrawing}
+        style={{ position:"absolute", inset:0, display:"block", width:"100%", height:"100%" }}
+      />
+    </>
   );
 }
