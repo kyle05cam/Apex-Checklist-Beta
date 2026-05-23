@@ -1239,8 +1239,9 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   };
 
   const commStartListening = async () => {
-  // Guard: bail if already running (prevents double-stream on rapid taps)
-    if (commStreamRef.current || commListening) return;
+  // Guard ONLY on real hardware state — not React state flag (async, may lag)
+  if (commStreamRef.current) return;
+  // ...rest unchanged
   
     try {
       const stream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,sampleRate:16000,echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
@@ -1298,9 +1299,11 @@ const commStopListening = () => {
     
     // 4. Return app state back to absolute cold baseline
     setCommListening(false);
-    setCommMicStatus("idle");
+    setCommMicStatus("idle");   // reset to idle so button re-enables cleanly
     setCommTranscript("");
     setCommRmsLevel(0);
+    commStreamRef.current = null;   // belt-and-suspenders: ensure ref is null
+    commAudioCtxRef.current = null; // ensure ctx ref is null after close
   };
 
   const commAckCall = () => { commClearTimers(); setCommWatchdogState("clear"); setCommWatchdogTx(null); setCommAckCountdown(0); commPlayChime(false); };
