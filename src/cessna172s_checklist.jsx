@@ -1164,8 +1164,6 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
     if(pos<t.length)out.push({text:t.slice(pos),type:"plain"});
     return out;
   };
-// Persistent drawing canvas cache to prevent unmount data-loss
-  const scratchpadLinesRef = useRef([]);
 
   const commPlayChime = (urgent=false) => {
     try {
@@ -2249,7 +2247,7 @@ return (
           <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", padding: "10px 14px 14px" }}>
             {scratchpadMode === "draw" ? (
               <div style={{ flex: 1, position: "relative", background: "#050e09", border: "1px solid #1e3528", borderRadius: 6, overflow: "hidden", cursor: "crosshair" }}>
-                <PersistentCanvas linesRef={scratchpadLinesRef} />
+                <ScratchpadCanvas storageKey="scratchpad-main-canvas" />
               </div>
             ) : (
               <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
@@ -2264,96 +2262,5 @@ return (
         </div>
       )}
     </div>
-  );
-}
-
-function PersistentCanvas({ linesRef }) {
-  const canvasRef = useRef(null);
-  const isDrawingRef = useRef(false);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const container = canvas.parentElement;
-    canvas.width  = container.clientWidth;
-    canvas.height = container.clientHeight;
-    redraw(canvas);
-  }, []);
-
-  function redraw(canvas) {
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = "#4ae8c8";
-    ctx.lineWidth   = 3;
-    ctx.lineCap     = "round";
-    ctx.lineJoin    = "round";
-    linesRef.current.forEach(stroke => {
-      if (stroke.length < 2) return;
-      ctx.beginPath();
-      ctx.moveTo(stroke[0].x, stroke[0].y);
-      for (let i = 1; i < stroke.length; i++) ctx.lineTo(stroke[i].x, stroke[i].y);
-      ctx.stroke();
-    });
-  }
-
-  function getXY(e) {
-    const rect = canvasRef.current.getBoundingClientRect();
-    const src  = e.touches ? e.touches[0] : e;
-    return { x: src.clientX - rect.left, y: src.clientY - rect.top };
-  }
-
-  function startDrawing(e) {
-    if (e.cancelable) e.preventDefault();
-    const { x, y } = getXY(e);
-    const ctx = canvasRef.current.getContext("2d");
-    ctx.strokeStyle = "#4ae8c8";
-    ctx.lineWidth   = 3;
-    ctx.lineCap     = "round";
-    ctx.lineJoin    = "round";
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    isDrawingRef.current = true;
-    linesRef.current.push([{ x, y }]);
-  }
-
-  function draw(e) {
-    if (!isDrawingRef.current) return;
-    if (e.cancelable) e.preventDefault();
-    const { x, y } = getXY(e);
-    const ctx = canvasRef.current.getContext("2d");
-    ctx.lineTo(x, y);
-    ctx.stroke();
-    linesRef.current[linesRef.current.length - 1].push({ x, y });
-  }
-
-  function stopDrawing() { isDrawingRef.current = false; }
-
-  function clearCanvas() {
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    linesRef.current = [];
-  }
-
-  return (
-    <>
-      <button
-        onClick={clearCanvas}
-        style={{ position:"absolute", top:8, right:8, zIndex:10, fontFamily:"'Share Tech Mono',monospace", fontSize:9, padding:"3px 10px", borderRadius:3, cursor:"pointer", background:"rgba(8,14,10,0.8)", color:"#e85a4a", border:"1px solid rgba(232,90,74,0.4)" }}
-      >
-        ↺ WIPE
-      </button>
-      <canvas
-        ref={canvasRef}
-        onMouseDown={startDrawing}
-        onMouseMove={draw}
-        onMouseUp={stopDrawing}
-        onMouseLeave={stopDrawing}
-        onTouchStart={e => { if (e.cancelable) e.preventDefault(); startDrawing(e); }}
-        onTouchMove={e => { if (e.cancelable) e.preventDefault(); draw(e); }}
-        onTouchEnd={stopDrawing}
-        style={{ position:"absolute", inset:0, display:"block", width:"100%", height:"100%" }}
-      />
-    </>
   );
 }
