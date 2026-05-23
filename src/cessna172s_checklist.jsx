@@ -1381,21 +1381,31 @@ const commStartListening = async () => {
   // ── END COMM AUDIO ENGINE
 
   // ── Theme tokens ──────────────────────────────────────────────────────────
+// ── Theme tokens ──────────────────────────────────────────────────────────
   const T = lightMode ? {
-    appBg:"#e8eaf0", headerBg:"linear-gradient(135deg,#d0d4e0 0%,#c8ccd8 60%,#d0d4e0 100%)",
-    headerBorder:"#1a6ab0", leftSideBg:"#d0d4e0", leftSideBorder:"#a0a8c0",
-    leftTabActive:"rgba(26,106,176,0.12)", leftTabText:"#1a6ab0", leftTabDim:"#607090",
-    leftTabCount:"#40608a", centerBg:"#f0f2f8", centerBorder:"#a0a8c0",
-    itemLabel:"#0a1428", itemAction:"#1a3a6a", itemBorder:"rgba(100,120,160,0.25)",
-    itemCheckedOp:0.3, checkboxBorder:"#3a70b0", checkboxDone:"rgba(20,120,60,0.2)",
-    checkColor:"#1a7040", actionColor:"#1a4a8a",
-    sectionBg:"linear-gradient(90deg, rgba(26,106,176,0.15) 0%, rgba(220,226,238,0) 80%)",
-    sectionBorder:"#1a6ab0", sectionTitle:"#0a2858", noteColor:"#5a6a20",
-    cautionColor:"#8a2010", noteBg:"rgba(120,140,20,0.08)", cautionBg:"rgba(180,40,20,0.06)",
-    panelTabBg:"#c8ccd8", editBg:"#dde0ec", editBorder:"#9098b8",
-    editHintColor:"#404878", inputBg:"#f8f9fc", scratchBg:"#f0f2f8", emgSidebarBg:  "#e0e2ec",
-    emgSidebarBdr: "#b0b6c8", emgLabelColor: "#4a5888", emgItemBdr:    "#c0c6d8", moreOverlayBg: "rgba(240,242,248,0.97)",
-    moreHeaderBg:  "linear-gradient(135deg,#e4e6f0,#eceef6)", moreSidebarBg: "#e8eaf4", moreSidebarBdr:"#c0c6d8",
+    appBg:"#e2e4ec", headerBg:"linear-gradient(135deg,#b8b0c8 0%,#c8ccd8 60%,#b8b0c8 100%)",
+    headerBorder:"#1a6ab0", leftSideBg:"#c8cbd4", leftSideBorder:"#8a94a8",
+    leftTabActive:"rgba(26,106,176,0.18)", leftTabText:"#0a2858", leftTabDim:"#3a4868",
+    leftTabCount:"#1a3a6a", centerBg:"#eef0f6", centerBorder:"#8a94a8",
+    itemLabel:"#050a15", itemAction:"#0c2340", itemBorder:"rgba(10,20,40,0.25)",
+    itemCheckedOp:0.4, checkboxBorder:"#1a4a8a", checkboxDone:"rgba(20,120,60,0.25)",
+    checkColor:"#0b532b", actionColor:"#1a4a8a",
+    sectionBg:"linear-gradient(90deg, rgba(26,106,176,0.18) 0%, rgba(220,226,238,0) 80%)",
+    sectionBorder:"#1a6ab0", sectionTitle:"#0a2858", noteColor:"#405010",
+    cautionColor:"#8a1005", noteBg:"rgba(100,120,15,0.12)", cautionBg:"rgba(180,30,10,0.1)",
+    panelTabBg:"#b8b0c8", editBg:"#cbd0e2", editBorder:"#7a8498",
+    editHintColor:"#202848", inputBg:"#ffffff", scratchBg:"#eef0f6",
+    
+    // ── QUICK REFERENCE & SIDEBAR OVERLAYS HIGH-CONTRAST ──
+    emgSidebarBg:  "#cbd0e2",
+    emgSidebarBdr: "#8a94a8",
+    emgLabelColor: "#0a1428", // Deep contrast text header
+    emgItemBdr:    "#a0a8b8",
+    moreOverlayBg: "#f4f5fa",
+    moreHeaderBg:  "linear-gradient(135deg,#c0c6d8,#d8dce8)",
+    moreSidebarBg: "#d8dce8",
+    moreSidebarBdr:"#8a94a8",
+    textMuted:     "#202838", // Significantly darkened charcoal for descriptions
   } : {
     appBg:"#0d0f12", headerBg:"linear-gradient(135deg,#0a0c10 0%,#141820 60%,#0a0c10 100%)",
     headerBorder:"#e8c84a", leftSideBg:"#141820", leftSideBorder:"#2a3040",
