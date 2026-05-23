@@ -2337,7 +2337,20 @@ function ScratchpadModal({ onClose, linesRef }) {
   };
 
   return (
-    <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 250, background: "#0a0d14", display: "flex", flexDirection: "column", animation: "fadeIn 0.12s ease" }}>
+    <div style={{ 
+      position: "fixed", 
+      top: 0, 
+      left: 0, 
+      right: 0,
+      bottom: 0,
+      width: "100vw", 
+      height: "100vh", 
+      zIndex: 9999, // Force it to sit over every single background sidebar layer
+      background: "#0a0d14", 
+      display: "flex", 
+      flexDirection: "column", 
+      animation: "fadeIn 0.12s ease" 
+    }}>
       {/* Header Panel */}
       <div style={{ height: "48px", background: "linear-gradient(135deg,#0a0c10,#141820)", borderBottom: "2px solid #4ae8c8", padding: "0 14px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
