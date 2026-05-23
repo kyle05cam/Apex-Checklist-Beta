@@ -1239,6 +1239,9 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   };
 
   const commStartListening = async () => {
+  // Guard: bail if already running (prevents double-stream on rapid taps)
+    if (commStreamRef.current || commListening) return;
+  
     try {
       const stream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,sampleRate:16000,echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
       commStreamRef.current=stream;
@@ -1266,12 +1269,38 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
     } catch(err) { setCommMicStatus(err.name==="NotAllowedError"?"denied":"error"); }
   };
 
-  const commStopListening = () => {
-    commRecognitionRef.current?.stop(); commRecognitionRef.current=null;
-    commStreamRef.current?.getTracks().forEach(t=>t.stop()); commStreamRef.current=null;
-    cancelAnimationFrame(commAnimFrameRef.current);
-    commAudioCtxRef.current?.close(); commAudioCtxRef.current=null;
-    setCommListening(false); setCommMicStatus("idle"); setCommTranscript(""); setCommRmsLevel(0);
+const commStopListening = () => {
+    // 1. Forcefully unbind all listeners before killing the recognition thread
+    if (commRecognitionRef.current) {
+      commRecognitionRef.current.onresult = null;
+      commRecognitionRef.current.onerror = null;
+      commRecognitionRef.current.onend = null;
+      try { commRecognitionRef.current.stop(); } catch(e) {}
+      commRecognitionRef.current = null;
+    }
+    
+    // 2. Clear out underlying hardware media stream tracks cleanly
+    if (commStreamRef.current) {
+      commStreamRef.current.getTracks().forEach(track => track.stop());
+      commStreamRef.current = null;
+    }
+    
+    // 3. Dismantle visual rendering loops and engine contexts
+    if (commAnimFrameRef.current) {
+      cancelAnimationFrame(commAnimFrameRef.current);
+      commAnimFrameRef.current = null;
+    }
+    
+    if (commAudioCtxRef.current) {
+      try { commAudioCtxRef.current.close(); } catch(e) {}
+      commAudioCtxRef.current = null;
+    }
+    
+    // 4. Return app state back to absolute cold baseline
+    setCommListening(false);
+    setCommMicStatus("idle");
+    setCommTranscript("");
+    setCommRmsLevel(0);
   };
 
   const commAckCall = () => { commClearTimers(); setCommWatchdogState("clear"); setCommWatchdogTx(null); setCommAckCountdown(0); commPlayChime(false); };
