@@ -1480,12 +1480,7 @@ moreSidebarBdr:"#2a1e3a",
         if (cd?.value) setClimbData(JSON.parse(cd.value));
         const crd = await window.storage.get("kneeboard-cruisedata");
         if (crd?.value) setCruiseData(JSON.parse(crd.value));
-        // Notepad images
         const keys = await window.storage.list("notepad-");
-        if (keys?.keys) {
-          const imgs = {};
-          for (const key of keys.keys) {
-            const keys = await window.storage.list("notepad-");
         if (keys?.keys) {
           const imgs = {};
           for (const key of keys.keys) {
@@ -1494,12 +1489,15 @@ moreSidebarBdr:"#2a1e3a",
           }
           setNotepadImages(imgs);
         }
-        try { const sp = localStorage.getItem("scratchpad-text"); if (sp) setScratchpadText(sp); } catch {}
-      }
+      } catch {}
+      try {
+        const sp = localStorage.getItem("scratchpad-text");
+        if (sp) setScratchpadText(sp);
+      } catch {}
     };
     if (typeof window !== "undefined" && window.storage) load();
   }, []);
-
+  
   // ── Custom items helpers ──────────────────────────────────────────────────
   const getSectionKey = (pageId, sectionTitle) => `${pageId}::${sectionTitle}`;
   const getSectionCustom = (pageId, sectionTitle) => {
