@@ -244,7 +244,7 @@ function MiniScribbleField({ T, label, value, onChange, color, placeholder }) {
 }
 
 // ─── ATIS CARD ────────────────────────────────────────────────────────────────
-function AtisCard({ T, data, onSetAtisData, armed, onArmAtis }) {
+function AtisCard({ T, data, onSetAtisData, armState, rawText, onArm, onClearRaw }) {
   const FIELDS = [
     { key:"info",       label:"INFORMATION", color:A.teal,   hint:"Ident letter" },
     { key:"wind",       label:"WIND",        color:A.blue,   hint:"Dir/speed (e.g. 270° AT 12KT)" },
@@ -252,25 +252,54 @@ function AtisCard({ T, data, onSetAtisData, armed, onArmAtis }) {
     { key:"visibility", label:"VISIBILITY",  color:A.green,  hint:"e.g. 10SM" },
     { key:"sky",        label:"SKY",         color:A.purple, hint:"e.g. FEW 3500" },
   ];
+  const isArmed = armState === "armed";
+  const isDone  = armState === "done";
   return (
-    <div style={{ background:T.cardBg, border:`1px solid ${A.teal}28`, borderRadius:5, overflow:"hidden", transition:"background 0.2s" }}>
-      <div style={{ background:`${A.teal}12`, borderBottom:`2px solid ${A.teal}`, padding:"7px 12px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+    <div style={{ background:T.cardBg, border:`2px solid ${isArmed ? A.teal : isDone ? `${A.teal}60` : `${A.teal}28`}`, borderRadius:5, overflow:"hidden", transition:"all 0.2s" }}>
+      {/* ── Header ── */}
+      <div style={{ background: isArmed ? `${A.teal}20` : `${A.teal}12`, borderBottom:`2px solid ${A.teal}`, padding:"10px 12px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
         <div>
           <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:14, fontWeight:700, letterSpacing:3, color:A.teal }}>ATIS</div>
-          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:1 }}>AUTO-FILL · AI PARSED</div>
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:1 }}>
+            {isArmed ? "● RECORDING…" : isDone ? "CAPTURED · AI PARSED" : "TAP ARM TO CAPTURE"}
+          </div>
         </div>
-        <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-          <button onClick={onArmAtis} style={{
-            fontFamily:"'Share Tech Mono',monospace", fontSize:8, padding:"3px 9px", borderRadius:3, cursor:"pointer",
-            background: armed ? `${A.teal}22` : "transparent",
-            color: armed ? A.teal : T.textDim,
-            border:`1px solid ${armed ? A.teal : T.border}`,
-            animation: armed ? "commGlow 1.5s ease infinite" : "none",
-            transition:"all 0.15s",
-          }}>{armed ? "⏺ ARMED" : "ARM"}</button>
-          <button onClick={() => onSetAtisData({ info:"",wind:"",altimeter:"",visibility:"",sky:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, padding:"3px 9px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺</button>
-        </div>
+        {/* ARM / STOP button — large, thumb-friendly */}
+        <button onClick={onArm} style={{
+          fontFamily:"'Oswald',sans-serif", fontSize:13, fontWeight:700, letterSpacing:2,
+          padding:"10px 20px", borderRadius:5, cursor:"pointer", minWidth:90,
+          background: isArmed ? A.teal : `${A.teal}18`,
+          color: isArmed ? "#000" : A.teal,
+          border:`2px solid ${A.teal}`,
+          boxShadow: isArmed ? `0 0 14px ${A.teal}70` : "none",
+          animation: isArmed ? "commGlow 1.2s ease infinite" : "none",
+          transition:"all 0.15s",
+        }}>
+          {isArmed ? "⏹ STOP" : "⏺ ARM"}
+        </button>
+        <button onClick={() => onSetAtisData({ info:"",wind:"",altimeter:"",visibility:"",sky:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, padding:"5px 10px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺</button>
       </div>
+      {/* ── Raw captured text — visible after capture, stays until cleared ── */}
+      {rawText ? (
+        <div style={{ padding:"8px 12px", borderBottom:`1px solid ${T.border}`, background: isDone ? `${A.teal}08` : `${A.teal}05` }}>
+          <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:6, marginBottom:4 }}>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:A.teal, letterSpacing:1.5 }}>
+              {isArmed ? "▶ LIVE BUFFER" : "✓ CAPTURED TEXT"}
+            </div>
+            {isDone && <button onClick={onClearRaw} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, padding:"1px 6px", borderRadius:2, cursor:"pointer", background:"transparent", color:T.textDim, border:`1px solid ${T.border}` }}>DISMISS</button>}
+          </div>
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color: isArmed ? A.amber : T.textMain, lineHeight:1.55, letterSpacing:0.3 }}>
+            {rawText}
+          </div>
+        </div>
+      ) : isArmed ? (
+        <div style={{ padding:"8px 12px", borderBottom:`1px solid ${T.border}`, background:`${A.teal}05` }}>
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:A.teal, letterSpacing:1, fontStyle:"italic", animation:"commPulse 1.5s ease infinite" }}>
+            — listening for transmission —
+          </div>
+        </div>
+      ) : null}
+      {/* ── Data fields ── */}
       <div style={{ padding:"8px 12px", display:"flex", flexDirection:"column", gap:6 }}>
         {FIELDS.map(f => (
           <MiniScribbleField key={f.key} T={T} label={f.label} color={f.color} placeholder={f.hint}
@@ -284,7 +313,7 @@ function AtisCard({ T, data, onSetAtisData, armed, onArmAtis }) {
 }
 
 // ─── GROUND CLEARANCE CARD ────────────────────────────────────────────────────
-function GndCard({ T, data, onSetGndData, armed, onArmGnd }) {
+function GndCard({ T, data, onSetGndData, armState, rawText, onArm, onClearRaw }) {
   const FIELDS = [
     { key:"clearedTo",  label:"CLEARED TO",  color:A.green,  hint:"Destination" },
     { key:"route",      label:"ROUTE",       color:A.blue,   hint:"Via / as filed" },
@@ -293,25 +322,53 @@ function GndCard({ T, data, onSetGndData, armed, onArmGnd }) {
     { key:"taxi",       label:"TAXI",        color:A.amber,  hint:"Taxi instructions" },
     { key:"squawk",     label:"SQUAWK",      color:A.red,    hint:"4-digit code" },
   ];
+  const isArmed = armState === "armed";
+  const isDone  = armState === "done";
   return (
-    <div style={{ background:T.cardBg, border:`1px solid ${A.green}28`, borderRadius:5, overflow:"hidden", transition:"background 0.2s" }}>
-      <div style={{ background:`${A.green}10`, borderBottom:`2px solid ${A.green}`, padding:"7px 12px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+    <div style={{ background:T.cardBg, border:`2px solid ${isArmed ? A.green : isDone ? `${A.green}60` : `${A.green}28`}`, borderRadius:5, overflow:"hidden", transition:"all 0.2s" }}>
+      {/* ── Header ── */}
+      <div style={{ background: isArmed ? `${A.green}18` : `${A.green}10`, borderBottom:`2px solid ${A.green}`, padding:"10px 12px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
         <div>
           <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:14, fontWeight:700, letterSpacing:3, color:A.green }}>GROUND CLEARANCE</div>
-          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:1 }}>AUTO-FILL · AI PARSED</div>
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:1 }}>
+            {isArmed ? "● RECORDING…" : isDone ? "CAPTURED · AI PARSED" : "TAP ARM TO CAPTURE"}
+          </div>
         </div>
-        <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-          <button onClick={onArmGnd} style={{
-            fontFamily:"'Share Tech Mono',monospace", fontSize:8, padding:"3px 9px", borderRadius:3, cursor:"pointer",
-            background: armed ? `${A.green}22` : "transparent",
-            color: armed ? A.green : T.textDim,
-            border:`1px solid ${armed ? A.green : T.border}`,
-            animation: armed ? "commGlow 1.5s ease infinite" : "none",
-            transition:"all 0.15s",
-          }}>{armed ? "⏺ ARMED" : "ARM"}</button>
-          <button onClick={() => onSetGndData({ clearedTo:"",route:"",altitude:"",frequency:"",taxi:"",squawk:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, padding:"3px 9px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺</button>
-        </div>
+        <button onClick={onArm} style={{
+          fontFamily:"'Oswald',sans-serif", fontSize:13, fontWeight:700, letterSpacing:2,
+          padding:"10px 20px", borderRadius:5, cursor:"pointer", minWidth:90,
+          background: isArmed ? A.green : `${A.green}18`,
+          color: isArmed ? "#000" : A.green,
+          border:`2px solid ${A.green}`,
+          boxShadow: isArmed ? `0 0 14px ${A.green}70` : "none",
+          animation: isArmed ? "commGlow 1.2s ease infinite" : "none",
+          transition:"all 0.15s",
+        }}>
+          {isArmed ? "⏹ STOP" : "⏺ ARM"}
+        </button>
+        <button onClick={() => onSetGndData({ clearedTo:"",route:"",altitude:"",frequency:"",taxi:"",squawk:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, padding:"5px 10px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺</button>
       </div>
+      {/* ── Raw captured text ── */}
+      {rawText ? (
+        <div style={{ padding:"8px 12px", borderBottom:`1px solid ${T.border}`, background: isDone ? `${A.green}08` : `${A.green}05` }}>
+          <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:6, marginBottom:4 }}>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:A.green, letterSpacing:1.5 }}>
+              {isArmed ? "▶ LIVE BUFFER" : "✓ CAPTURED TEXT"}
+            </div>
+            {isDone && <button onClick={onClearRaw} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, padding:"1px 6px", borderRadius:2, cursor:"pointer", background:"transparent", color:T.textDim, border:`1px solid ${T.border}` }}>DISMISS</button>}
+          </div>
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color: isArmed ? A.amber : T.textMain, lineHeight:1.55, letterSpacing:0.3 }}>
+            {rawText}
+          </div>
+        </div>
+      ) : isArmed ? (
+        <div style={{ padding:"8px 12px", borderBottom:`1px solid ${T.border}`, background:`${A.green}05` }}>
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:A.green, letterSpacing:1, fontStyle:"italic", animation:"commPulse 1.5s ease infinite" }}>
+            — listening for transmission —
+          </div>
+        </div>
+      ) : null}
+      {/* ── Data fields ── */}
       <div style={{ padding:"8px 12px", display:"flex", flexDirection:"column", gap:6 }}>
         {FIELDS.map(f => (
           <MiniScribbleField key={f.key} T={T} label={f.label} color={f.color} placeholder={f.hint}
@@ -427,15 +484,26 @@ export function CommPage({
   onSetIfrData   = () => {},
   atisData       = { info:"",wind:"",altimeter:"",visibility:"",sky:"" },
   onSetAtisData  = () => {},
-  atisArmed      = false,
+  atisArmState   = "idle",
+  atisRawText    = "",
   onArmAtis      = () => {},
+  onClearAtisRaw = () => {},
   gndData        = { clearedTo:"",route:"",altitude:"",frequency:"",taxi:"",squawk:"" },
   onSetGndData   = () => {},
-  gndArmed       = false,
+  gndArmState    = "idle",
+  gndRawText     = "",
   onArmGnd       = () => {},
-  ifrArmed       = false,
+  onClearGndRaw  = () => {},
+  ifrArmState    = "idle",
+  ifrRawText     = "",
   onArmIfr       = () => {},
+  onClearIfrRaw  = () => {},
+  atisArmState   = "idle",
+  atisRawText    = "",
+  onArmAtis      = () => {},
+  onClearAtisRaw = () => {},
 }) {
+  
   // ── Theme computed from prop — recalculates on every lightMode toggle ──────
   const T = buildTheme(lightMode);
 
@@ -719,26 +787,53 @@ export function CommPage({
               )}
 
               {/* Three smart cards */}
-              <AtisCard T={T} data={atisData} onSetAtisData={onSetAtisData} armed={atisArmed} onArmAtis={onArmAtis} />
-              <GndCard  T={T} data={gndData}  onSetGndData={onSetGndData} armed={gndArmed} onArmGnd={onArmGnd} />
+             <AtisCard T={T} data={atisData} onSetAtisData={onSetAtisData}
+                armState={atisArmState} rawText={atisRawText}
+                onArm={onArmAtis} onClearRaw={onClearAtisRaw} />
+              <GndCard  T={T} data={gndData}  onSetGndData={onSetGndData}
+                armState={gndArmState} rawText={gndRawText}
+                onArm={onArmGnd} onClearRaw={onClearGndRaw} />
               <div style={{ background:T.cardBg, border:`1px solid ${A.amber}28`, borderRadius:5, overflow:"hidden", transition:"background 0.2s" }}>
-                <div style={{ background:`${A.amber}10`, borderBottom:`2px solid ${A.amber}`, padding:"7px 12px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                <div style={{ background: ifrArmState==="armed" ? `${A.amber}20` : `${A.amber}10`, borderBottom:`2px solid ${A.amber}`, padding:"10px 12px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
                   <div>
                     <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:14, fontWeight:700, letterSpacing:3, color:A.amber }}>IFR CLEARANCE</div>
-                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:1 }}>NWKRAFT FORMAT · AUTO-FILL</div>
+                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:1 }}>
+                      {ifrArmState==="armed" ? "● RECORDING…" : ifrArmState==="done" ? "CAPTURED · AI PARSED" : "NWKRAFT FORMAT · TAP ARM"}
+                    </div>
                   </div>
-                  <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-                    <button onClick={onArmIfr} style={{
-                      fontFamily:"'Share Tech Mono',monospace", fontSize:8, padding:"3px 9px", borderRadius:3, cursor:"pointer",
-                      background: ifrArmed ? `${A.amber}22` : "transparent",
-                      color: ifrArmed ? A.amber : T.textDim,
-                      border:`1px solid ${ifrArmed ? A.amber : T.border}`,
-                      animation: ifrArmed ? "commGlow 1.5s ease infinite" : "none",
-                      transition:"all 0.15s",
-                    }}>{ifrArmed ? "⏺ ARMED" : "ARM"}</button>
-                    <button onClick={() => onSetIfrData({ N:"",W:"",K:"",R:"",A:"",F:"",T:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, padding:"3px 9px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺</button>
-                  </div>
+                  <button onClick={onArmIfr} style={{
+                    fontFamily:"'Oswald',sans-serif", fontSize:13, fontWeight:700, letterSpacing:2,
+                    padding:"10px 20px", borderRadius:5, cursor:"pointer", minWidth:90,
+                    background: ifrArmState==="armed" ? A.amber : `${A.amber}18`,
+                    color: ifrArmState==="armed" ? "#000" : A.amber,
+                    border:`2px solid ${A.amber}`,
+                    boxShadow: ifrArmState==="armed" ? `0 0 14px ${A.amber}70` : "none",
+                    animation: ifrArmState==="armed" ? "commGlow 1.2s ease infinite" : "none",
+                    transition:"all 0.15s",
+                  }}>
+                    {ifrArmState==="armed" ? "⏹ STOP" : "⏺ ARM"}
+                  </button>
+                  <button onClick={() => onSetIfrData({ N:"",W:"",K:"",R:"",A:"",F:"",T:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, padding:"5px 10px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺</button>
                 </div>
+                {ifrRawText ? (
+                  <div style={{ padding:"8px 12px", borderBottom:`1px solid ${T.border}`, background: ifrArmState==="done" ? `${A.amber}08` : `${A.amber}05` }}>
+                    <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:6, marginBottom:4 }}>
+                      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:A.amber, letterSpacing:1.5 }}>
+                        {ifrArmState==="armed" ? "▶ LIVE BUFFER" : "✓ CAPTURED TEXT"}
+                      </div>
+                      {ifrArmState==="done" && <button onClick={onClearIfrRaw} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, padding:"1px 6px", borderRadius:2, cursor:"pointer", background:"transparent", color:T.textDim, border:`1px solid ${T.border}` }}>DISMISS</button>}
+                    </div>
+                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color: ifrArmState==="armed" ? A.amber : T.textMain, lineHeight:1.55, letterSpacing:0.3 }}>
+                      {ifrRawText}
+                    </div>
+                  </div>
+                ) : ifrArmState==="armed" ? (
+                  <div style={{ padding:"8px 12px", borderBottom:`1px solid ${T.border}`, background:`${A.amber}05` }}>
+                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:A.amber, letterSpacing:1, fontStyle:"italic", animation:"commPulse 1.5s ease infinite" }}>
+                      — listening for transmission —
+                    </div>
+                  </div>
+                ) : null}
                 <div style={{ padding:"8px 12px", display:"flex", flexDirection:"column", gap:6 }}>
                   {NWKRAFT_FIELDS.map(f => (
                     <MiniScribbleField key={f.key} T={T}
