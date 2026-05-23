@@ -2268,10 +2268,10 @@ return (
 }
 
 function PersistentCanvas({ linesRef }) {
-  const canvasRef = React.useRef(null);
-  const isDrawingRef = React.useRef(false);
+  const canvasRef = useRef(null);
+  const isDrawingRef = useRef(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const container = canvas.parentElement;
