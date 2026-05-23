@@ -832,7 +832,7 @@ function ScratchpadCanvas({ storageKey }) {
     try {
       const canvas = canvasRef.current;
       if (!canvas) return;
-      window.storage.set(storageKey, canvas.toDataURL());
+      localStorage.setItem(storageKey, canvas.toDataURL());
     } catch {}
   }, 600);
 };
@@ -871,7 +871,7 @@ function ScratchpadCanvas({ storageKey }) {
   const clearCanvas = () => {
     if (!canvasRef.current) return;
     canvasRef.current.getContext("2d").clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-    try { window.storage.delete(storageKey); } catch {}
+    try { localStorage.removeItem(storageKey); } catch {}
   };
 
   const PEN_COLORS = ["#e8e4d8","#4ae888","#4ab8e8","#e8c84a","#e85a4a","#c87ae8","#e8a030"];
