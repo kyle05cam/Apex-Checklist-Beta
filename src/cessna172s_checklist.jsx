@@ -1153,24 +1153,15 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   const atisSilenceRef  = useRef(null);
   const gndSilenceRef   = useRef(null);
   const ifrSilenceRef   = useRef(null);
-  const atisArmTimeRef  = useRef(null);   // ms timestamp when ATIS was armed
-  const gndArmTimeRef   = useRef(null);   // ms timestamp when GND was armed
-  const ifrArmTimeRef   = useRef(null);   // ms timestamp when IFR was armed
   const atisArmStateRef = useRef("idle"); // ref mirror of atisArmState — safe inside timers & callbacks
   const gndArmStateRef  = useRef("idle"); // ref mirror of gndArmState
   const ifrArmStateRef  = useRef("idle"); // ref mirror of ifrArmState
-
-  const ATIS_SILENCE_MS = 6500; // ATIS has natural pauses between elements — be patient
-  const GND_SILENCE_MS  = 4000; // Ground clearance is faster paced
-  const IFR_SILENCE_MS  = 4000; // IFR readback is continuous
-  const MIN_RECORD_MS   = 8000; // silence timer is blocked for 8s after arming
 
   // Parse + commit a completed buffer to a card.
   // Always resets ref mirrors so the STOP button never gets orphaned.
   const commitAtisBuffer = useCallback(() => {
     const buf = atisBufferRef.current.trim();
     atisArmStateRef.current = buf ? "done" : "idle";
-    atisArmTimeRef.current  = null;
     if (!buf) { setAtisArmState("idle"); return; }
     setAtisRawText(buf);
     setCommAtisData(commParseAtis(buf));
@@ -1181,7 +1172,6 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   const commitGndBuffer = useCallback(() => {
     const buf = gndBufferRef.current.trim();
     gndArmStateRef.current = buf ? "done" : "idle";
-    gndArmTimeRef.current  = null;
     if (!buf) { setGndArmState("idle"); return; }
     setGndRawText(buf);
     setCommGndData(commParseGround(buf));
@@ -1192,7 +1182,6 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   const commitIfrBuffer = useCallback(() => {
     const buf = ifrBufferRef.current.trim();
     ifrArmStateRef.current = buf ? "done" : "idle";
-    ifrArmTimeRef.current  = null;
     if (!buf) { setIfrArmState("idle"); return; }
     setIfrRawText(buf);
     setCommIfrData(commParseNwkraft(buf));
@@ -1204,15 +1193,12 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   // fires immediately regardless of React render timing or the MIN_RECORD window.
   const handleArmAtis = useCallback(() => {
     if (atisArmStateRef.current === "armed") {
-      // STOP — always immediate, no minimum window check
       clearTimeout(atisSilenceRef.current);
       atisArmStateRef.current = "idle";
-      atisArmTimeRef.current  = null;
       commitAtisBuffer();
     } else {
       atisBufferRef.current   = "";
       setAtisRawText("");
-      atisArmTimeRef.current  = Date.now();
       atisArmStateRef.current = "armed";
       setAtisArmState("armed");
     }
@@ -1222,12 +1208,10 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
     if (gndArmStateRef.current === "armed") {
       clearTimeout(gndSilenceRef.current);
       gndArmStateRef.current = "idle";
-      gndArmTimeRef.current  = null;
       commitGndBuffer();
     } else {
       gndBufferRef.current   = "";
       setGndRawText("");
-      gndArmTimeRef.current  = Date.now();
       gndArmStateRef.current = "armed";
       setGndArmState("armed");
     }
@@ -1237,12 +1221,10 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
     if (ifrArmStateRef.current === "armed") {
       clearTimeout(ifrSilenceRef.current);
       ifrArmStateRef.current = "idle";
-      ifrArmTimeRef.current  = null;
       commitIfrBuffer();
     } else {
       ifrBufferRef.current   = "";
       setIfrRawText("");
-      ifrArmTimeRef.current  = Date.now();
       ifrArmStateRef.current = "armed";
       setIfrArmState("armed");
     }
@@ -1475,31 +1457,33 @@ const commParseGround = (text) => {
     if (commCallsignRxRef.current && commCallsignRxRef.current.test(text)) commTriggerWatchdog(entry);
 
     // ── ARMED BUFFER ACCUMULATION ─────────────────────────────────────────
-    // Reads ref mirrors so this works correctly regardless of render timing.
-    // MIN_RECORD_MS guard prevents premature commit on natural ATIS pauses.
+    // Every final chunk is appended to the buffer AND immediately shown in
+    // the card's live display so the pilot can see text growing in real time.
+    // The silence timer is a 30-second safety fallback only — the pilot is
+    // expected to press STOP when done. This prevents any premature commit.
 
     if (atisArmStateRef.current === "armed") {
-      atisBufferRef.current = (atisBufferRef.current + " " + text).trim();
+      const newBuf = (atisBufferRef.current + " " + text).trim();
+      atisBufferRef.current = newBuf;
+      setAtisRawText(newBuf); // live update so pilot sees accumulation
       clearTimeout(atisSilenceRef.current);
-      const elapsed = atisArmTimeRef.current ? Date.now() - atisArmTimeRef.current : MIN_RECORD_MS + 1;
-      const delay   = elapsed < MIN_RECORD_MS ? (MIN_RECORD_MS - elapsed + ATIS_SILENCE_MS) : ATIS_SILENCE_MS;
-      atisSilenceRef.current = setTimeout(commitAtisBuffer, delay);
+      atisSilenceRef.current = setTimeout(commitAtisBuffer, 30000); // 30s safety fallback
     }
 
     if (gndArmStateRef.current === "armed") {
-      gndBufferRef.current = (gndBufferRef.current + " " + text).trim();
+      const newBuf = (gndBufferRef.current + " " + text).trim();
+      gndBufferRef.current = newBuf;
+      setGndRawText(newBuf);
       clearTimeout(gndSilenceRef.current);
-      const elapsed = gndArmTimeRef.current ? Date.now() - gndArmTimeRef.current : MIN_RECORD_MS + 1;
-      const delay   = elapsed < MIN_RECORD_MS ? (MIN_RECORD_MS - elapsed + GND_SILENCE_MS) : GND_SILENCE_MS;
-      gndSilenceRef.current = setTimeout(commitGndBuffer, delay);
+      gndSilenceRef.current = setTimeout(commitGndBuffer, 30000);
     }
 
     if (ifrArmStateRef.current === "armed") {
-      ifrBufferRef.current = (ifrBufferRef.current + " " + text).trim();
+      const newBuf = (ifrBufferRef.current + " " + text).trim();
+      ifrBufferRef.current = newBuf;
+      setIfrRawText(newBuf);
       clearTimeout(ifrSilenceRef.current);
-      const elapsed = ifrArmTimeRef.current ? Date.now() - ifrArmTimeRef.current : MIN_RECORD_MS + 1;
-      const delay   = elapsed < MIN_RECORD_MS ? (MIN_RECORD_MS - elapsed + IFR_SILENCE_MS) : IFR_SILENCE_MS;
-      ifrSilenceRef.current = setTimeout(commitIfrBuffer, delay);
+      ifrSilenceRef.current = setTimeout(commitIfrBuffer, 30000);
     }
 
   }, [commForceIfr, commTriggerWatchdog, commitAtisBuffer, commitGndBuffer, commitIfrBuffer]);
