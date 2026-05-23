@@ -1199,6 +1199,22 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
     t = t.replace(/\binformation\s+zelda\b/gi,  "information Z");
     t = t.replace(/\binformation\s+echo\b/gi,   "information E");
 
+    // ── SPEECH ENGINE ZERO INSERTION FIX ──────────────────────────────────
+    // When pilot says "two niner four eight", the speech engine groups "two niner"
+    // as the number 29 and then inserts a leading zero before the next group:
+    // "two niner four eight" → "29048" instead of "2948".
+    // Scope this ONLY to altimeter context to avoid corrupting squawk codes.
+    t = t.replace(
+      /\baltimeter\s+(2[89]|3[01])0(\d{2})\b/gi,
+      (_, prefix, suffix) => `altimeter ${prefix}${suffix}`
+    );
+
+    // ── CLEARED / DIRECT VARIANTS ──────────────────────────────────────────
+    t = t.replace(/\bcrude\s+direct\b/gi,    "cleared direct");
+    t = t.replace(/\bcrude\b/gi,             "cleared");        // catch standalone
+    t = t.replace(/\bcleared\s+direkt\b/gi,  "cleared direct");
+    t = t.replace(/\bdirect\s+to\b/gi,       "direct");         // "direct to X" = "direct X" in ATC
+
     // ── NINER ─────────────────────────────────────────────────────────────
     t = t.replace(/\bnine-r\b/gi,   "niner");
     t = t.replace(/\bnine\s+er\b/gi,"niner");
@@ -1466,10 +1482,22 @@ const commParseAtis = (text) => {
     }
     if (bestAltm) {
       let raw = bestAltm.replace(/\./g,"");
-      if (raw.length === 5) raw = raw.slice(0, 4);
+      if (raw.length === 5) {
+        // Check if this is the "29048" zero-insertion pattern:
+        // digits 0-1 are in altimeter range (28-31) and digit 2 is 0
+        const prefix = parseInt(raw.slice(0,2));
+        if (prefix >= 28 && prefix <= 31 && raw[2] === "0") {
+          raw = raw.slice(0,2) + raw.slice(3); // remove the inserted zero → 2948
+        } else {
+          raw = raw.slice(0, 4); // fallback: trim last digit
+        }
+      }
       if (raw.length === 3) {
         const n = parseInt(raw);
-        if (n >= 900 && n <= 999) raw = "2" + raw;
+        // "298" → pilot said "two niner eight" dropping the last digit → "2980" or "2985"
+        // Best we can do is append 0 as the missing digit and let pilot correct manually
+        if (n >= 280 && n <= 319) raw = raw + "0"; // e.g. 298 → 2980
+        else if (n >= 900 && n <= 999) raw = "2" + raw; // 9XX → 29XX (three spoken digits)
         else if (n >= 800 && n <= 899) raw = "2" + raw;
         else if (n >= 100 && n <= 199) raw = "3" + raw;
         else raw = "29" + raw.slice(1);
