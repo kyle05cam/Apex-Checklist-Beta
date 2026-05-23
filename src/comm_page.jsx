@@ -21,7 +21,7 @@
 //   onToggleForce   — fn()
 //   ifrData         — { N,W,K,R,A,F,T }
 //   onSetIfrData    — fn(data)
-//   atisData        — { info,wind,altimeter,visibility,sky }
+//   atisData        — { info,wind,altimeter,visibility,sky,caution }
 //   onSetAtisData   — fn(data)
 //   gndData         — { clearedTo,route,altitude,frequency,taxi,squawk }
 //   onSetGndData    — fn(data)
@@ -251,6 +251,7 @@ function AtisCard({ T, data, onSetAtisData, armState, rawText, onArm, onClearRaw
     { key:"altimeter",  label:"ALTIMETER",   color:A.amber,  hint:"e.g. 29.92" },
     { key:"visibility", label:"VISIBILITY",  color:A.green,  hint:"e.g. 10SM" },
     { key:"sky",        label:"SKY",         color:A.purple, hint:"e.g. FEW 3500" },
+    { key:"caution",    label:"CAUTION",     color:A.red,    hint:"NOTAMs / hazards / advisories" },
   ];
   const isArmed = armState === "armed";
   const isDone  = armState === "done";
@@ -278,7 +279,7 @@ function AtisCard({ T, data, onSetAtisData, armState, rawText, onArm, onClearRaw
           {isArmed ? "⏹ STOP" : "● ARM"}
         </button>
         {/* CLR button — far right */}
-        <button onClick={() => onSetAtisData({ info:"",wind:"",altimeter:"",visibility:"",sky:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
+        <button onClick={() => onSetAtisData({ info:"",wind:"",altimeter:"",visibility:"",sky:"",caution:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
       </div>
       {/* ── Raw captured text — high-visibility pilot-readable block ── */}
       {rawText ? (
@@ -483,7 +484,7 @@ export function CommPage({
   onToggleForce  = () => {},
   ifrData        = { N:"",W:"",K:"",R:"",A:"",F:"",T:"" },
   onSetIfrData   = () => {},
-  atisData       = { info:"",wind:"",altimeter:"",visibility:"",sky:"" },
+  atisData       = { info:"",wind:"",altimeter:"",visibility:"",sky:"",caution:"" },
   onSetAtisData  = () => {},
   atisArmState   = "idle",
   atisRawText    = "",
