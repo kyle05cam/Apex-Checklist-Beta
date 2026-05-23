@@ -2156,7 +2156,9 @@ return (
             <button onClick={() => setMoreOpen(false)} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: 1, padding: "4px 14px", borderRadius: 4, cursor: "pointer", background: "rgba(232,90,74,0.1)", color: "#e85a4a", border: "1px solid #e85a4a" }}>✕ CLOSE</button>
           </div>
           <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-            <div style={{ width: 160, flexShrink: 0, background: T.moreSidebarBg, borderRight: 1px solid ${T.moreSidebarBdr}, overflowY: "auto", transition: "background 0.2s ease" }}>
+            <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+            {/* MORE reference material sidebar list selection strip */}
+            <div style={{ width: 160, flexShrink: 0, background: T.moreSidebarBg, borderRight: `1px solid ${T.moreSidebarBdr}`, overflowY: "auto", transition: "background 0.2s ease" }}>
               {MORE_REFS.map(ref => (
                 <button key={ref.id} onClick={() => setActiveMoreRef(ref.id)} style={{ width: "100%", textAlign: "left", padding: "10px 12px", cursor: "pointer", background: activeMoreRef === ref.id ? `${ref.color}12` : "transparent", border: "none", borderLeft: `3px solid ${activeMoreRef === ref.id ? ref.color : "transparent"}`, borderBottom: "1px solid rgba(42,30,58,0.8)", transition: "all 0.12s" }}>
                   <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, fontWeight: 700, letterSpacing: 0.5, color: activeMoreRef === ref.id ? ref.color : T.textMuted || T.emgLabelColor, textTransform: "uppercase", lineHeight: 1.3 }}>{ref.title}</div>
