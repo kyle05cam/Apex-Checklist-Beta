@@ -1083,7 +1083,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   const [commReplayActive,  setCommReplayActive]  = useState(false);
   const [commForceIfr,      setCommForceIfr]      = useState(false);
   const [commIfrData,       setCommIfrData]       = useState({ N:"",W:"",K:"",R:"",A:"",F:"",T:"" });
-  const [commAtisData,      setCommAtisData]      = useState({ info:"",wind:"",altimeter:"",visibility:"",sky:"" });
+  const [commAtisData,      setCommAtisData]      = useState({ info:"",wind:"",altimeter:"",visibility:"",sky:"",caution:"" });
   const [commGndData,       setCommGndData]        = useState({ clearedTo:"",route:"",altitude:"",frequency:"",taxi:"",squawk:"" });
   const commWorkerRef       = useRef(null);
   const commWorkerBlobUrl   = useRef(null);
@@ -1317,7 +1317,7 @@ const commParseNwkraft = (text) => {
   };
 
 const commParseAtis = (text) => {
-    const r = { info:"", wind:"", altimeter:"", visibility:"", sky:"" };
+    const r = { info:"", wind:"", altimeter:"", visibility:"", sky:"", caution:"" };
     const t = normalizePhonetic(text);
 
     // Information identifier — broadcast: "information B" or pilot readback:
@@ -1329,7 +1329,6 @@ const commParseAtis = (text) => {
     if (infoMatch) r.info = infoMatch[1].toUpperCase();
 
     // Wind: "wind 270 at 12" / "wind calm" — after phonetic normalization
-    // digits are already substituted so these patterns now work on spoken input
     if (/wind\s+calm/i.test(t)) {
       r.wind = "CALM";
     } else {
@@ -1340,15 +1339,21 @@ const commParseAtis = (text) => {
     // Altimeter: "altimeter 2992" — after normalization "two niner niner two" → "2992"
     const altm = t.match(/altimeter\s+(\d{2,4}(?:\.\d+)?)/i);
     if (altm) {
-      // Format raw digits as decimal if needed: "2992" → "29.92"
       const raw = altm[1].replace(/\./g,"");
       r.altimeter = raw.length === 4 && !altm[1].includes(".")
         ? `${raw.slice(0,2)}.${raw.slice(2)}`
         : altm[1];
     }
 
-    // Visibility: "visibility 10" or "visibility 1 0" after normalization
-    const vis = t.match(/visibility\s+(\d+(?:\.\d+)?)/i);
+    // Visibility — normalize homophones before matching.
+    // Speech engines commonly transcribe "four" as "for" and "to" as "two"
+    // in this context, so we fix those before the digit pattern runs.
+    const tVis = t
+      .replace(/\bvisibility\s+for\b/gi, "visibility 4")
+      .replace(/\bvisibility\s+to\b/gi,  "visibility 2")
+      .replace(/\bvisibility\s+too\b/gi, "visibility 2")
+      .replace(/\bvisibility\s+won\b/gi, "visibility 1");
+    const vis = tVis.match(/visibility\s+(\d+(?:\.\d+)?)/i);
     if (vis) r.visibility = `${vis[1]}SM`;
 
     // Sky condition
@@ -1358,6 +1363,14 @@ const commParseAtis = (text) => {
       const sky = t.match(/(few|scattered|broken|overcast)\s+(?:clouds?\s+)?(?:at\s+)?(\d[\d,]+)/i);
       if (sky) r.sky = `${sky[1].toUpperCase()} ${parseInt(sky[2].replace(/,/g,"")).toLocaleString()}`;
     }
+
+    // Caution / NOTAMs — capture anything after "caution" to end of sentence or
+    // next keyword. Common in ATIS: "caution construction on taxiway alpha",
+    // "caution birds in vicinity", "caution drone activity"
+    const cautionMatch = t.match(/caution\s+([^.!?]+?)(?:\s+(?:wind|altimeter|visibility|sky|information|automated|notice|notam|$))/i)
+      || t.match(/caution\s+(.+?)(?:[.!?]|$)/i);
+    if (cautionMatch) r.caution = cautionMatch[1].trim().toUpperCase();
+
     return r;
   };
 
@@ -2402,7 +2415,7 @@ const commParseGround = (text) => {
                   atisArmState={atisArmState}
                   atisRawText={atisRawText}
                   onArmAtis={handleArmAtis}
-                  onClearAtisRaw={() => { setAtisRawText(""); setAtisArmState("idle"); }}
+                  onClearAtisRaw={() => { setAtisRawText(""); atisArmStateRef.current = "idle"; setAtisArmState("idle"); setCommAtisData({ info:"",wind:"",altimeter:"",visibility:"",sky:"",caution:"" }); }}
                   gndData={commGndData}
                   onSetGndData={setCommGndData}
                   gndArmState={gndArmState}
