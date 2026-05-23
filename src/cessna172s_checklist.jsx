@@ -2255,8 +2255,10 @@ function ScratchpadModal({ onClose, linesRef }) {
     const ctx = canvas.getContext("2d");
     
     // Set up canvas crisp resolution tracking bounds
-    canvas.width = canvas.parentElement.clientWidth;
-    canvas.height = canvas.parentElement.clientHeight || 500;
+    // Calculate the absolute layout limits of the parent container frame
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width || window.innerWidth;
+    canvas.height = rect.height || (window.innerHeight - 60); // Leaves exact clearance for header panel strip
     
     // Drawing styles
     ctx.strokeStyle = "#4ae8c8"; // Matching avionics tactical teal
