@@ -814,27 +814,39 @@ function ScratchpadCanvas({ storageKey }) {
   const [penColor, setPenColor] = useState("#e8e4d8");
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const load = async () => {
-      try {
-        const result = await window.storage.get(storageKey);
-        if (result?.value) {
-          const img = new Image();
-          img.onload = () => canvas.getContext("2d").drawImage(img, 0, 0);
-          img.src = result.value;
-        }
-      } catch {}
-    };
-    load();
-  }, [storageKey]);
+  const canvas = canvasRef.current;
+  if (!canvas) return;
+  const load = async () => {
+    try {
+      const result = await window.storage.get(storageKey);
+      if (result?.value) {
+        const img = new Image();
+        img.onload = () => {
+          // Canvas may have been cleared between async gap — redraw fresh
+          const ctx = canvas.getContext("2d");
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0);
+        };
+        img.onerror = () => {}; // silently ignore corrupt stored data
+        img.src = result.value;
+      }
+    } catch {}
+  };
+  // Small defer ensures canvas bitmap is fully initialized before we paint
+  const timer = setTimeout(load, 50);
+  return () => clearTimeout(timer);
+}, [storageKey]);
 
   const persist = () => {
-    clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
-      try { window.storage.set(storageKey, canvasRef.current.toDataURL()); } catch {}
-    }, 400);
-  };
+  clearTimeout(saveTimerRef.current);
+  saveTimerRef.current = setTimeout(() => {
+    try {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      window.storage.set(storageKey, canvas.toDataURL());
+    } catch {}
+  }, 600);
+};
 
   const getPos = (e) => {
     const canvas = canvasRef.current;
