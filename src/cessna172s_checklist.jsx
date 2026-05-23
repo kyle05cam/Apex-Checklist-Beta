@@ -3,7 +3,7 @@
 // All PAGES, EMG_PAGES, reference data, helper components, and ChecklistApp
 // live here. Import { ChecklistApp } into apex_kneeboard.jsx to use.
 // ─────────────────────────────────────────────────────────────────────────────
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { CommPage } from "./comm_page.jsx";
 
 export const PAGES = [
@@ -1060,6 +1060,227 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   const ttsIdxRef = useRef(0);
   const ttsUtterRef = useRef(null);
 
+  // ── COMM AUDIO ENGINE — global background state (survives page changes) ──────
+  // Worker + ring buffer live here so monitoring continues across all tabs.
+  const [commListening,     setCommListening]     = useState(false);
+  const [commMicStatus,     setCommMicStatus]     = useState("idle");
+  const [commRmsLevel,      setCommRmsLevel]      = useState(0);
+  const [commTranscript,    setCommTranscript]    = useState("");
+  const [commTxLog,         setCommTxLog]         = useState([]);
+  const [commWatchdogState, setCommWatchdogState] = useState("clear");
+  const [commWatchdogTx,    setCommWatchdogTx]    = useState(null);
+  const [commAckCountdown,  setCommAckCountdown]  = useState(0);
+  const [commReplayActive,  setCommReplayActive]  = useState(false);
+  const [commForceIfr,      setCommForceIfr]      = useState(false);
+  const [commIfrData,       setCommIfrData]       = useState({ N:"",W:"",K:"",R:"",A:"",F:"",T:"" });
+  const commWorkerRef       = useRef(null);
+  const commWorkerBlobUrl   = useRef(null);
+  const commRecognitionRef  = useRef(null);
+  const commStreamRef       = useRef(null);
+  const commAudioCtxRef     = useRef(null);
+  const commAnimFrameRef    = useRef(null);
+  const commAckIntervalRef  = useRef(null);
+  const commBeepIntervalRef = useRef(null);
+  const commTxIdRef         = useRef(0);
+  const commCallsignRxRef   = useRef(null);
+
+  // Directive verbs for watchdog regex
+  const COMM_DIRECTIVES = [
+    // Original Baseline Core
+    "climb","descend","turn","maintain","fly","cleared","contact",
+    "squawk","hold short","hold","report","traffic","expect","cross",
+    "taxi","line up","wait","go around","cancel","frequency","departure",
+    "approach","heading","altitude","speed","direct","intercept",
+    
+    // High-Risk Safety & Urgent Directives
+    "expedite","immediate","say again","verify","correction","unable",
+    "avoid","alert","hazard","traffic","alert","nearest","suitable","parallel","upwind","downwind","cross","base","final",
+    
+    // Advanced Surface & Runway Operations
+    "line up","and wait","back taxi","taxi","progressive","movement area",
+    "hold position","exit","intersection","apron","ramp","hold short","hold",
+    
+    // IFR Terminal & En Route Management
+    "as filed","ident","resume","own navigation","climb","in route",
+    "climb via","descend via","cruise","maintain block","visual",
+    "radar contact","lost radar contact","radar service terminated",
+    
+    // Critical Flight Environment Calls
+    "caution wake turbulence","wind shear","microburst","sigmet",
+    "airmet","convective","unreported icing","caution","turbulence"
+  ];
+
+  const COMM_PHONETIC_D = {"0":"zero","1":"one","2":"two","3":"three","4":"four","5":"five","6":"six","7":"seven","8":"eight","9":"nine"};
+  const COMM_PHONETIC_A = {A:"alpha",B:"bravo",C:"charlie",D:"delta",E:"echo",F:"foxtrot",G:"golf",H:"hotel",I:"india",J:"juliett",K:"kilo",L:"lima",M:"mike",N:"november",O:"oscar",P:"papa",Q:"quebec",R:"romeo",S:"sierra",T:"tango",U:"uniform",V:"victor",W:"whiskey",X:"xray",Y:"yankee",Z:"zulu"};
+
+  const buildCommRegex = useCallback((tail) => {
+    if (!tail) return null;
+    const clean = tail.toUpperCase().replace(/[^A-Z0-9]/g,"");
+    const parts = clean.split("").map(c => { const ph=COMM_PHONETIC_A[c]||COMM_PHONETIC_D[c]||c; return `(?:${c}|${ph})`; });
+    const combined = `(?:${clean}|${parts.join("[\\s\\-]*")}|${clean.split("").join("[\\s]*")})`;
+    const verbPart = COMM_DIRECTIVES.map(v=>v.replace(/ /g,"\\s+")).join("|");
+    return new RegExp(`(${combined})[^.]{0,60}(${verbPart})`,"i");
+  }, []);
+
+  const commDetectType = (text) => {
+    const t = text.toLowerCase();
+    if (/cleared\s+(?:to|for)\s+(?:the\s+)?(?:ils|rnav|vor|gps|lda|loc|ndb)\s+approach/.test(t)) return "ifr_approach";
+    if (/cleared\s+to\s+[a-z]/.test(t) && /squawk|departure|maintain\s+\d/.test(t)) return "ifr_departure";
+    if (/cleared\s+to\s+land/.test(t)||/cleared\s+(?:for|the)\s+(?:option|landing|approach)/.test(t)) return "landing";
+    const LEGS=["upwind","crosswind","downwind","base","final","left downwind","right downwind","left base","right base","straight-in"];
+    if (/enter|make|report|traffic/.test(t)&&LEGS.some(l=>t.includes(l))) return "pattern";
+    return "general";
+  };
+
+  const commParseNwkraft = (text) => {
+    const r={N:"",W:"",K:"",R:"",A:"",F:"",T:""};
+    const dest=text.match(/cleared\s+(?:to\s+)?([A-Z][A-Z0-9\s]{2,20}?)(?:\s+via|\s+as\s+filed|\s+climb|\s+maintain|,)/i);
+    if(dest) r.N=dest[1].trim();
+    r.W=text.toLowerCase().includes("ifr")?"IFR FLIGHT PLAN":"";
+    const sqk=text.match(/squawk\s+(\d{4})/i); if(sqk) r.K=sqk[1];
+    const via=text.match(/via\s+([A-Z0-9\s,]+?)(?:\s+maintain|\s+climb|\s+expect|$)/i);
+    if(via) r.R=via[1].trim(); else if(text.toLowerCase().includes("as filed")) r.R="AS FILED";
+    const alt=text.match(/(?:maintain|climb\s+and\s+maintain|climb\s+to)\s+(\d[\d,]+\s*(?:feet|ft)?)/i);
+    if(alt) r.A=alt[1].replace(/,/g,"").trim();
+    const exp=text.match(/expect\s+(\d[\d,]+)\s*(?:feet|ft)?/i);
+    if(exp) r.A=(r.A?r.A+" / EXP ":"EXP ")+exp[1];
+    const frq=text.match(/(?:contact|departure|frequency)\s+(\d{3}.\d+)/i); if(frq) r.F=frq[1];
+    r.T=r.K?`SQUAWK ${r.K}`:"";
+    return r;
+  };
+
+  const commParseLanding = (text) => {
+    const LEGS_RX=["upwind","crosswind","downwind","base","final","left\\s+downwind","right\\s+downwind","left\\s+base","right\\s+base","left\\s+traffic","right\\s+traffic","straight-in","overhead"];
+    const annotated=[]; const t=text;
+    const add=(rx,type)=>{let m;while((m=rx.exec(t))!==null)annotated.push({start:m.index,end:m.index+m[0].length,text:m,type});};
+    add(/\b(?:runway|rwy)\s*([0-9]{1,2}[LRC]?)\b/gi,"runway");
+    add(new RegExp(`\\b(${LEGS_RX.join("|")})\\b`,"gi"),"leg");
+    add(/\b(left|right|straight|north|south|east|west)\b/gi,"direction");
+    annotated.sort((a,b)=>a.start-b.start);
+    const deduped=[]; let cur=0;
+    for(const a of annotated){if(a.start<cur)continue;deduped.push(a);cur=a.end;}
+    const out=[]; let pos=0;
+    for(const a of deduped){if(a.start>pos)out.push({text:t.slice(pos,a.start),type:"plain"});out.push({text:a.text,type:a.type});pos=a.end;}
+    if(pos<t.length)out.push({text:t.slice(pos),type:"plain"});
+    return out;
+  };
+
+  const commPlayChime = (urgent=false) => {
+    try {
+      const ctx=new(window.AudioContext||window.webkitAudioContext)();
+      const b=(st,f,d)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.value=f;o.type="sine";g.gain.setValueAtTime(0,st);g.gain.linearRampToValueAtTime(0.5,st+0.02);g.gain.linearRampToValueAtTime(0,st+d);o.start(st);o.stop(st+d+0.02);};
+      const t=ctx.currentTime;
+      if(urgent){b(t,1046,0.12);b(t+0.16,1046,0.12);b(t+0.32,1046,0.22);}
+      else{b(t,523,0.25);b(t+0.3,659,0.15);}
+      setTimeout(()=>{try{ctx.close();}catch{}},1400);
+    } catch {}
+  };
+
+  const commClearTimers = () => { clearInterval(commAckIntervalRef.current); clearInterval(commBeepIntervalRef.current); };
+
+  const commTriggerWatchdog = useCallback((entry) => {
+    commClearTimers();
+    setCommWatchdogState("alert");
+    setCommWatchdogTx(entry);
+    setCommAckCountdown(5);
+    commPlayChime(false);
+    let rem=5;
+    commAckIntervalRef.current=setInterval(()=>{ rem--; setCommAckCountdown(rem); if(rem<=0){ clearInterval(commAckIntervalRef.current); setCommWatchdogState("unanswered"); commPlayChime(true); commBeepIntervalRef.current=setInterval(()=>commPlayChime(true),2000); }},1000);
+  },[]);
+
+  const commHandleTranscript = useCallback((text, isFinal) => {
+    if (!text?.trim()) return;
+    setCommTranscript(isFinal ? "" : text);
+    if (!isFinal) return;
+    const type    = commDetectType(text);
+    const tokens  = (type==="landing"||type==="pattern") ? commParseLanding(text) : null;
+    const nwkraft = (type==="ifr_departure"||type==="ifr_approach"||commForceIfr) ? commParseNwkraft(text) : null;
+    const entry   = { id:++commTxIdRef.current, text, ts:new Date(), type, tokens, nwkraft };
+    setCommTxLog(prev=>[entry,...prev].slice(0,40));
+    if (nwkraft) setCommIfrData(nwkraft);
+    if (commCallsignRxRef.current && commCallsignRxRef.current.test(text)) commTriggerWatchdog(entry);
+  },[commForceIfr, commTriggerWatchdog]);
+
+  // Build comm worker blob inline (same architecture as comm_page.jsx worker)
+  const COMM_WORKER_BLOB = `const SAMPLE_RATE=16000,BUFFER_SIZE=16000*12; const ring=new Float32Array(BUFFER_SIZE);let wh=0; function rms(s){let sum=0;for(let i=0;i<s.length;i++)sum+=s[i]*s[i];return 20*Math.log10(Math.sqrt(sum/s.length)+1e-9);} function write(s){for(let i=0;i<s.length;i++){ring[wh]=s[i];wh=(wh+1)%BUFFER_SIZE;}} function read(sec){const n=Math.min(sec*SAMPLE_RATE,BUFFER_SIZE),out=new Float32Array(n),st=(wh-n+BUFFER_SIZE)%BUFFER_SIZE;for(let i=0;i<n;i++)out[i]=ring[(st+i)%BUFFER_SIZE];return out;} self.onmessage=function(e){   if(e.data.type==="AUDIO_CHUNK"){write(e.data.samples);self.postMessage({type:"BUFFER_READY",rmsDb:rms(e.data.samples)});return;}   if(e.data.type==="TRANSCRIPTION_RESULT"){self.postMessage({type:"TRANSCRIPT",text:e.data.text,isFinal:e.data.isFinal,ts:Date.now()});return;}   if(e.data.type==="GET_REPLAY"){self.postMessage({type:"REPLAY_PCM",pcm:read(e.data.seconds||10),sampleRate:SAMPLE_RATE});return;} };`;
+
+  // Spin up worker once on mount
+  useEffect(() => {
+    const blob=new Blob([COMM_WORKER_BLOB],{type:"application/javascript"});
+    commWorkerBlobUrl.current=URL.createObjectURL(blob);
+    commWorkerRef.current=new Worker(commWorkerBlobUrl.current);
+    commWorkerRef.current.onmessage=(e)=>{
+      const{type}=e.data;
+      if(type==="BUFFER_READY") setCommRmsLevel(Math.max(0,Math.min(1,(e.data.rmsDb+60)/60)));
+      if(type==="TRANSCRIPT")   commHandleTranscript(e.data.text,e.data.isFinal);
+      if(type==="REPLAY_PCM")   commPlayPcm(e.data.pcm,e.data.sampleRate);
+    };
+    return()=>{commWorkerRef.current?.terminate();if(commWorkerBlobUrl.current)URL.revokeObjectURL(commWorkerBlobUrl.current);};
+  }, [commHandleTranscript]);
+
+  // Rebuild callsign regex when aircraft prop changes
+  useEffect(() => { commCallsignRxRef.current = buildCommRegex(aircraft?.tail); }, [aircraft?.tail, buildCommRegex]);
+
+  // Cleanup all comm resources on unmount
+  useEffect(() => {
+    return () => {
+      commStopListening();
+      commClearTimers();
+    };
+  }, []);
+
+  const commPlayPcm = (pcm,sr) => {
+    try {
+      const ctx=new(window.AudioContext||window.webkitAudioContext)();
+      const buf=ctx.createBuffer(1,pcm.length,sr); buf.copyToChannel(pcm,0);
+      const src=ctx.createBufferSource(); src.buffer=buf; src.connect(ctx.destination); src.start();
+      src.onended=()=>{setCommReplayActive(false);ctx.close();};
+    } catch { setCommReplayActive(false); }
+  };
+
+  const commStartListening = async () => {
+    try {
+      const stream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,sampleRate:16000,echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+      commStreamRef.current=stream;
+      const ctx=new(window.AudioContext||window.webkitAudioContext)({sampleRate:16000});
+      commAudioCtxRef.current=ctx;
+      const source=ctx.createMediaStreamSource(stream);
+      const proc=ctx.createScriptProcessor(4096,1,1);
+      source.connect(proc); proc.connect(ctx.destination);
+      proc.onaudioprocess=(e)=>{const s=new Float32Array(e.inputBuffer.getChannelData(0));commWorkerRef.current?.postMessage({type:"AUDIO_CHUNK",samples:s});};
+      // VU animation via analyser
+      const analyser=ctx.createAnalyser(); analyser.fftSize=256; source.connect(analyser);
+      const vuBuf=new Uint8Array(analyser.frequencyBinCount);
+      const animVu=()=>{analyser.getByteFrequencyData(vuBuf);let sum=0;for(let i=0;i<vuBuf.length;i++)sum+=vuBuf[i]*vuBuf[i];setCommRmsLevel(Math.sqrt(sum/vuBuf.length)/255);commAnimFrameRef.current=requestAnimationFrame(animVu);};
+      commAnimFrameRef.current=requestAnimationFrame(animVu);
+      // Web Speech API injection
+      if("webkitSpeechRecognition"in window||"SpeechRecognition"in window){
+        const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+        const rec=new SR(); rec.continuous=true; rec.interimResults=true; rec.lang="en-US"; rec.maxAlternatives=1;
+        rec.onresult=(e)=>{let p="",f="";for(let i=e.resultIndex;i<e.results.length;i++){const r=e.results[i];if(r.isFinal)f+=r[0].transcript+" ";else p+=r[0].transcript;}if(p)setCommTranscript(p);if(f.trim())commWorkerRef.current?.postMessage({type:"TRANSCRIPTION_RESULT",text:f.trim(),isFinal:true});};
+        rec.onerror=(e)=>{if(e.error==="not-allowed")setCommMicStatus("denied");};
+        rec.onend=()=>{try{rec.start();}catch{}};
+        rec.start(); commRecognitionRef.current=rec;
+      }
+      setCommListening(true); setCommMicStatus("active");
+    } catch(err) { setCommMicStatus(err.name==="NotAllowedError"?"denied":"error"); }
+  };
+
+  const commStopListening = () => {
+    commRecognitionRef.current?.stop(); commRecognitionRef.current=null;
+    commStreamRef.current?.getTracks().forEach(t=>t.stop()); commStreamRef.current=null;
+    cancelAnimationFrame(commAnimFrameRef.current);
+    commAudioCtxRef.current?.close(); commAudioCtxRef.current=null;
+    setCommListening(false); setCommMicStatus("idle"); setCommTranscript(""); setCommRmsLevel(0);
+  };
+
+  const commAckCall = () => { commClearTimers(); setCommWatchdogState("clear"); setCommWatchdogTx(null); setCommAckCountdown(0); commPlayChime(false); };
+  const commReplay = (seconds=10) => { commWorkerRef.current?.postMessage({type:"GET_REPLAY",seconds}); setCommReplayActive(true); setTimeout(()=>setCommReplayActive(false),seconds*1000); };
+  // ── END COMM AUDIO ENGINE 
+
+  // ── Theme tokens ──────────────────────────────────────────────────────────
+  const T = lightMode ? {
+
   // ── Theme tokens ──────────────────────────────────────────────────────────
   const T = lightMode ? {
     appBg:"#e8eaf0", headerBg:"linear-gradient(135deg,#d0d4e0 0%,#c8ccd8 60%,#d0d4e0 100%)",
@@ -1595,18 +1816,37 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
           </div>
         </div>
 
-        {/* Center — checklist with fixed bottom accordion overlay */}
+        {/* Center — checklist OR comm page */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: T.centerBg, position: "relative" }}>
-          {/* Main checklist scroll area */}
-          <div style={{ flex: 1, overflowY: currentPage === "comm" ? "hidden" : "auto", overflowX: "hidden", scrollbarWidth: "thin", display: "flex", flexDirection: "column" }}>
+          {/* Main content area — comm page gets height:100% fill; checklist scrolls */}
+          <div style={{ flex: 1, overflow: currentPage === "comm" ? "hidden" : "auto", overflowX: "hidden", scrollbarWidth: "thin", display: "flex", flexDirection: "column" }}>
             {currentPage === "comm"
-              ? <CommPage aircraft={aircraft} />
+              ? <CommPage
+                  aircraft={aircraft}
+                  listening={commListening}
+                  micStatus={commMicStatus}
+                  rmsLevel={commRmsLevel}
+                  transcript={commTranscript}
+                  txLog={commTxLog}
+                  watchdogState={commWatchdogState}
+                  watchdogTx={commWatchdogTx}
+                  ackCountdown={commAckCountdown}
+                  onStartListen={commStartListening}
+                  onStopListen={commStopListening}
+                  onAckCall={commAckCall}
+                  onReplay={commReplay}
+                  replayActive={commReplayActive}
+                  forceIfrMode={commForceIfr}
+                  onToggleForce={() => setCommForceIfr(v => !v)}
+                  ifrData={commIfrData}
+                  onSetIfrData={setCommIfrData}
+                />
               : renderChecklist(activePg)
             }
           </div>
 
-          {/* ── PERFORMANCE DRAWERS — Pinned to bottom, grows smoothly upward ── */}
-          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 40, pointerEvents: "none", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 4px 4px 4px" }}>
+          {/* ── PERFORMANCE DRAWERS — hidden on comm page, absolute overlay on checklist pages ── */}
+          {currentPage !== "comm" && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 40, pointerEvents: "none", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 4px 4px 4px" }}>
             <div style={{ pointerEvents: "auto", display: "flex", flexDirection: "column", gap: "0px" }}>
               {[
                 { key: "vspeeds", label: "V-SPEEDS · C172S",           color: "#3a9ad4", headerBg: "rgba(58,154,212,0.12)",  contentBg: "rgba(5,17,24,0.96)"  },
@@ -1710,8 +1950,8 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                   </div>
                 );
               })}
-            </div>
-          </div>
+           </div>
+          </div>}
         </div>
         {/* Right sidebar — emergency pages */}
         <div style={{ width: 90, flexShrink: 0, background: "#100c0c", borderLeft: "1px solid #281818", display: "flex", flexDirection: "column", overflowY: "auto", overflowX: "hidden" }}>
