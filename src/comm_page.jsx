@@ -264,8 +264,8 @@ function AtisCard({ T, data, onSetAtisData, armState, rawText, onArm, onClearRaw
             {isArmed ? "● RECORDING…" : isDone ? "CAPTURED · AI PARSED" : "TAP ARM TO CAPTURE"}
           </div>
         </div>
-        {/* Reset button — left of ARM */}
-        <button onClick={() => onSetAtisData({ info:"",wind:"",altimeter:"",visibility:"",sky:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, padding:"5px 10px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺</button>
+        {/* CLR button — left of ARM */}
+        <button onClick={() => onSetAtisData({ info:"",wind:"",altimeter:"",visibility:"",sky:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
         {/* ARM / STOP button — far right, large, thumb-friendly */}
         <button onClick={onArm} style={{
           fontFamily:"'Oswald',sans-serif", fontSize:13, fontWeight:700, letterSpacing:2,
@@ -329,7 +329,7 @@ function GndCard({ T, data, onSetGndData, armState, rawText, onArm, onClearRaw }
     <div style={{ background:T.cardBg, border:`2px solid ${isArmed ? A.green : isDone ? `${A.green}60` : `${A.green}28`}`, borderRadius:5, overflow:"hidden", transition:"all 0.2s" }}>
       {/* ── Header ── */}
       <div style={{ background: isArmed ? `${A.green}18` : `${A.green}10`, borderBottom:`2px solid ${A.green}`, padding:"10px 12px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
-        <div>
+        <div style={{ flex:1 }}>
           <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:14, fontWeight:700, letterSpacing:3, color:A.green }}>GROUND CLEARANCE</div>
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:1 }}>
             {isArmed ? "● RECORDING…" : isDone ? "CAPTURED · AI PARSED" : "TAP ARM TO CAPTURE"}
@@ -345,27 +345,27 @@ function GndCard({ T, data, onSetGndData, armState, rawText, onArm, onClearRaw }
           animation: isArmed ? "commGlow 1.2s ease infinite" : "none",
           transition:"all 0.15s",
         }}>
-          {isArmed ? "⏹ STOP" : "⏺ ARM"}
+          {isArmed ? "⏹ STOP" : "● ARM"}
         </button>
-        <button onClick={() => onSetGndData({ clearedTo:"",route:"",altitude:"",frequency:"",taxi:"",squawk:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, padding:"5px 10px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺</button>
+        <button onClick={() => onSetGndData({ clearedTo:"",route:"",altitude:"",frequency:"",taxi:"",squawk:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
       </div>
       {/* ── Raw captured text ── */}
       {rawText ? (
-        <div style={{ padding:"8px 12px", borderBottom:`1px solid ${T.border}`, background: isDone ? `${A.green}08` : `${A.green}05` }}>
-          <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:6, marginBottom:4 }}>
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:A.green, letterSpacing:1.5 }}>
+        <div style={{ padding:"10px 14px", borderBottom:`1px solid ${T.border}`, background: isDone ? `${A.green}10` : `${A.green}06`, borderLeft: isDone ? `4px solid ${A.green}` : `4px solid ${A.amber}` }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:6, marginBottom:6 }}>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color: isArmed ? A.amber : A.green, letterSpacing:2, fontWeight:700 }}>
               {isArmed ? "▶ LIVE BUFFER" : "✓ CAPTURED TEXT"}
             </div>
-            {isDone && <button onClick={onClearRaw} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, padding:"1px 6px", borderRadius:2, cursor:"pointer", background:"transparent", color:T.textDim, border:`1px solid ${T.border}` }}>DISMISS</button>}
+            {isDone && <button onClick={onClearRaw} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, padding:"2px 8px", borderRadius:2, cursor:"pointer", background:"transparent", color:T.textDim, border:`1px solid ${T.border}` }}>DISMISS</button>}
           </div>
-          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color: isArmed ? A.amber : T.textMain, lineHeight:1.55, letterSpacing:0.3 }}>
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:16, fontWeight:700, color: isArmed ? A.amber : T.textMain, lineHeight:1.6, letterSpacing:0.4 }}>
             {rawText}
           </div>
         </div>
       ) : isArmed ? (
-        <div style={{ padding:"8px 12px", borderBottom:`1px solid ${T.border}`, background:`${A.green}05` }}>
-          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:A.green, letterSpacing:1, fontStyle:"italic", animation:"commPulse 1.5s ease infinite" }}>
-            — listening for transmission —
+        <div style={{ padding:"10px 14px", borderBottom:`1px solid ${T.border}`, background:`${A.green}05`, borderLeft:`4px solid ${A.green}40` }}>
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:A.green, letterSpacing:1, fontStyle:"italic", animation:"commPulse 1.5s ease infinite" }}>
+            — listening · minimum 8s recording window active —
           </div>
         </div>
       ) : null}
@@ -792,7 +792,7 @@ export function CommPage({
                 onArm={onArmGnd} onClearRaw={onClearGndRaw} />
               <div style={{ background:T.cardBg, border:`1px solid ${A.amber}28`, borderRadius:5, overflow:"hidden", transition:"background 0.2s" }}>
                 <div style={{ background: ifrArmState==="armed" ? `${A.amber}20` : `${A.amber}10`, borderBottom:`2px solid ${A.amber}`, padding:"10px 12px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
-                  <div>
+                  <div style={{ flex:1 }}>
                     <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:14, fontWeight:700, letterSpacing:3, color:A.amber }}>IFR CLEARANCE</div>
                     <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:1 }}>
                       {ifrArmState==="armed" ? "● RECORDING…" : ifrArmState==="done" ? "CAPTURED · AI PARSED" : "NWKRAFT FORMAT · TAP ARM"}
@@ -808,26 +808,26 @@ export function CommPage({
                     animation: ifrArmState==="armed" ? "commGlow 1.2s ease infinite" : "none",
                     transition:"all 0.15s",
                   }}>
-                    {ifrArmState==="armed" ? "⏹ STOP" : "⏺ ARM"}
+                    {ifrArmState==="armed" ? "⏹ STOP" : "● ARM"}
                   </button>
-                  <button onClick={() => onSetIfrData({ N:"",W:"",K:"",R:"",A:"",F:"",T:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, padding:"5px 10px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺</button>
+                  <button onClick={() => onSetIfrData({ N:"",W:"",K:"",R:"",A:"",F:"",T:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
                 </div>
                 {ifrRawText ? (
-                  <div style={{ padding:"8px 12px", borderBottom:`1px solid ${T.border}`, background: ifrArmState==="done" ? `${A.amber}08` : `${A.amber}05` }}>
-                    <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:6, marginBottom:4 }}>
-                      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:A.amber, letterSpacing:1.5 }}>
+                  <div style={{ padding:"10px 14px", borderBottom:`1px solid ${T.border}`, background: ifrArmState==="done" ? `${A.amber}10` : `${A.amber}06`, borderLeft: ifrArmState==="done" ? `4px solid ${A.amber}` : `4px solid ${A.amber}60` }}>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:6, marginBottom:6 }}>
+                      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color: ifrArmState==="armed" ? A.amber : A.amber, letterSpacing:2, fontWeight:700 }}>
                         {ifrArmState==="armed" ? "▶ LIVE BUFFER" : "✓ CAPTURED TEXT"}
                       </div>
-                      {ifrArmState==="done" && <button onClick={onClearIfrRaw} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, padding:"1px 6px", borderRadius:2, cursor:"pointer", background:"transparent", color:T.textDim, border:`1px solid ${T.border}` }}>DISMISS</button>}
+                      {ifrArmState==="done" && <button onClick={onClearIfrRaw} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, padding:"2px 8px", borderRadius:2, cursor:"pointer", background:"transparent", color:T.textDim, border:`1px solid ${T.border}` }}>DISMISS</button>}
                     </div>
-                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color: ifrArmState==="armed" ? A.amber : T.textMain, lineHeight:1.55, letterSpacing:0.3 }}>
+                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:16, fontWeight:700, color: ifrArmState==="armed" ? A.amber : T.textMain, lineHeight:1.6, letterSpacing:0.4 }}>
                       {ifrRawText}
                     </div>
                   </div>
                 ) : ifrArmState==="armed" ? (
-                  <div style={{ padding:"8px 12px", borderBottom:`1px solid ${T.border}`, background:`${A.amber}05` }}>
-                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:A.amber, letterSpacing:1, fontStyle:"italic", animation:"commPulse 1.5s ease infinite" }}>
-                      — listening for transmission —
+                  <div style={{ padding:"10px 14px", borderBottom:`1px solid ${T.border}`, background:`${A.amber}05`, borderLeft:`4px solid ${A.amber}40` }}>
+                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:A.amber, letterSpacing:1, fontStyle:"italic", animation:"commPulse 1.5s ease infinite" }}>
+                      — listening · minimum 8s recording window active —
                     </div>
                   </div>
                 ) : null}
