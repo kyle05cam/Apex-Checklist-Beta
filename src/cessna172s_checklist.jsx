@@ -1096,55 +1096,6 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   const commTxIdRef         = useRef(0);
   const commCallsignRxRef   = useRef(null);
 
-  // ── PHONETIC WORD → DIGIT NORMALIZER ─────────────────────────────────────
-  // ATC always speaks numbers as individual words. Speech recognition returns
-  // "two niner niner two" — not "2992". This runs before every parser.
-  const PHONETIC_DIGITS = {
-    "zero":"0","niner":"9","nine":"9","one":"1","two":"2","three":"3",
-    "four":"4","five":"5","six":"6","seven":"7","eight":"8",
-  };
-  const PHONETIC_ALPHA = {
-    "alpha":"A","bravo":"B","charlie":"C","delta":"D","echo":"E",
-    "foxtrot":"F","golf":"G","hotel":"H","india":"I","juliett":"J",
-    "juliet":"J","kilo":"K","lima":"L","mike":"M","november":"N",
-    "oscar":"O","papa":"P","quebec":"Q","romeo":"R","sierra":"S",
-    "tango":"T","uniform":"U","victor":"V","whiskey":"W","xray":"X",
-    "yankee":"Y","zulu":"Z",
-  };
-
-  // Converts spoken phonetic words into digit/letter equivalents so regexes
-  // that match digit strings work on real speech-recognition output.
-  const normalizePhonetic = (text) => {
-    // Step 1 — spoken frequency decimals: "one two niner point four" → "129.4"
-    // Matches digit-words on both sides of the word "point"
-    let t = text.replace(
-      /\b((?:(?:zero|one|two|three|four|five|six|seven|eight|niner|nine)\s+)+)point\s+((?:(?:zero|one|two|three|four|five|six|seven|eight|niner|nine)\s*)+)/gi,
-      (_, left, right) => {
-        const l = left.trim().split(/\s+/).map(w => PHONETIC_DIGITS[w.toLowerCase()]||w).join("");
-        const r = right.trim().split(/\s+/).map(w => PHONETIC_DIGITS[w.toLowerCase()]||w).join("");
-        return `${l}.${r}`;
-      }
-    );
-    // Step 2 — convert remaining isolated digit words to numerals
-    // Only converts known phonetic digit words so normal speech is untouched
-    t = t.replace(/\b(zero|one|two|three|four|five|six|seven|eight|niner|nine)\b/gi,
-      w => PHONETIC_DIGITS[w.toLowerCase()] || w
-    );
-    // Step 3 — convert phonetic alphabet letters (for squawk codes + idents)
-    // Only fires inside known contexts to avoid converting normal words
-    t = t.replace(
-      /\b(information|with|squawk|ident)\s+(alpha|bravo|charlie|delta|echo|foxtrot|golf|hotel|india|juliett|juliet|kilo|lima|mike|november|oscar|papa|quebec|romeo|sierra|tango|uniform|victor|whiskey|xray|yankee|zulu)\b/gi,
-      (_, prefix, letter) => `${prefix} ${PHONETIC_ALPHA[letter.toLowerCase()] || letter.toUpperCase()}`
-    );
-    return t;
-  };
-
-  // ── ARM STATE — one boolean per card ─────────────────────────────────────
-  // When armed, card captures the next matching transmission then auto-disarms.
-  const [atisArmed,  setAtisArmed]  = useState(false);
-  const [gndArmed,   setGndArmed]   = useState(false);
-  const [ifrArmed,   setIfrArmed]   = useState(false);
-
   // ── PHONETIC WORD → DIGIT/LETTER NORMALIZER ──────────────────────────────
   const PHONETIC_DIGITS = {
     "zero":"0","niner":"9","nine":"9","one":"1","two":"2","three":"3",
