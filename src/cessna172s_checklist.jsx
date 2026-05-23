@@ -1153,19 +1153,25 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   const atisSilenceRef  = useRef(null);
   const gndSilenceRef   = useRef(null);
   const ifrSilenceRef   = useRef(null);
-  const atisArmTimeRef  = useRef(null); // timestamp when ATIS was armed
-  const gndArmTimeRef   = useRef(null); // timestamp when GND was armed
-  const ifrArmTimeRef   = useRef(null); // timestamp when IFR was armed
+  const atisArmTimeRef  = useRef(null);   // ms timestamp when ATIS was armed
+  const gndArmTimeRef   = useRef(null);   // ms timestamp when GND was armed
+  const ifrArmTimeRef   = useRef(null);   // ms timestamp when IFR was armed
+  const atisArmStateRef = useRef("idle"); // ref mirror of atisArmState — safe inside timers & callbacks
+  const gndArmStateRef  = useRef("idle"); // ref mirror of gndArmState
+  const ifrArmStateRef  = useRef("idle"); // ref mirror of ifrArmState
 
-  const ATIS_SILENCE_MS  = 6500;  // ATIS has natural pauses between elements — be patient
-  const GND_SILENCE_MS   = 4000;  // Ground clearance is faster paced
-  const IFR_SILENCE_MS   = 4000;  // IFR readback is continuous
-  const MIN_RECORD_MS    = 8000;  // No card commits for at least 8s after arming
+  const ATIS_SILENCE_MS = 6500; // ATIS has natural pauses between elements — be patient
+  const GND_SILENCE_MS  = 4000; // Ground clearance is faster paced
+  const IFR_SILENCE_MS  = 4000; // IFR readback is continuous
+  const MIN_RECORD_MS   = 8000; // silence timer is blocked for 8s after arming
 
-  // Parse + commit a completed buffer to a card
+  // Parse + commit a completed buffer to a card.
+  // Always resets ref mirrors so the STOP button never gets orphaned.
   const commitAtisBuffer = useCallback(() => {
     const buf = atisBufferRef.current.trim();
-    if (!buf) return;
+    atisArmStateRef.current = buf ? "done" : "idle";
+    atisArmTimeRef.current  = null;
+    if (!buf) { setAtisArmState("idle"); return; }
     setAtisRawText(buf);
     setCommAtisData(commParseAtis(buf));
     setAtisArmState("done");
@@ -1174,7 +1180,9 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
 
   const commitGndBuffer = useCallback(() => {
     const buf = gndBufferRef.current.trim();
-    if (!buf) return;
+    gndArmStateRef.current = buf ? "done" : "idle";
+    gndArmTimeRef.current  = null;
+    if (!buf) { setGndArmState("idle"); return; }
     setGndRawText(buf);
     setCommGndData(commParseGround(buf));
     setGndArmState("done");
@@ -1183,53 +1191,62 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
 
   const commitIfrBuffer = useCallback(() => {
     const buf = ifrBufferRef.current.trim();
-    if (!buf) return;
+    ifrArmStateRef.current = buf ? "done" : "idle";
+    ifrArmTimeRef.current  = null;
+    if (!buf) { setIfrArmState("idle"); return; }
     setIfrRawText(buf);
     setCommIfrData(commParseNwkraft(buf));
     setIfrArmState("done");
     ifrBufferRef.current = "";
   }, []);
 
-// ARM toggle handlers — exposed as props to CommPage
+  // ARM toggle handlers — read atisArmStateRef (not atisArmState) so STOP always
+  // fires immediately regardless of React render timing or the MIN_RECORD window.
   const handleArmAtis = useCallback(() => {
-    if (atisArmState === "armed") {
-      // Manual stop — bypass minimum window and parse immediately
+    if (atisArmStateRef.current === "armed") {
+      // STOP — always immediate, no minimum window check
       clearTimeout(atisSilenceRef.current);
-      atisArmTimeRef.current = null;
+      atisArmStateRef.current = "idle";
+      atisArmTimeRef.current  = null;
       commitAtisBuffer();
     } else {
-      atisBufferRef.current = "";
+      atisBufferRef.current   = "";
       setAtisRawText("");
-      atisArmTimeRef.current = Date.now(); // record arm time
+      atisArmTimeRef.current  = Date.now();
+      atisArmStateRef.current = "armed";
       setAtisArmState("armed");
     }
-  }, [atisArmState, commitAtisBuffer]);
+  }, [commitAtisBuffer]);
 
   const handleArmGnd = useCallback(() => {
-    if (gndArmState === "armed") {
+    if (gndArmStateRef.current === "armed") {
       clearTimeout(gndSilenceRef.current);
-      gndArmTimeRef.current = null;
+      gndArmStateRef.current = "idle";
+      gndArmTimeRef.current  = null;
       commitGndBuffer();
     } else {
-      gndBufferRef.current = "";
+      gndBufferRef.current   = "";
       setGndRawText("");
-      gndArmTimeRef.current = Date.now();
+      gndArmTimeRef.current  = Date.now();
+      gndArmStateRef.current = "armed";
       setGndArmState("armed");
     }
-  }, [gndArmState, commitGndBuffer]);
+  }, [commitGndBuffer]);
 
   const handleArmIfr = useCallback(() => {
-    if (ifrArmState === "armed") {
+    if (ifrArmStateRef.current === "armed") {
       clearTimeout(ifrSilenceRef.current);
-      ifrArmTimeRef.current = null;
+      ifrArmStateRef.current = "idle";
+      ifrArmTimeRef.current  = null;
       commitIfrBuffer();
     } else {
-      ifrBufferRef.current = "";
+      ifrBufferRef.current   = "";
       setIfrRawText("");
-      ifrArmTimeRef.current = Date.now();
+      ifrArmTimeRef.current  = Date.now();
+      ifrArmStateRef.current = "armed";
       setIfrArmState("armed");
     }
-  }, [ifrArmState, commitIfrBuffer]);
+  }, [commitIfrBuffer]);
   
   // Directive verbs for watchdog regex
   const COMM_DIRECTIVES = [
@@ -1451,36 +1468,37 @@ const commHandleTranscript = useCallback((text, isFinal) => {
     if (nwkraft) setCommIfrData(nwkraft);
     if (commCallsignRxRef.current && commCallsignRxRef.current.test(text)) commTriggerWatchdog(entry);
 
-// ── ARMED BUFFER ACCUMULATION ─────────────────────────────────────────
-    // Appends every final transcript chunk into the armed card's buffer.
-    // Silence timer is blocked for MIN_RECORD_MS after arming to prevent
-    // premature commits on natural ATIS pauses between weather elements.
+    // ── ARMED BUFFER ACCUMULATION ─────────────────────────────────────────
+    // Reads ref mirrors (not state) to avoid stale closure issues.
+    // MIN_RECORD_MS guard: if a transcript chunk arrives while still inside
+    // the 8s minimum window, the silence delay is extended so natural ATIS
+    // pauses between weather elements never trigger a premature commit.
 
-    if (atisArmState === "armed") {
+    if (atisArmStateRef.current === "armed") {
       atisBufferRef.current = (atisBufferRef.current + " " + text).trim();
       clearTimeout(atisSilenceRef.current);
       const atisElapsed = atisArmTimeRef.current ? Date.now() - atisArmTimeRef.current : MIN_RECORD_MS + 1;
-      const atisDelay = atisElapsed < MIN_RECORD_MS ? (MIN_RECORD_MS - atisElapsed + ATIS_SILENCE_MS) : ATIS_SILENCE_MS;
+      const atisDelay   = atisElapsed < MIN_RECORD_MS ? (MIN_RECORD_MS - atisElapsed + ATIS_SILENCE_MS) : ATIS_SILENCE_MS;
       atisSilenceRef.current = setTimeout(commitAtisBuffer, atisDelay);
     }
 
-    if (gndArmState === "armed") {
+    if (gndArmStateRef.current === "armed") {
       gndBufferRef.current = (gndBufferRef.current + " " + text).trim();
       clearTimeout(gndSilenceRef.current);
       const gndElapsed = gndArmTimeRef.current ? Date.now() - gndArmTimeRef.current : MIN_RECORD_MS + 1;
-      const gndDelay = gndElapsed < MIN_RECORD_MS ? (MIN_RECORD_MS - gndElapsed + GND_SILENCE_MS) : GND_SILENCE_MS;
+      const gndDelay   = gndElapsed < MIN_RECORD_MS ? (MIN_RECORD_MS - gndElapsed + GND_SILENCE_MS) : GND_SILENCE_MS;
       gndSilenceRef.current = setTimeout(commitGndBuffer, gndDelay);
     }
 
-    if (ifrArmState === "armed") {
+    if (ifrArmStateRef.current === "armed") {
       ifrBufferRef.current = (ifrBufferRef.current + " " + text).trim();
       clearTimeout(ifrSilenceRef.current);
       const ifrElapsed = ifrArmTimeRef.current ? Date.now() - ifrArmTimeRef.current : MIN_RECORD_MS + 1;
-      const ifrDelay = ifrElapsed < MIN_RECORD_MS ? (MIN_RECORD_MS - ifrElapsed + IFR_SILENCE_MS) : IFR_SILENCE_MS;
+      const ifrDelay   = ifrElapsed < MIN_RECORD_MS ? (MIN_RECORD_MS - ifrElapsed + IFR_SILENCE_MS) : IFR_SILENCE_MS;
       ifrSilenceRef.current = setTimeout(commitIfrBuffer, ifrDelay);
     }
 
-  }, [commForceIfr, commTriggerWatchdog, atisArmState, gndArmState, ifrArmState, commitAtisBuffer, commitGndBuffer, commitIfrBuffer]);
+  }, [commForceIfr, commTriggerWatchdog, commitAtisBuffer, commitGndBuffer, commitIfrBuffer]);
 
   // Worker background trace config
   const COMM_WORKER_BLOB = `const SAMPLE_RATE=16000,BUFFER_SIZE=16000*12; const ring=new Float32Array(BUFFER_SIZE);let wh=0; function rms(s){let sum=0;for(let i=0;i<s.length;i++)sum+=s[i]*s[i];return 20*Math.log10(Math.sqrt(sum/s.length)+1e-9);} function write(s){for(let i=0;i<s.length;i++){ring[wh]=s[i];wh=(wh+1)%BUFFER_SIZE;}} function read(sec){const n=Math.min(sec*SAMPLE_RATE,BUFFER_SIZE),out=new Float32Array(n),st=(wh-n+BUFFER_SIZE)%BUFFER_SIZE;for(let i=0;i<n;i++)out[i]=ring[(st+i)%BUFFER_SIZE];return out;} self.onmessage=function(e){   if(e.data.type==="AUDIO_CHUNK"){write(e.data.samples);self.postMessage({type:"BUFFER_READY",rmsDb:rms(e.data.samples)});return;}   if(e.data.type==="TRANSCRIPTION_RESULT"){self.postMessage({type:"TRANSCRIPT",text:e.data.text,isFinal:e.data.isFinal,ts:Date.now()});return;}   if(e.data.type==="GET_REPLAY"){self.postMessage({type:"REPLAY_PCM",pcm:read(e.data.seconds||10),sampleRate:SAMPLE_RATE});return;} };`;
