@@ -258,13 +258,15 @@ function AtisCard({ T, data, onSetAtisData, armState, rawText, onArm, onClearRaw
     <div style={{ background:T.cardBg, border:`2px solid ${isArmed ? A.teal : isDone ? `${A.teal}60` : `${A.teal}28`}`, borderRadius:5, overflow:"hidden", transition:"all 0.2s" }}>
       {/* ── Header ── */}
       <div style={{ background: isArmed ? `${A.teal}20` : `${A.teal}12`, borderBottom:`2px solid ${A.teal}`, padding:"10px 12px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
-        <div>
+        <div style={{ flex:1 }}>
           <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:14, fontWeight:700, letterSpacing:3, color:A.teal }}>ATIS</div>
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:1 }}>
             {isArmed ? "● RECORDING…" : isDone ? "CAPTURED · AI PARSED" : "TAP ARM TO CAPTURE"}
           </div>
         </div>
-        {/* ARM / STOP button — large, thumb-friendly */}
+        {/* Reset button — left of ARM */}
+        <button onClick={() => onSetAtisData({ info:"",wind:"",altimeter:"",visibility:"",sky:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, padding:"5px 10px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺</button>
+        {/* ARM / STOP button — far right, large, thumb-friendly */}
         <button onClick={onArm} style={{
           fontFamily:"'Oswald',sans-serif", fontSize:13, fontWeight:700, letterSpacing:2,
           padding:"10px 20px", borderRadius:5, cursor:"pointer", minWidth:90,
@@ -275,27 +277,26 @@ function AtisCard({ T, data, onSetAtisData, armState, rawText, onArm, onClearRaw
           animation: isArmed ? "commGlow 1.2s ease infinite" : "none",
           transition:"all 0.15s",
         }}>
-          {isArmed ? "⏹ STOP" : "⏺ ARM"}
+          {isArmed ? "⏹ STOP" : "● ARM"}
         </button>
-        <button onClick={() => onSetAtisData({ info:"",wind:"",altimeter:"",visibility:"",sky:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, padding:"5px 10px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺</button>
       </div>
-      {/* ── Raw captured text — visible after capture, stays until cleared ── */}
+      {/* ── Raw captured text — high-visibility pilot-readable block ── */}
       {rawText ? (
-        <div style={{ padding:"8px 12px", borderBottom:`1px solid ${T.border}`, background: isDone ? `${A.teal}08` : `${A.teal}05` }}>
-          <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:6, marginBottom:4 }}>
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:A.teal, letterSpacing:1.5 }}>
+        <div style={{ padding:"10px 14px", borderBottom:`1px solid ${T.border}`, background: isDone ? `${A.teal}10` : `${A.teal}06`, borderLeft: isDone ? `4px solid ${A.teal}` : `4px solid ${A.amber}` }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:6, marginBottom:6 }}>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color: isArmed ? A.amber : A.teal, letterSpacing:2, fontWeight:700 }}>
               {isArmed ? "▶ LIVE BUFFER" : "✓ CAPTURED TEXT"}
             </div>
-            {isDone && <button onClick={onClearRaw} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, padding:"1px 6px", borderRadius:2, cursor:"pointer", background:"transparent", color:T.textDim, border:`1px solid ${T.border}` }}>DISMISS</button>}
+            {isDone && <button onClick={onClearRaw} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, padding:"2px 8px", borderRadius:2, cursor:"pointer", background:"transparent", color:T.textDim, border:`1px solid ${T.border}` }}>DISMISS</button>}
           </div>
-          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color: isArmed ? A.amber : T.textMain, lineHeight:1.55, letterSpacing:0.3 }}>
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:16, fontWeight:700, color: isArmed ? A.amber : T.textMain, lineHeight:1.6, letterSpacing:0.4 }}>
             {rawText}
           </div>
         </div>
       ) : isArmed ? (
-        <div style={{ padding:"8px 12px", borderBottom:`1px solid ${T.border}`, background:`${A.teal}05` }}>
-          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:A.teal, letterSpacing:1, fontStyle:"italic", animation:"commPulse 1.5s ease infinite" }}>
-            — listening for transmission —
+        <div style={{ padding:"10px 14px", borderBottom:`1px solid ${T.border}`, background:`${A.teal}05`, borderLeft:`4px solid ${A.teal}40` }}>
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:A.teal, letterSpacing:1, fontStyle:"italic", animation:"commPulse 1.5s ease infinite" }}>
+            — listening · minimum 8s recording window active —
           </div>
         </div>
       ) : null}
