@@ -264,9 +264,7 @@ function AtisCard({ T, data, onSetAtisData, armState, rawText, onArm, onClearRaw
             {isArmed ? "● RECORDING…" : isDone ? "CAPTURED · AI PARSED" : "TAP ARM TO CAPTURE"}
           </div>
         </div>
-        {/* CLR button — left of ARM */}
-        <button onClick={() => onSetAtisData({ info:"",wind:"",altimeter:"",visibility:"",sky:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
-        {/* ARM / STOP button — far right, large, thumb-friendly */}
+        {/* ARM / STOP button — primary action, left of CLR */}
         <button onClick={onArm} style={{
           fontFamily:"'Oswald',sans-serif", fontSize:13, fontWeight:700, letterSpacing:2,
           padding:"10px 20px", borderRadius:5, cursor:"pointer", minWidth:90,
@@ -279,6 +277,8 @@ function AtisCard({ T, data, onSetAtisData, armState, rawText, onArm, onClearRaw
         }}>
           {isArmed ? "⏹ STOP" : "● ARM"}
         </button>
+        {/* CLR button — far right */}
+        <button onClick={() => onSetAtisData({ info:"",wind:"",altimeter:"",visibility:"",sky:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
       </div>
       {/* ── Raw captured text — high-visibility pilot-readable block ── */}
       {rawText ? (
