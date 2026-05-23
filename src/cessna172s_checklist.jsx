@@ -1878,7 +1878,101 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
           </button>
         </div>
       </div>
+{/* PERSISTENT ATC COMM BANNER TIMELINE */}
+      <div 
+        onClick={() => setCurrentPage("comm")} // Quick-jump to full logs if clicked
+        style={{
+          flexShrink: 0,
+          background: commWatchdogState === "unanswered" 
+            ? "rgba(232,90,74,0.25)" 
+            : commWatchdogState === "alert" 
+              ? "rgba(232,200,74,0.18)" 
+              : lightMode ? "#cbd0e2" : "#141820",
+          borderBottom: `2px solid ${
+            commWatchdogState === "unanswered" 
+              ? "#e85a4a" 
+              : commWatchdogState === "alert" 
+                ? "#e8c84a" 
+                : commListening ? "#4ae8c8" : "#2a3040"
+          }`,
+          padding: "6px 14px",
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          cursor: "pointer",
+          animation: commWatchdogState === "unanswered" ? "commFlash 0.5s ease infinite alternate" : "none",
+          transition: "all 0.2s ease"
+        }}
+      >
+        {/* Status Indicator Icon */}
+        <div style={{
+          width: 8,
+          height: 8,
+          borderRadius: "50%",
+          background: commWatchdogState === "unanswered" 
+            ? "#e85a4a" 
+            : commWatchdogState === "alert" 
+              ? "#e8c84a" 
+              : commListening ? "#3dbe6c" : "#4a5068",
+          boxShadow: commListening ? "0 0 8px currentColor" : "none"
+        }} />
 
+        {/* Real-time Ticker Feed */}
+        <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "baseline", gap: 8 }}>
+          <span style={{ 
+            fontFamily: "'Share Tech Mono', monospace", 
+            fontSize: 9, 
+            fontWeight: 700, 
+            color: commWatchdogState !== "clear" ? "#e8c84a" : "#7a8090", 
+            letterSpacing: 1 
+          }}>
+            {commWatchdogState !== "clear" ? "⚠ ATC GUARD ALERT:" : "📡 LIVE RADIO:"}
+          </span>
+          
+          <span style={{
+            fontFamily: "'Share Tech Mono', monospace",
+            fontSize: 12,
+            fontWeight: commWatchdogState !== "clear" ? 700 : 500,
+            color: commTranscript ? (lightMode ? "#b08000" : "#e8c84a") : (lightMode ? "#050a15" : "#e8e4d8"),
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            fontStyle: commTranscript || commTxLog.length > 0 ? "normal" : "italic"
+          }}>
+            {commTranscript 
+              ? commTranscript 
+              : commTxLog.length > 0 
+                ? commTxLog[0].text 
+                : "Awaiting voice transmission streaming entries... Tap COMM WATCH to toggle microphone state."
+            }
+          </span>
+        </div>
+
+        {/* Quick-Action Alert Dismiss Trigger */}
+        {commWatchdogState !== "clear" && (
+          <button 
+            onClick={(e) => {
+              e.stopPropagation(); // Avoid triggering page navigation jump
+              commAckCall();
+            }}
+            style={{
+              fontFamily: "'Oswald', sans-serif",
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: 1,
+              padding: "3px 10px",
+              borderRadius: 3,
+              cursor: "pointer",
+              background: commWatchdogState === "unanswered" ? "#e85a4a" : "#e8c84a",
+              color: "#000",
+              border: "none",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.3)"
+            }}
+          >
+            ACK CALL [{commAckCountdown}s]
+          </button>
+        )}
+      </div>
       {/* BODY */}
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
         <div style={{ width: 90, flexShrink: 0, background: T.leftSideBg, borderRight: `1px solid ${T.leftSideBorder}`, display: "flex", flexDirection: "column", overflowY: "auto", overflowX: "hidden" }}>
