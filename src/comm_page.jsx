@@ -143,6 +143,169 @@ function TokenText({ entry }) {
   });
 }
 
+// ─── MINI SCRIBBLE FIELD ──────────────────────────────────────────────────────
+// Dual-input field: text box + tap-to-expand inline drawing canvas
+function MiniScribbleField({ T, label, value, onChange, color, placeholder }) {
+  const [canvasOpen, setCanvasOpen] = useState(false);
+  const canvasRef = useRef(null);
+  const drawingRef = useRef({ active: false, lastX: 0, lastY: 0 });
+
+  const startDraw = (e) => {
+    const canvas = canvasRef.current; if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const src  = e.touches ? e.touches[0] : e;
+    drawingRef.current = { active: true, lastX: src.clientX - rect.left, lastY: src.clientY - rect.top };
+  };
+  const draw = (e) => {
+    if (!drawingRef.current.active) return;
+    e.preventDefault();
+    const canvas = canvasRef.current; if (!canvas) return;
+    const ctx  = canvas.getContext("2d");
+    const rect = canvas.getBoundingClientRect();
+    const src  = e.touches ? e.touches[0] : e;
+    const x = src.clientX - rect.left, y = src.clientY - rect.top;
+    ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.beginPath(); ctx.moveTo(drawingRef.current.lastX, drawingRef.current.lastY);
+    ctx.lineTo(x, y); ctx.stroke();
+    drawingRef.current = { active: true, lastX: x, lastY: y };
+  };
+  const endDraw = () => { drawingRef.current.active = false; };
+  const clearCanvas = () => {
+    const canvas = canvasRef.current; if (!canvas) return;
+    canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+  };
+
+  return (
+    <div style={{ marginBottom: 2 }}>
+      {/* Row: label + text input + scribble toggle */}
+      <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom: canvasOpen ? 4 : 0 }}>
+        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:color, letterSpacing:1.5, flexShrink:0, width:70 }}>
+          {label}
+        </div>
+        <input
+          type="text"
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder={placeholder}
+          style={{
+            flex:1, boxSizing:"border-box",
+            background:T.inputBg, border:`1px solid ${T.inputBdr(color)}`,
+            borderRadius:3, padding:"5px 8px", outline:"none",
+            fontFamily:"'Share Tech Mono',monospace", fontSize:14, fontWeight:700,
+            color:value ? color : T.textDim, caretColor:color,
+          }}
+        />
+        <button
+          onClick={() => setCanvasOpen(o => !o)}
+          title={canvasOpen ? "Hide scribble pad" : "Open scribble pad"}
+          style={{
+            flexShrink:0, width:28, height:28, borderRadius:3, cursor:"pointer", border:`1px solid ${color}40`,
+            background: canvasOpen ? `${color}18` : "transparent",
+            color: canvasOpen ? color : T.textDim,
+            display:"flex", alignItems:"center", justifyContent:"center",
+            fontSize:14, lineHeight:1, transition:"all 0.15s",
+          }}
+        >
+          ✏
+        </button>
+      </div>
+      {/* Inline canvas — only rendered when open */}
+      {canvasOpen && (
+        <div style={{ position:"relative", marginLeft:76 }}>
+          <canvas
+            ref={canvasRef}
+            width={340} height={52}
+            onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
+            onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}
+            style={{
+              display:"block", width:"100%", height:52, borderRadius:3, cursor:"crosshair",
+              background:T.inputBg, border:`1px dashed ${color}40`,
+              touchAction:"none",
+            }}
+          />
+          <button
+            onClick={clearCanvas}
+            style={{
+              position:"absolute", top:3, right:3,
+              fontFamily:"'Share Tech Mono',monospace", fontSize:7, padding:"1px 5px",
+              borderRadius:2, cursor:"pointer", background:"transparent",
+              color:T.textDim, border:`1px solid ${T.border}`,
+            }}
+          >CLR</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── ATIS CARD ────────────────────────────────────────────────────────────────
+function AtisCard({ T, data, onSetAtisData }) {
+  const FIELDS = [
+    { key:"info",       label:"INFORMATION", color:A.teal,   hint:"Ident letter" },
+    { key:"wind",       label:"WIND",        color:A.blue,   hint:"Dir/speed (e.g. 270° AT 12KT)" },
+    { key:"altimeter",  label:"ALTIMETER",   color:A.amber,  hint:"e.g. 29.92" },
+    { key:"visibility", label:"VISIBILITY",  color:A.green,  hint:"e.g. 10SM" },
+    { key:"sky",        label:"SKY",         color:A.purple, hint:"e.g. FEW 3500" },
+  ];
+  return (
+    <div style={{ background:T.cardBg, border:`1px solid ${A.teal}28`, borderRadius:5, overflow:"hidden", transition:"background 0.2s" }}>
+      <div style={{ background:`${A.teal}12`, borderBottom:`2px solid ${A.teal}`, padding:"7px 12px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <div>
+          <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:14, fontWeight:700, letterSpacing:3, color:A.teal }}>ATIS</div>
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:1 }}>AUTO-FILL · AI PARSED</div>
+        </div>
+        <button onClick={() => onSetAtisData({ info:"",wind:"",altimeter:"",visibility:"",sky:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, padding:"3px 9px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLEAR</button>
+      </div>
+      <div style={{ padding:"8px 12px", display:"flex", flexDirection:"column", gap:6 }}>
+        {FIELDS.map(f => (
+          <MiniScribbleField key={f.key} T={T} label={f.label} color={f.color} placeholder={f.hint}
+            value={data[f.key]||""}
+            onChange={v => onSetAtisData({ ...data, [f.key]: v })}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── GROUND CLEARANCE CARD ────────────────────────────────────────────────────
+function GndCard({ T, data, onSetGndData }) {
+  const FIELDS = [
+    { key:"clearedTo",  label:"CLEARED TO",  color:A.green,  hint:"Destination" },
+    { key:"route",      label:"ROUTE",       color:A.blue,   hint:"Via / as filed" },
+    { key:"altitude",   label:"ALTITUDE",    color:A.purple, hint:"Maintain / expect" },
+    { key:"frequency",  label:"FREQUENCY",   color:A.teal,   hint:"Departure freq" },
+    { key:"taxi",       label:"TAXI",        color:A.amber,  hint:"Taxi instructions" },
+    { key:"squawk",     label:"SQUAWK",      color:A.red,    hint:"4-digit code" },
+  ];
+  return (
+    <div style={{ background:T.cardBg, border:`1px solid ${A.green}28`, borderRadius:5, overflow:"hidden", transition:"background 0.2s" }}>
+      <div style={{ background:`${A.green}10`, borderBottom:`2px solid ${A.green}`, padding:"7px 12px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <div>
+          <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:14, fontWeight:700, letterSpacing:3, color:A.green }}>GROUND CLEARANCE</div>
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:1 }}>AUTO-FILL · AI PARSED</div>
+        </div>
+        <button onClick={() => onSetGndData({ clearedTo:"",route:"",altitude:"",frequency:"",taxi:"",squawk:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, padding:"3px 9px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLEAR</button>
+      </div>
+      <div style={{ padding:"8px 12px", display:"flex", flexDirection:"column", gap:6 }}>
+        {FIELDS.map(f => (
+          <MiniScribbleField key={f.key} T={T} label={f.label} color={f.color} placeholder={f.hint}
+            value={data[f.key]||""}
+            onChange={v => onSetGndData({ ...data, [f.key]: v })}
+          />
+        ))}
+        {data.squawk && (
+          <div style={{ background:`${A.red}12`, border:`1px solid ${A.red}40`, borderRadius:4, padding:"7px 12px", display:"flex", alignItems:"center", gap:14, marginTop:2 }}>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:A.red, letterSpacing:2 }}>SQUAWK</div>
+            <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:28, fontWeight:700, color:A.amber, letterSpacing:4 }}>{data.squawk}</div>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim }}>SET XPDR</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── NWKRAFT CARD ─────────────────────────────────────────────────────────────
 function NwkraftCard({ T, data, tail, onClear, forceIfrMode, onToggleForce, onSetIfrData }) {
   return (
@@ -178,18 +341,10 @@ function NwkraftCard({ T, data, tail, onClear, forceIfrMode, onToggleForce, onSe
               <div style={{ fontFamily:"'Rajdhani',sans-serif", fontSize:9, color:T.textDim }}>{f.hint}</div>
             </div>
           </div>
-          <input
-            type="text"
-            value={data[f.key] || ""}
-            onChange={e => onSetIfrData({ ...data, [f.key]: e.target.value })}
-            placeholder={f.hint}
-            style={{
-              width:"100%", boxSizing:"border-box",
-              background:T.inputBg, border:`1px solid ${T.inputBdr(f.color)}`,
-              borderRadius:3, padding:"5px 10px", outline:"none",
-              fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:T.textMain,
-              caretColor:f.color,
-            }}
+          <MiniScribbleField
+            T={T} label="" color={f.color} placeholder={f.hint}
+            value={data[f.key]||""}
+            onChange={v => onSetIfrData({ ...data, [f.key]: v })}
           />
         </div>
       ))}
@@ -245,13 +400,17 @@ export function CommPage({
   onToggleForce  = () => {},
   ifrData        = { N:"",W:"",K:"",R:"",A:"",F:"",T:"" },
   onSetIfrData   = () => {},
+  atisData       = { info:"",wind:"",altimeter:"",visibility:"",sky:"" },
+  onSetAtisData  = () => {},
+  gndData        = { clearedTo:"",route:"",altitude:"",frequency:"",taxi:"",squawk:"" },
+  onSetGndData   = () => {},
 }) {
   // ── Theme computed from prop — recalculates on every lightMode toggle ──────
   const T = buildTheme(lightMode);
 
   // ── Local UI state only ────────────────────────────────────────────────────
   const [ifrOverlay,  setIfrOverlay]  = useState(false);
-  const [activeTab,   setActiveTab]   = useState("live");
+  const [activeTab,   setActiveTab]   = useState("active");
   const [replayIndex, setReplayIndex] = useState(null);
 
   const tail         = aircraft ? aircraft.tail : "UNKNOWN";
@@ -461,9 +620,8 @@ export function CommPage({
         transition:"background 0.2s ease",
       }}>
         {[
-          { key:"live",    label:"LIVE FEED", color:A.teal  },
-          { key:"log",     label:"TX LOG",    color:A.blue  },
-          { key:"nwkraft", label:"NWKRAFT",   color:A.amber },
+          { key:"active",  label:"ACTIVE FEED", color:A.teal  },
+          { key:"archive", label:"ARCHIVE LOG",  color:A.blue  },
         ].map(tab => (
           <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
             flex:1, padding:"7px 4px", cursor:"pointer", border:"none",
@@ -487,80 +645,82 @@ export function CommPage({
           scrollbarWidth:"thin",
         }}>
 
-          {/* ── LIVE FEED ── */}
-          {activeTab === "live" && (
-            <div style={{ padding:"12px 14px", display:"flex", flexDirection:"column", gap:10 }}>
+          {/* ── ACTIVE FEED ── */}
+          {activeTab === "active" && (
+            <div style={{ padding:"12px 14px", display:"flex", flexDirection:"column", gap:12 }}>
 
-              {txLog.length > 0 && (() => {
+              {/* Most recent transmission — large, high-visibility block */}
+              {txLog.length > 0 ? (() => {
                 const latest = txLog[0];
                 const tc = TYPE_META[latest.type] || TYPE_META.general;
                 return (
                   <div style={{
-                    background:T.cardBg, border:`1.5px solid ${tc.c}30`,
-                    borderLeft:`4px solid ${tc.c}`, borderRadius:5, padding:"10px 12px",
-                    animation:"commSlideIn 0.2s ease",
-                    transition:"background 0.2s ease",
+                    background:T.cardBg, border:`2px solid ${tc.c}50`,
+                    borderLeft:`5px solid ${tc.c}`, borderRadius:5, padding:"12px 14px",
+                    animation:"commSlideIn 0.2s ease", transition:"background 0.2s ease",
                   }}>
-                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:6 }}>
-                      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, fontWeight:700, letterSpacing:2, color:tc.c, background:`${tc.c}14`, padding:"2px 8px", borderRadius:3 }}>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+                      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, fontWeight:700, letterSpacing:2, color:tc.c, background:`${tc.c}14`, padding:"2px 8px", borderRadius:3 }}>
                         {tc.label}
                       </div>
                       <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim }}>
                         {latest.ts.toLocaleTimeString("en-US",{hour12:false,hour:"2-digit",minute:"2-digit",second:"2-digit"})}Z
                       </div>
                     </div>
-                    <div style={{ fontFamily:"'Rajdhani',sans-serif", fontSize:14, lineHeight:1.65, color:T.textMain }}>
+                    <div style={{ fontFamily:"'Rajdhani',sans-serif", fontSize:16, fontWeight:700, lineHeight:1.6, color:T.textMain }}>
                       <TokenText entry={latest}/>
                     </div>
                     {latest.nwkraft && (
-                      <button onClick={() => showIfrOverlay(latest.nwkraft)} style={{
-                        marginTop:8, fontFamily:"'Share Tech Mono',monospace", fontSize:8, fontWeight:700, letterSpacing:1,
-                        padding:"3px 10px", borderRadius:3, cursor:"pointer",
-                        background:`${A.amber}12`, color:A.amber, border:`1px solid ${A.amber}`,
-                      }}>
+                      <button onClick={() => showIfrOverlay(latest.nwkraft)} style={{ marginTop:8, fontFamily:"'Share Tech Mono',monospace", fontSize:8, fontWeight:700, letterSpacing:1, padding:"3px 10px", borderRadius:3, cursor:"pointer", background:`${A.amber}12`, color:A.amber, border:`1px solid ${A.amber}` }}>
                         ✦ VIEW NWKRAFT
                       </button>
                     )}
                   </div>
                 );
-              })()}
-
-              {txLog.length === 0 && (
-                <div style={{ textAlign:"center", padding:"46px 20px" }}>
-                  <div style={{ fontSize:34, marginBottom:10, opacity:0.28 }}>📡</div>
-                  <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:14, letterSpacing:3, color:T.textDim }}>AWAITING TRANSMISSION</div>
-                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, marginTop:6, color:T.textDim, opacity:0.5 }}>
+              })() : (
+                <div style={{ textAlign:"center", padding:"30px 20px" }}>
+                  <div style={{ fontSize:32, marginBottom:8, opacity:0.28 }}>📡</div>
+                  <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:13, letterSpacing:3, color:T.textDim }}>AWAITING TRANSMISSION</div>
+                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, marginTop:5, color:T.textDim, opacity:0.5 }}>
                     {listening ? `MONITORING · ${tail}` : "TAP LISTEN TO BEGIN"}
                   </div>
                 </div>
               )}
 
-              {txLog.length > 1 && (
-                <div style={{ borderTop:`1px solid ${T.border}`, paddingTop:8 }}>
-                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:1.5, marginBottom:6 }}>
-                    PREVIOUS TRANSMISSIONS
+              {/* Three smart cards */}
+              <AtisCard T={T} data={atisData} onSetAtisData={onSetAtisData} />
+              <GndCard  T={T} data={gndData}  onSetGndData={onSetGndData}  />
+              <div style={{ background:T.cardBg, border:`1px solid ${A.amber}28`, borderRadius:5, overflow:"hidden", transition:"background 0.2s" }}>
+                <div style={{ background:`${A.amber}10`, borderBottom:`2px solid ${A.amber}`, padding:"7px 12px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                  <div>
+                    <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:14, fontWeight:700, letterSpacing:3, color:A.amber }}>IFR CLEARANCE</div>
+                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:1 }}>NWKRAFT FORMAT · AUTO-FILL</div>
                   </div>
-                  {txLog.slice(1, 6).map(entry => {
-                    const ec = (TYPE_META[entry.type]||TYPE_META.general).c;
-                    return (
-                      <div key={entry.id} style={{ padding:"5px 0", borderBottom:`1px solid ${T.borderLight}`, display:"flex", alignItems:"flex-start", gap:8 }}>
-                        <div style={{ width:5, height:5, borderRadius:"50%", background:ec, flexShrink:0, marginTop:5 }}/>
-                        <div style={{ flex:1, fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:T.textMuted, lineHeight:1.35, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>
-                          {entry.text}
-                        </div>
-                        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:T.textDim, flexShrink:0 }}>
-                          {entry.ts.toLocaleTimeString("en-US",{hour12:false,hour:"2-digit",minute:"2-digit"})}
-                        </div>
-                      </div>
-                    );
-                  })}
+                  <button onClick={() => onSetIfrData({ N:"",W:"",K:"",R:"",A:"",F:"",T:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, padding:"3px 9px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLEAR</button>
                 </div>
-              )}
+                <div style={{ padding:"8px 12px", display:"flex", flexDirection:"column", gap:6 }}>
+                  {NWKRAFT_FIELDS.map(f => (
+                    <MiniScribbleField key={f.key} T={T}
+                      label={f.label.replace("— ","")} color={f.color} placeholder={f.hint}
+                      value={ifrData[f.key]||""}
+                      onChange={v => onSetIfrData({ ...ifrData, [f.key]: v })}
+                    />
+                  ))}
+                  {ifrData.K && (
+                    <div style={{ background:`${A.blue}12`, border:`1px solid ${A.blue}40`, borderRadius:4, padding:"7px 12px", display:"flex", alignItems:"center", gap:14, marginTop:2 }}>
+                      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:A.blue, letterSpacing:2 }}>SQUAWK</div>
+                      <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:28, fontWeight:700, color:A.amber, letterSpacing:4 }}>{ifrData.K}</div>
+                      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim }}>SET XPDR</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
             </div>
           )}
 
-          {/* ── TX LOG ── */}
-          {activeTab === "log" && (
+          {/* ── ARCHIVE LOG ── */}
+          {activeTab === "archive" && (
             <div style={{ padding:"8px 0" }}>
               {txLog.length === 0 ? (
                 <div style={{ padding:"30px 20px", textAlign:"center", fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:T.textDim, letterSpacing:1 }}>
@@ -588,17 +748,11 @@ export function CommPage({
                         </div>
                       </div>
                       <div style={{ display:"flex", flexDirection:"column", gap:3, flexShrink:0 }}>
-                        <button onClick={() => replayEntry(entry)} style={{
-                          fontFamily:"'Share Tech Mono',monospace", fontSize:7, padding:"2px 6px", borderRadius:2, cursor:"pointer",
-                          background:"transparent", color:isReplaying?A.amber:T.textDim, border:`1px solid ${isReplaying?A.amber:T.border}`,
-                        }}>
+                        <button onClick={() => replayEntry(entry)} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, padding:"2px 6px", borderRadius:2, cursor:"pointer", background:"transparent", color:isReplaying?A.amber:T.textDim, border:`1px solid ${isReplaying?A.amber:T.border}` }}>
                           {isReplaying?"▶▶":"▶"}
                         </button>
                         {entry.nwkraft && (
-                          <button onClick={() => showIfrOverlay(entry.nwkraft)} style={{
-                            fontFamily:"'Share Tech Mono',monospace", fontSize:7, padding:"2px 6px", borderRadius:2, cursor:"pointer",
-                            background:`${A.amber}08`, color:A.amber, border:`1px solid ${A.amber}28`,
-                          }}>IFR</button>
+                          <button onClick={() => showIfrOverlay(entry.nwkraft)} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, padding:"2px 6px", borderRadius:2, cursor:"pointer", background:`${A.amber}08`, color:A.amber, border:`1px solid ${A.amber}28` }}>IFR</button>
                         )}
                       </div>
                     </div>
@@ -607,27 +761,9 @@ export function CommPage({
               })}
               {txLog.length > 0 && (
                 <div style={{ padding:"8px 14px" }}>
-                  <button style={{
-                    fontFamily:"'Share Tech Mono',monospace", fontSize:8, padding:"4px 12px", borderRadius:3, cursor:"pointer",
-                    background:"transparent", color:A.red, border:`1px solid ${A.red}50`,
-                  }}>↺ CLEAR LOG</button>
+                  <button style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, padding:"4px 12px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLEAR LOG</button>
                 </div>
               )}
-            </div>
-          )}
-
-          {/* ── NWKRAFT TAB ── */}
-          {activeTab === "nwkraft" && (
-            <div style={{ padding:"12px 14px" }}>
-              <NwkraftCard
-                T={T}
-                data={ifrData}
-                tail={tail}
-                onClear={() => onSetIfrData({ N:"",W:"",K:"",R:"",A:"",F:"",T:"" })}
-                forceIfrMode={forceIfrMode}
-                onToggleForce={onToggleForce}
-                onSetIfrData={onSetIfrData}
-              />
             </div>
           )}
 
