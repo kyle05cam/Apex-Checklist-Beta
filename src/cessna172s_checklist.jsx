@@ -1179,6 +1179,9 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
     t = t.replace(/\bsquak\b/gi,                   "squawk");
     t = t.replace(/\bsquak\b/gi,                   "squawk");
     t = t.replace(/\btransponder\s+code\b/gi,      "squawk");
+    t = t.replace(/\bsquat\b/gi,                   "squawk");   // very common mishearing
+    t = t.replace(/\bsquad\b/gi,                   "squawk");
+    t = t.replace(/\bsquak\b/gi,                   "squawk");
 
     // ── WIND DIRECTION SPOKEN AS FULL WORDS ───────────────────────────────
     t = t.replace(/\bwind\s+calm\b/gi,             "wind calm");
@@ -1513,11 +1516,16 @@ const commParseGround = (text) => {
     else if (/radar\s+vectors/i.test(t)) r.route = "RADAR VECTORS";
     else if (/as\s+filed/i.test(t)) r.route = "AS FILED";
 
-    // Altitude: "climb and maintain 5000" / "expect 7000"
+    // Altitude: "climb and maintain 5000" / "expect 7000 6 minutes after departure"
     const alt = t.match(/(?:maintain|climb\s+(?:and\s+)?maintain|climb\s+to)\s+(\d[\d,]+)/i);
     if (alt) r.altitude = alt[1].replace(/,/g,"");
-    const exp = t.match(/expect\s+(\d[\d,]+)/i);
-    if (exp) r.altitude = (r.altitude ? r.altitude + " / EXP " : "EXP ") + exp[1];
+    // Capture full expect phrase including optional time qualifier
+    const exp = t.match(/expect\s+(\d[\d,]+)(?:\s+(\d+)\s+minutes?\s+after\s+(?:departure|takeoff))?/i);
+    if (exp) {
+      const expAlt = exp[1].replace(/,/g,"");
+      const expMin = exp[2] ? ` / ${exp[2]} MIN AFT DEP` : "";
+      r.altitude = (r.altitude ? r.altitude + " / EXP " : "EXP ") + expAlt + expMin;
+    }
 
     // Frequency — after normalization "one two niner point four" → "129.4"
     const frq = t.match(/(?:contact|departure|frequency|on)\s+(\d{2,3}\.\d+)/i);
@@ -1563,15 +1571,100 @@ const commParseGround = (text) => {
 
   const commClearTimers = () => { clearInterval(commAckIntervalRef.current); clearInterval(commBeepIntervalRef.current); };
 
+  // ── WATCHDOG PENDING STATE ─────────────────────────────────────────────────
+  // Refs that track the smart gated alert system.
+  // When callsign is detected we enter "pending" — we do NOT start the countdown.
+  // Two gates must both clear before countdown begins:
+  //   Gate A: speech engine interim text has stopped (isFinal confirmed)
+  //   Gate B: RMS has been below silence threshold for SILENCE_CONFIRM_MS
+  // If new voice activity is detected during the 5s countdown, auto-standdown.
+  const watchdogPendingEntryRef  = useRef(null);  // the tx entry that triggered pending
+  const watchdogSilenceTimerRef  = useRef(null);  // timer waiting for confirmed silence
+  const watchdogInterimActiveRef = useRef(false); // true while interim text is flowing
+  const watchdogCountdownRef     = useRef(false); // true while 5s countdown is running
+  const SILENCE_CONFIRM_MS       = 1800;          // ms of RMS silence before countdown starts
+  const RMS_SILENCE_THRESHOLD    = 0.04;          // RMS below this = radio silence
+
+  // Called from the VU animation loop on every audio frame when watchdog is pending
+  // or counting down. Exported via ref so it's accessible inside requestAnimationFrame.
+  const watchdogRmsCheckRef = useRef(null);
+
   const commTriggerWatchdog = useCallback((entry) => {
+    // Enter PENDING state immediately — no chime, no countdown yet
     commClearTimers();
-    setCommWatchdogState("alert");
+    clearTimeout(watchdogSilenceTimerRef.current);
+    watchdogPendingEntryRef.current = entry;
+    watchdogCountdownRef.current    = false;
+    setCommWatchdogState("pending");
     setCommWatchdogTx(entry);
+    setCommAckCountdown(0);
+  }, []);
+
+  // Start the actual 5-second countdown — only called after both gates clear
+  const commStartWatchdogCountdown = useCallback(() => {
+    if (watchdogCountdownRef.current) return; // already running
+    if (!watchdogPendingEntryRef.current) return; // pending was cleared
+    watchdogCountdownRef.current = true;
+    setCommWatchdogState("alert");
     setCommAckCountdown(5);
     commPlayChime(false);
-    let rem=5;
-    commAckIntervalRef.current=setInterval(()=>{ rem--; setCommAckCountdown(rem); if(rem<=0){ clearInterval(commAckIntervalRef.current); setCommWatchdogState("unanswered"); commPlayChime(true); commBeepIntervalRef.current=setInterval(()=>commPlayChime(true),2000); }},1000);
-  },[]);
+    let rem = 5;
+    commAckIntervalRef.current = setInterval(() => {
+      rem--;
+      setCommAckCountdown(rem);
+      if (rem <= 0) {
+        clearInterval(commAckIntervalRef.current);
+        setCommWatchdogState("unanswered");
+        commPlayChime(true);
+        commBeepIntervalRef.current = setInterval(() => commPlayChime(true), 2000);
+      }
+    }, 1000);
+  }, []);
+
+  // Called when interim text arrives — resets the silence gate
+  const commWatchdogOnInterim = useCallback(() => {
+    watchdogInterimActiveRef.current = true;
+    clearTimeout(watchdogSilenceTimerRef.current);
+    // If countdown was already running and we hear new speech — auto standdown
+    // (either pilot readback or ATC transmitting again — either way, hold off)
+    if (watchdogCountdownRef.current) {
+      commClearTimers();
+      watchdogCountdownRef.current = false;
+      setCommWatchdogState("pending");
+      setCommAckCountdown(0);
+    }
+  }, []);
+
+  // Called when a final transcript arrives — clears interim gate, starts silence wait
+  const commWatchdogOnFinal = useCallback(() => {
+    watchdogInterimActiveRef.current = false;
+    // Only arm the silence timer if we're in pending state
+    if (watchdogPendingEntryRef.current && !watchdogCountdownRef.current) {
+      clearTimeout(watchdogSilenceTimerRef.current);
+      watchdogSilenceTimerRef.current = setTimeout(() => {
+        // Final gate: check RMS is also quiet before starting countdown
+        // rmsCheckRef will have been confirming silence during this window
+        commStartWatchdogCountdown();
+      }, SILENCE_CONFIRM_MS);
+    }
+  }, [commStartWatchdogCountdown]);
+
+  // Wire RMS check into the watchdog — called from VU meter animation frame
+  watchdogRmsCheckRef.current = (rmsLevel) => {
+    if (!watchdogPendingEntryRef.current) return;
+    if (rmsLevel > RMS_SILENCE_THRESHOLD) {
+      // Audio detected — reset the silence confirmation timer
+      clearTimeout(watchdogSilenceTimerRef.current);
+      watchdogInterimActiveRef.current = true;
+      // If counting down and audio spikes, pilot is transmitting — standdown
+      if (watchdogCountdownRef.current) {
+        commClearTimers();
+        watchdogCountdownRef.current = false;
+        setCommWatchdogState("pending");
+        setCommAckCountdown(0);
+      }
+    }
+  };
 
   // ── Stable ref that always holds the latest transcript handler ────────────
   // This is the core fix: SpeechRecognition and the worker both call
@@ -1581,8 +1674,14 @@ const commParseGround = (text) => {
 
   const commHandleTranscript = useCallback((text, isFinal) => {
     if (!text?.trim()) return;
-    setCommTranscript(isFinal ? "" : text);
-    if (!isFinal) return;
+
+    // ── Interim text gate — resets silence timer, holds countdown ────────────
+    if (!isFinal) {
+      setCommTranscript(text);
+      commWatchdogOnInterim();
+      return;
+    }
+    setCommTranscript("");
 
     // ── ATC correction pass — fix speech engine homophones before anything else
     const corrected = normalizeAtcSpeech(text);
@@ -1595,6 +1694,8 @@ const commParseGround = (text) => {
     setCommTxLog(prev=>[entry,...prev].slice(0,40));
     if (nwkraft) setCommIfrData(nwkraft);
     if (commCallsignRxRef.current && commCallsignRxRef.current.test(corrected)) commTriggerWatchdog(entry);
+    // Final text arrived — start silence confirmation window for watchdog
+    commWatchdogOnFinal();
 
     // ── ARMED BUFFER ACCUMULATION ─────────────────────────────────────────
     // Every final chunk is appended to the buffer AND immediately shown in
@@ -1626,7 +1727,7 @@ const commParseGround = (text) => {
       ifrSilenceRef.current = setTimeout(commitIfrBuffer, 30000);
     }
 
-  }, [commForceIfr, commTriggerWatchdog, commitAtisBuffer, commitGndBuffer, commitIfrBuffer]);
+  }, [commForceIfr, commTriggerWatchdog, commWatchdogOnInterim, commWatchdogOnFinal, commitAtisBuffer, commitGndBuffer, commitIfrBuffer]);
 
   // Keep the ref in sync with the latest version of the handler every render.
   // Cost: negligible. Benefit: every caller always gets the fresh closure.
@@ -1733,7 +1834,10 @@ const commParseGround = (text) => {
         analyser.getByteFrequencyData(vuBuf);
         let sum = 0;
         for (let i = 0; i < vuBuf.length; i++) sum += vuBuf[i] * vuBuf[i];
-        setCommRmsLevel(Math.sqrt(sum / vuBuf.length) / 255);
+        const rms = Math.sqrt(sum / vuBuf.length) / 255;
+        setCommRmsLevel(rms);
+        // Feed RMS into watchdog gate on every frame
+        watchdogRmsCheckRef.current?.(rms);
       };
       commAnimFrameRef.current = requestAnimationFrame(animVu);
       
@@ -1794,7 +1898,17 @@ const commParseGround = (text) => {
     setCommTranscript("");
     setCommRmsLevel(0);
   };
-  const commAckCall = () => { commClearTimers(); setCommWatchdogState("clear"); setCommWatchdogTx(null); setCommAckCountdown(0); commPlayChime(false); };
+  const commAckCall = () => {
+    commClearTimers();
+    clearTimeout(watchdogSilenceTimerRef.current);
+    watchdogPendingEntryRef.current = null;
+    watchdogCountdownRef.current    = false;
+    watchdogInterimActiveRef.current = false;
+    setCommWatchdogState("clear");
+    setCommWatchdogTx(null);
+    setCommAckCountdown(0);
+    commPlayChime(false);
+  };
   const commReplay = (seconds = 10) => { commWorkerRef.current?.postMessage({ type: "GET_REPLAY", seconds }); setCommReplayActive(true); setTimeout(() => setCommReplayActive(false), seconds * 1000); };
 
   // ── Theme tokens ──────────────────────────────────────────────────────────
