@@ -2254,19 +2254,18 @@ function ScratchpadModal({ onClose, linesRef }) {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     
-    // Set up canvas crisp resolution tracking bounds
-    // Calculate the absolute layout limits of the parent container frame
-    const rect = canvas.parentElement.getBoundingClientRect();
-    canvas.width = rect.width || window.innerWidth;
-    canvas.height = rect.height || (window.innerHeight - 60); // Leaves exact clearance for header panel strip
+    // Force direct absolute window pixel dimensions to bypass container collapse bugs
+    const headerHeight = 48;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight - headerHeight;
     
-    // Drawing styles
-    ctx.strokeStyle = "#4ae8c8"; // Matching avionics tactical teal
+    // Fixed drawing style rules
+    ctx.strokeStyle = "#4ae8c8"; // Avionics tactical teal
     ctx.lineWidth = 3;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
 
-    // Redraw historical flight paths from the master ref vault
+    // Instantly redraw historical line steps from the persistent parent ref array vault
     if (linesRef.current && linesRef.current.length > 0) {
       linesRef.current.forEach(stroke => {
         if (stroke.length < 1) return;
@@ -2322,36 +2321,7 @@ function ScratchpadModal({ onClose, linesRef }) {
       linesRef.current[linesRef.current.length - 1].push({ x, y });
     }
   };
-// WARM LOAD: Immediately redraw cached lines from parent reference when opened
-  React.useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    
-    // Force direct absolute window pixel dimensions to bypass flex container collapse bugs
-    const headerHeight = 48;
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight - headerHeight;
-    
-    // Fixed drawing style rules
-    ctx.strokeStyle = "#4ae8c8"; // Avionics tactical teal
-    ctx.lineWidth = 3;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
 
-    // Instantly redraw historical line steps from the persistent parent ref array vault
-    if (linesRef.current && linesRef.current.length > 0) {
-      linesRef.current.forEach(stroke => {
-        if (stroke.length < 1) return;
-        ctx.beginPath();
-        ctx.moveTo(stroke[0].x, stroke[0].y);
-        for (let i = 1; i < stroke.length; i++) {
-          ctx.lineTo(stroke[i].x, stroke[i].y);
-        }
-        ctx.stroke();
-      });
-    }
-  }, [linesRef]);
   const stopDrawing = () => {
     setIsDrawing(false);
   };
