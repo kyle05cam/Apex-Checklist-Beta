@@ -303,16 +303,27 @@ export function CommPage({
         }}>
           {forceIfrMode ? "▶ IFR ON" : "IFR CAPTURE"}
         </button>
-        {/* Listen toggle */}
-        <button onClick={() => listening ? onStopListen() : onStartListen()} style={{
-          fontFamily:"'Oswald',sans-serif", fontSize:11, fontWeight:700, letterSpacing:2,
-          padding:"5px 14px", borderRadius:4, cursor:"pointer",
-          background: listening ? "rgba(232,90,74,0.15)" : "rgba(74,232,200,0.12)",
-          color:  listening ? C.red : C.teal,
-          border:`1.5px solid ${listening ? C.red : C.teal}`,
-          animation: listening && micStatus==="active" ? "commGlow 1.8s ease infinite" : "none",
-          transition:"all 0.15s",
-        }}>
+      {/* Listen toggle */}
+        <button 
+          onClick={() => {
+            if (listening) {
+              onStopListen();
+            } else {
+              // Clear any error states and force reset pointers before deferring start execution
+              onStopListen();   
+              setTimeout(() => onStartListen(), 50); // 50ms deferral clears iOS Safari frame race conditions
+            }
+          }} 
+          style={{
+            fontFamily:"'Oswald',sans-serif", fontSize:11, fontWeight:700, letterSpacing:2,
+            padding:"5px 14px", borderRadius:4, cursor:"pointer",
+            background: listening ? "rgba(232,90,74,0.15)" : "rgba(74,232,200,0.12)",
+            color:  listening ? C.red : C.teal,
+            border:`1.5px solid ${listening ? C.red : C.teal}`,
+            animation: listening && micStatus==="active" ? "commGlow 1.8s ease infinite" : "none",
+            transition:"all 0.15s",
+          }}
+        >
           {listening ? "⏹ STOP" : "⏵ LISTEN"}
         </button>
       </div>
