@@ -1340,7 +1340,7 @@ const commParseAtis = (text) => {
       r.wind = "CALM";
     } else {
       const wind = tWind.match(/wind\s+(\d{1,3})\s+(?:at\s+)?(\d{1,3})(?:\s+(?:gusts?|gusting|gust)\s+(\d{1,3}))?/i);
-      if (wind) r.wind = wind[3] ? `${wind[1]}° AT ${wind[2]}G${wind[3]}` : `${wind[1]}° AT ${wind[2]}KT`;
+      if (wind) r.wind = wind[3] ? `${wind[1]}° AT ${wind[2]} GUSTING ${wind[3]}` : `${wind[1]}° AT ${wind[2]}KT`;
     }
 
     // Altimeter — normalize homophones then format.
