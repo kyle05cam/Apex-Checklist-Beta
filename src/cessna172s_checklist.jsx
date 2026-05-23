@@ -2338,9 +2338,9 @@ function ScratchpadModal({ onClose, linesRef }) {
   };
 
   return (
-    <div style={{ position: "absolute", inset: 0, zIndex: 250, background: "rgba(8,10,14,0.96)", display: "flex", flexDirection: "column", animation: "fadeIn 0.12s ease" }}>
+    <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 250, background: "#0a0d14", display: "flex", flexDirection: "column", animation: "fadeIn 0.12s ease" }}>
       {/* Header Panel */}
-      <div style={{ background: "linear-gradient(135deg,#0a0c10,#141820)", borderBottom: "2px solid #4ae8c8", padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+      <div style={{ height: "48px", background: "linear-gradient(135deg,#0a0c10,#141820)", borderBottom: "2px solid #4ae8c8", padding: "0 14px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontFamily: "'Oswald',sans-serif", fontSize: 14, fontWeight: 700, letterSpacing: 3, color: "#4ae8c8" }}>✦ SCRATCHPAD NOTEBOOK</span>
         </div>
@@ -2351,7 +2351,7 @@ function ScratchpadModal({ onClose, linesRef }) {
       </div>
 
       {/* Canvas Interaction Field */}
-      <div style={{ flex: 1, position: "relative", cursor: "crosshair", background: "#0a0d14" }}>
+      <div style={{ flex: 1, position: "relative", cursor: "crosshair", background: "#0a0d14", width: "100%" }}>
         <canvas
           ref={canvasRef}
           onMouseDown={startDrawing}
@@ -2361,7 +2361,7 @@ function ScratchpadModal({ onClose, linesRef }) {
           onTouchStart={e => { if (e.cancelable) e.preventDefault(); startDrawing(e); }}
           onTouchMove={e => { if (e.cancelable) e.preventDefault(); draw(e); }}
           onTouchEnd={stopDrawing}
-          style={{ position: "absolute", inset: 0, display: "block" }}
+          style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "block" }}
         />
       </div>
     </div>
