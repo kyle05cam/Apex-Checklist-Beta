@@ -2039,14 +2039,15 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                     flex: 1
                   }}>
                     {log.text}
-                  </span>
+                </span>
                 </div>
               ))}
             </div>
           )}
         </div>
       )}
-      </div>
+
+      {/* ── BODY STACK VIEW SEGMENTATION ── */}
       {/* BODY */}
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
         <div style={{ width: 90, flexShrink: 0, background: T.leftSideBg, borderRight: `1px solid ${T.leftSideBorder}`, display: "flex", flexDirection: "column", overflowY: "auto", overflowX: "hidden" }}>
