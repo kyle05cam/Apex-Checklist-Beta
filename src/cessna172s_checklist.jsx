@@ -1328,18 +1328,38 @@ const commParseAtis = (text) => {
     const infoMatch = infoFull || infoWith || infoHave;
     if (infoMatch) r.info = infoMatch[1].toUpperCase();
 
-    // Wind: "wind 270 at 12" / "wind calm" — after phonetic normalization
-    if (/wind\s+calm/i.test(t)) {
+    // Wind — normalize gust homophones before matching.
+    // Speech engines transcribe "gusting" as "guessing", "gusting to" as
+    // "guessing to", and occasionally "gust" as "just". Fix all before regex.
+    const tWind = t
+      .replace(/\bguessing\b/gi, "gusting")
+      .replace(/\bgusted\b/gi,   "gusting")
+      .replace(/\bgust\s+to\b/gi, "gusting");
+
+    if (/wind\s+calm/i.test(tWind)) {
       r.wind = "CALM";
     } else {
-      const wind = t.match(/wind\s+(\d{1,3})\s+(?:at\s+)?(\d{1,3})(?:\s+gusts?\s+(\d{1,3}))?/i);
+      const wind = tWind.match(/wind\s+(\d{1,3})\s+(?:at\s+)?(\d{1,3})(?:\s+(?:gusts?|gusting|gust)\s+(\d{1,3}))?/i);
       if (wind) r.wind = wind[3] ? `${wind[1]}° AT ${wind[2]}G${wind[3]}` : `${wind[1]}° AT ${wind[2]}KT`;
     }
 
-    // Altimeter: "altimeter 2992" — after normalization "two niner niner two" → "2992"
-    const altm = t.match(/altimeter\s+(\d{2,4}(?:\.\d+)?)/i);
+    // Altimeter — normalize homophones then format.
+    // Speech engines sometimes drop leading digit: "two niner eight" → "298"
+    // instead of "2985". For 3-digit results in the 290-299 range, treat as
+    // 29.XX by prepending "29" logic. Also trim 5-digit OCR errors like "29090".
+    const altm = t.match(/altimeter\s+(\d{2,5}(?:\.\d+)?)/i);
     if (altm) {
-      const raw = altm[1].replace(/\./g,"");
+      let raw = altm[1].replace(/\./g,"");
+      // Trim 5-digit errors to 4 by dropping last digit
+      if (raw.length === 5) raw = raw.slice(0, 4);
+      // Expand 3-digit to 4 — US altimeter always 28XX-31XX range
+      if (raw.length === 3) {
+        const n = parseInt(raw);
+        if (n >= 900 && n <= 999) raw = "2" + raw;      // 9XX → 29XX
+        else if (n >= 800 && n <= 899) raw = "2" + raw; // 8XX → 28XX (rare low)
+        else if (n >= 100 && n <= 199) raw = "3" + raw; // 1XX → 31XX (rare high)
+        else raw = "29" + raw.slice(1);                  // fallback
+      }
       r.altimeter = raw.length === 4 && !altm[1].includes(".")
         ? `${raw.slice(0,2)}.${raw.slice(2)}`
         : altm[1];
