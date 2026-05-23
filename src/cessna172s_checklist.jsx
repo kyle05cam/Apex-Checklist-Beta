@@ -1878,7 +1878,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
           </button>
         </div>
       </div>
-{/* EXPANDED HEADS-UP ROLLING RADIO COMM STACK WITH LARGE FONTS */}
+{/* EXPANDED HEADS-UP ROLLING RADIO COMM STACK — STREAMLINED TO 2 HISTORY LINES */}
       {currentPage !== "comm" && (
         <div 
           onClick={() => setCurrentPage("comm")} // Quick-jump to full logs if clicked
@@ -1896,10 +1896,10 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                   ? "#e8c84a" 
                   : commListening ? "#4ae8c8" : "#2a3040"
             }`,
-            padding: "12px 16px", // Slightly increased padding for tap-target comfort
+            padding: "12px 16px",
             display: "flex",
             flexDirection: "column",
-            gap: 10, // Increased gap between live feed and history lines
+            gap: 10,
             cursor: "pointer",
             animation: commWatchdogState === "unanswered" ? "commFlash 0.5s ease infinite alternate" : "none",
             transition: "all 0.2s ease"
@@ -1908,7 +1908,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
           {/* TOP ROW: ACTIVE / LIVE TRANSMISSION STREAM + NATIVE AUDIO TOGGLES */}
           <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
             <div style={{
-              width: 12, // Slightly larger status dot
+              width: 12,
               height: 12,
               borderRadius: "50%",
               background: commWatchdogState === "unanswered" 
@@ -1923,7 +1923,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
             <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ 
                 fontFamily: "'Share Tech Mono', monospace", 
-                fontSize: 13, // Increased label size
+                fontSize: 13, 
                 fontWeight: 700, 
                 color: commWatchdogState !== "clear" ? "#e8c84a" : "#4ae8c8", 
                 letterSpacing: 1.5,
@@ -1934,7 +1934,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
               
               <span style={{
                 fontFamily: "'Share Tech Mono', monospace",
-                fontSize: 18, // Increased Live font to 18px for instant scanning
+                fontSize: 18, 
                 fontWeight: 700, 
                 color: commTranscript ? (lightMode ? "#b08000" : "#e8c84a") : (commListening || commTxLog.length > 0 ? (lightMode ? "#050a15" : "#ffffff") : (lightMode ? "#4a5a78" : "#4a5068")),
                 overflow: "hidden",
@@ -1964,10 +1964,10 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                 }}
                 style={{
                   fontFamily: "'Oswald', sans-serif",
-                  fontSize: 12, // Balanced button text
+                  fontSize: 12,
                   fontWeight: 700,
                   letterSpacing: 1.5,
-                  padding: "5px 14px", // Enhanced target layout size
+                  padding: "5px 14px",
                   borderRadius: 4,
                   cursor: "pointer",
                   background: commListening ? "rgba(232,90,74,0.15)" : "rgba(74,232,200,0.12)",
@@ -2003,25 +2003,25 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
             </div>
           </div>
 
-          {/* BOTTOM SECTION: ROLLING TIMELINE TRACK */}
+          {/* BOTTOM SECTION: ROLLING TIMELINE TRACK — STREAMLINED SLICE TO 2 ITEMS */}
           {commTxLog.length > 1 && (
             <div style={{ 
               display: "flex", 
               flexDirection: "column", 
-              gap: 6, // Marginally expanded gap
+              gap: 6,
               borderTop: `1.5px solid ${lightMode ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.05)"}`,
               paddingTop: 8
             }}>
-              {commTxLog.slice(1, 5).map((log) => (
+              {commTxLog.slice(1, 3).map((log) => ( // Changed slice end index from 5 to 3 to output exactly 2 entries
                 <div 
                   key={log.id} 
                   style={{ 
                     display: "flex", 
                     alignItems: "center", 
                     gap: 12,
-                    fontSize: 14, // Increased history font to 14px to support at-a-glance scans
+                    fontSize: 14, 
                     fontFamily: "'Share Tech Mono', monospace",
-                    lineHeight: 1.4 // Ensure clear text separation
+                    lineHeight: 1.4
                   }}
                 >
                   <span style={{ 
@@ -2032,7 +2032,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                     [{log.ts.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" })}Z]
                   </span>
                   <span style={{ 
-                    color: lightMode ? "rgba(5,10,21,0.75)" : "rgba(232,228,216,0.65)", // Slightly lightened dark mode line variant for pop
+                    color: lightMode ? "rgba(5,10,21,0.75)" : "rgba(232,228,216,0.65)", 
                     overflow: "hidden", 
                     textOverflow: "ellipsis", 
                     whiteSpace: "nowrap",
