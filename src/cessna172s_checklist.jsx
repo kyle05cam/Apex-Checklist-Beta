@@ -1878,7 +1878,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
           </button>
         </div>
       </div>
-{/* EXPANDED HEADS-UP ROLLING RADIO COMM STACK */}
+{/* EXPANDED HEADS-UP ROLLING RADIO COMM STACK WITH LIVE AUDIO TOGGLE */}
       <div 
         onClick={() => setCurrentPage("comm")} // Quick-jump to full logs if clicked
         style={{
@@ -1904,7 +1904,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
           transition: "all 0.2s ease"
         }}
       >
-        {/* TOP ROW: ACTIVE / LIVE TRANSMISSION STREAM */}
+        {/* TOP ROW: ACTIVE / LIVE TRANSMISSION STREAM + NATIVE AUDIO TOGGLES */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
           <div style={{
             width: 10,
@@ -1922,7 +1922,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
           <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ 
               fontFamily: "'Share Tech Mono', monospace", 
-              fontSize: 11, // Increased size
+              fontSize: 11, 
               fontWeight: 700, 
               color: commWatchdogState !== "clear" ? "#e8c84a" : "#4ae8c8", 
               letterSpacing: 1.5,
@@ -1933,51 +1933,80 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
             
             <span style={{
               fontFamily: "'Share Tech Mono', monospace",
-              fontSize: 15, // Increased text readability size
-              fontWeight: 700, // Hard bold so it pops out of corners
-              color: commTranscript ? (lightMode ? "#b08000" : "#e8c84a") : (lightMode ? "#050a15" : "#ffffff"),
+              fontSize: 15, 
+              fontWeight: 700, 
+              color: commTranscript ? (lightMode ? "#b08000" : "#e8c84a") : (commListening || commTxLog.length > 0 ? (lightMode ? "#050a15" : "#ffffff") : (lightMode ? "#4a5a78" : "#4a5068")),
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
+              fontStyle: commTranscript || commTxLog.length > 0 ? "normal" : "italic",
               flex: 1
             }}>
               {commTranscript 
                 ? commTranscript 
                 : commTxLog.length > 0 
                   ? commTxLog[0].text 
-                  : "Awaiting incoming radio traffic..."
+                  : commListening ? "Monitoring frequency... Awaiting traffic." : "Radio guard standby. Tap LISTEN to activate mic stream."
               }
             </span>
           </div>
 
-          {/* Alert button */}
-          {commWatchdogState !== "clear" && (
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                commAckCall();
+          {/* INTERACTION ACTION CONTAINER ROW */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+            
+            {/* HEADS-UP MIC LISTEN MASTER TOGGLE */}
+            <button
+              onClick={() => {
+                if (commListening) {
+                  commStopListening();
+                } else {
+                  commStopListening();
+                  setTimeout(() => commStartListening(), 50);
+                }
               }}
               style={{
                 fontFamily: "'Oswald', sans-serif",
                 fontSize: 11,
                 fontWeight: 700,
-                letterSpacing: 1,
+                letterSpacing: 1.5,
                 padding: "4px 12px",
                 borderRadius: 4,
                 cursor: "pointer",
-                background: commWatchdogState === "unanswered" ? "#e85a4a" : "#e8c84a",
-                color: "#000",
-                border: "none",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
-                flexShrink: 0
+                background: commListening ? "rgba(232,90,74,0.15)" : "rgba(74,232,200,0.12)",
+                color: commListening ? "#e85a4a" : "#4ae8c8",
+                border: `1.5px solid ${commListening ? "#e85a4a" : "#4ae8c8"}`,
+                boxShadow: commListening && commMicStatus === "active" ? "0 0 8px rgba(61,190,108,0.3)" : "none",
+                transition: "all 0.15s"
               }}
             >
-              ACK CALL [{commAckCountdown}s]
+              {commListening ? "⏹ STOP MIC" : "⏵ LISTEN"}
             </button>
-          )}
+
+            {/* Watchdog manual dismissal trigger */}
+            {commWatchdogState !== "clear" && (
+              <button 
+                onClick={commAckCall}
+                style={{
+                  fontFamily: "'Oswald', sans-serif",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: 1,
+                  padding: "4px 12px",
+                  borderRadius: 4,
+                  cursor: "pointer",
+                  background: commWatchdogState === "unanswered" ? "#e85a4a" : "#e8c84a",
+                  color: "#000",
+                  border: "none",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.4)"
+                }}
+              >
+                ACK CALL [{commAckCountdown}s]
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* BOTTOM SECTION: ROLLING TIMELINE TRACK (Only paints if logs exist) */}
+        {/* BOTTOM SECTION: ROLLING TIMELINE TRACK */}
         {commTxLog.length > 1 && (
           <div style={{ 
             display: "flex", 
@@ -1997,7 +2026,6 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                   fontFamily: "'Share Tech Mono', monospace"
                 }}
               >
-                {/* Micro timestamp tag */}
                 <span style={{ 
                   color: lightMode ? "#4a5a78" : "#4a5068", 
                   fontWeight: 600,
@@ -2005,8 +2033,6 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                 }}>
                   [{log.ts.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" })}Z]
                 </span>
-                
-                {/* Historical log data text line string */}
                 <span style={{ 
                   color: lightMode ? "rgba(5,10,21,0.65)" : "rgba(232,228,216,0.55)", 
                   overflow: "hidden", 
