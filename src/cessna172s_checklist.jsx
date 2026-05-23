@@ -2072,8 +2072,30 @@ moreSidebarBdr:"#2a1e3a",
             const isActive = currentPage === pg.id;
             const count = countPage(pg.id);
             const isDone = count.total > 0 && count.done === count.total;
-            return (
-              <button key={pg.id} className="tab-btn" onClick={() => setCurrentPage(pg.id)} style={{ width: "100%", minHeight: 76, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5, background: isActive ? ${pg.color}18 : "transparent", outline: "none", borderTop: "none", borderLeft: "none", borderBottom: 1px solid ${T.emgItemBdr}, borderRight: 3px solid ${isActive ? pg.color : "transparent"}, cursor: "pointer", padding: "10px 4px", transition: "all 0.12s" }}>
+return (
+              <button 
+                key={pg.id} 
+                className="tab-btn" 
+                onClick={() => setCurrentPage(pg.id)} 
+                style={{ 
+                  width: "100%", 
+                  minHeight: 76, 
+                  display: "flex", 
+                  flexDirection: "column", 
+                  alignItems: "center", 
+                  justifyContent: "center", 
+                  gap: 5, 
+                  background: isActive ? `${pg.color}18` : "transparent", 
+                  outline: "none", 
+                  borderTop: "none", 
+                  borderLeft: "none", 
+                  borderBottom: `1px solid ${T.emgItemBdr}`, 
+                  borderRight: `3px solid ${isActive ? pg.color : "transparent"}`, 
+                  cursor: "pointer", 
+                  padding: "10px 4px", 
+                  transition: "all 0.12s" 
+                }}
+              >
                 <div style={{ color: isActive ? pg.color : pg.dimColor, transition: "color 0.12s" }}>{pg.icon(28)}</div>
                 <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, fontWeight: 700, letterSpacing: 0.5, color: isActive ? pg.color : pg.dimColor, textAlign: "center", whiteSpace: "pre-line", lineHeight: 1.2, textTransform: "uppercase" }}>{pg.label}</div>
                 {count.total > 0 && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: isDone ? "#3dbe6c" : pg.dimColor }}>{count.done}/{count.total}</div>}
