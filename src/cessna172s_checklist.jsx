@@ -1239,18 +1239,44 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   };
 
 const commStartListening = async () => {
-    // Guard ONLY on real hardware state — not React state flag (async, may lag)
-    if (commStreamRef.current) return;
-  
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: 1,
-          sampleRate: 16000,
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false
+      // 1. WARM RESUME PATH: If stream exists, re-enable tracks and wake up contexts
+      if (commStreamRef.current) {
+        commStreamRef.current.getAudioTracks().forEach(track => { track.enabled = true; });
+        if (commAudioCtxRef.current && commAudioCtxRef.current.state === "suspended") {
+          await commAudioCtxRef.current.resume();
         }
+        
+        // Restart VU loop animation if it was cancelled during shutdown
+        if (!commAnimFrameRef.current) {
+          // Re-instantiate the animVu function frame reference
+          const analyser = commAudioCtxRef.current._analyser || commAudioCtxRef.current.createAnalyser();
+          const vuBuf = new Uint8Array(analyser.frequencyBinCount);
+          const animVu = () => {
+            commAnimFrameRef.current = requestAnimationFrame(animVu);
+            if (!commAudioCtxRef.current || commAudioCtxRef.current.state === "suspended") {
+              setCommRmsLevel(0);
+              return;
+            }
+            analyser.getByteFrequencyData(vuBuf);
+            let sum = 0;
+            for (let i = 0; i < vuBuf.length; i++) sum += vuBuf[i] * vuBuf[i];
+            setCommRmsLevel(Math.sqrt(sum / vuBuf.length) / 255);
+          };
+          commAnimFrameRef.current = requestAnimationFrame(animVu);
+        }
+
+        if (commRecognitionRef.current) {
+          try { commRecognitionRef.current.start(); } catch(e) {}
+        }
+        setCommListening(true);
+        setCommMicStatus("active");
+        return;
+      }
+
+      // 2. COLD START PATH: First time opening the hardware microphone stream
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { channelCount: 1, sampleRate: 16000, echoCancellation: false, noiseSuppression: false, autoGainControl: false }
       });
       commStreamRef.current = stream;
       
@@ -1263,26 +1289,30 @@ const commStartListening = async () => {
       proc.connect(ctx.destination);
       
       proc.onaudioprocess = (e) => {
+        if (!commStreamRef.current || !commStreamRef.current.getAudioTracks()[0].enabled) return;
         const s = new Float32Array(e.inputBuffer.getChannelData(0));
         commWorkerRef.current?.postMessage({ type: "AUDIO_CHUNK", samples: s });
       };
       
-      // VU animation via analyser
       const analyser = ctx.createAnalyser(); 
       analyser.fftSize = 256; 
       source.connect(analyser);
+      ctx._analyser = analyser; // Attach to context so the warm-resume route can reference it
       
       const vuBuf = new Uint8Array(analyser.frequencyBinCount);
       const animVu = () => {
+        commAnimFrameRef.current = requestAnimationFrame(animVu); // Always schedule first to survive suspends
+        if (!commAudioCtxRef.current || commAudioCtxRef.current.state === "suspended") {
+          setCommRmsLevel(0);
+          return;
+        }
         analyser.getByteFrequencyData(vuBuf);
         let sum = 0;
         for (let i = 0; i < vuBuf.length; i++) sum += vuBuf[i] * vuBuf[i];
         setCommRmsLevel(Math.sqrt(sum / vuBuf.length) / 255);
-        commAnimFrameRef.current = requestAnimationFrame(animVu);
       };
       commAnimFrameRef.current = requestAnimationFrame(animVu);
       
-      // Web Speech API injection
       if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         const rec = new SR(); 
@@ -1302,7 +1332,11 @@ const commStartListening = async () => {
           if (f.trim()) commWorkerRef.current?.postMessage({ type: "TRANSCRIPTION_RESULT", text: f.trim(), isFinal: true });
         };
         rec.onerror = (e) => { if (e.error === "not-allowed") setCommMicStatus("denied"); };
-        rec.onend = () => { try { rec.start(); } catch {} };
+        rec.onend = () => { 
+          if (commStreamRef.current && commStreamRef.current.getAudioTracks()[0].enabled) {
+            try { rec.start(); } catch {} 
+          }
+        };
         rec.start(); 
         commRecognitionRef.current = rec;
       }
@@ -1315,41 +1349,33 @@ const commStartListening = async () => {
   };
 
   const commStopListening = () => {
-    // 1. Forcefully unbind all listeners before killing the recognition thread
+    // 1. Stop the native speech engine
     if (commRecognitionRef.current) {
-      commRecognitionRef.current.onresult = null;
-      commRecognitionRef.current.onerror = null;
-      commRecognitionRef.current.onend = null;
-      try { commRecognitionRef.current.stop(); } catch (e) {}
-      commRecognitionRef.current = null;
+      try { commRecognitionRef.current.stop(); } catch(e) {}
     }
     
-    // 2. Clear out underlying hardware media stream tracks cleanly
+    // 2. Soft-mute the hardware stream track (keeps iOS hardware channel authorized)
     if (commStreamRef.current) {
-      commStreamRef.current.getTracks().forEach(track => track.stop());
-      commStreamRef.current = null;
+      commStreamRef.current.getAudioTracks().forEach(track => { track.enabled = false; });
     }
     
-    // 3. Dismantle visual rendering loops and engine contexts
+    // 3. Suspend Audio Context calculation load to save battery power
+    if (commAudioCtxRef.current && commAudioCtxRef.current.state === "running") {
+      try { commAudioCtxRef.current.suspend(); } catch(e) {}
+    }
+
+    // 4. Kill the active animation frame draw sequence cleanly on stop
     if (commAnimFrameRef.current) {
       cancelAnimationFrame(commAnimFrameRef.current);
       commAnimFrameRef.current = null;
     }
     
-    if (commAudioCtxRef.current) {
-      try { commAudioCtxRef.current.close(); } catch (e) {}
-      commAudioCtxRef.current = null;
-    }
-    
-    // 4. Return app state back to absolute cold baseline
+    // 5. Reset UI display variables back to idle baselines
     setCommListening(false);
-    setCommMicStatus("idle");   // reset to idle so button re-enables cleanly
+    setCommMicStatus("idle");   
     setCommTranscript("");
     setCommRmsLevel(0);
-    commStreamRef.current = null;   // belt-and-suspenders: ensure ref is null
-    commAudioCtxRef.current = null; // ensure ctx ref is null after close
   };
-
   const commAckCall = () => { commClearTimers(); setCommWatchdogState("clear"); setCommWatchdogTx(null); setCommAckCountdown(0); commPlayChime(false); };
   const commReplay = (seconds = 10) => { commWorkerRef.current?.postMessage({ type: "GET_REPLAY", seconds }); setCommReplayActive(true); setTimeout(() => setCommReplayActive(false), seconds * 1000); };
   // ── END COMM AUDIO ENGINE
