@@ -1096,6 +1096,106 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   const commTxIdRef         = useRef(0);
   const commCallsignRxRef   = useRef(null);
 
+  // ── ATC SPEECH CORRECTION — runs on raw transcript before any parsing ────
+  // The browser speech engine has no aviation context and maps spoken ATC
+  // words to common English homophones. This pass corrects the most frequent
+  // substitutions seen in practice before any downstream parser touches the text.
+  const normalizeAtcSpeech = (text) => {
+    let t = text;
+
+    // ── PHONETIC ALPHABET MISHEARINGS ─────────────────────────────────────
+    // Engine maps NATO phonetics to similar-sounding common words
+    t = t.replace(/\bzillow\b/gi,      "zulu");
+    t = t.replace(/\bzuloo\b/gi,       "zulu");
+    t = t.replace(/\bzoolu\b/gi,       "zulu");
+    t = t.replace(/\bjuliet\s+juliet\b/gi, "juliet"); // duplicate
+    t = t.replace(/\bcharlie\s+charlie\b/gi, "charlie");
+    t = t.replace(/\bfoxtail\b/gi,     "foxtrot");
+    t = t.replace(/\bfox\s+trot\b/gi,  "foxtrot");
+    t = t.replace(/\bwhiskey\s+tango\b/gi, "whiskey tango");
+    t = t.replace(/\bnove?m?ber\b/gi,  "november");
+    t = t.replace(/\bindigo\b/gi,      "india");
+    t = t.replace(/\bkiller\b/gi,      "kilo");
+    t = t.replace(/\bkilow\b/gi,       "kilo");
+    t = t.replace(/\blima\s+bean\b/gi, "lima");
+    t = t.replace(/\bpapa\s+bear\b/gi, "papa");
+    t = t.replace(/\bsurrey\b/gi,      "sierra");
+    t = t.replace(/\bsierra\s+nevada\b/gi, "sierra");
+    t = t.replace(/\btango\s+down\b/gi,"tango");
+    t = t.replace(/\buniform\s+code\b/gi, "uniform");
+    t = t.replace(/\bvictor\s+hugo\b/gi, "victor");
+    t = t.replace(/\bwhisky\b/gi,      "whiskey");
+    t = t.replace(/\byankee\s+doodle\b/gi, "yankee");
+
+    // ── WEATHER / ATIS KEYWORDS ────────────────────────────────────────────
+    t = t.replace(/\bautomatic\s+weather\b/gi,    "automated weather");
+    t = t.replace(/\bauto\s+weather\b/gi,         "automated weather");
+    t = t.replace(/\bbroadcasting\s+system\b/gi,  "reporting system");
+    t = t.replace(/\bobservation\s+system\b/gi,   "reporting system");
+
+    // ── GUST VARIANTS ─────────────────────────────────────────────────────
+    t = t.replace(/\bguessing\b/gi,    "gusting");
+    t = t.replace(/\bgusted\b/gi,      "gusting");
+    t = t.replace(/\bjust\s+ing\b/gi,  "gusting");
+    t = t.replace(/\btesting\b/gi,     "gusting");   // "testing 12" in wind context
+    t = t.replace(/\bgust\s+to\b/gi,   "gusting");
+
+    // ── VISIBILITY DIGITS ──────────────────────────────────────────────────
+    // Only fix these in direct visibility context to avoid corrupting other text
+    t = t.replace(/\bvisibility\s+or\b/gi,  "visibility 4");
+    t = t.replace(/\bvisibility\s+for\b/gi, "visibility 4");
+    t = t.replace(/\bvisibility\s+to\b/gi,  "visibility 2");
+    t = t.replace(/\bvisibility\s+too\b/gi, "visibility 2");
+    t = t.replace(/\bvisibility\s+won\b/gi, "visibility 1");
+    t = t.replace(/\bvisibility\s+ate\b/gi, "visibility 8");
+
+    // ── ALTIMETER CONTEXT ──────────────────────────────────────────────────
+    t = t.replace(/\baltimeter\s+to\b/gi,   "altimeter 2");  // "altimeter to niner 84" → "altimeter 2984"
+    t = t.replace(/\baltimeter\s+too\b/gi,  "altimeter 2");
+    t = t.replace(/\baltimeter\s+for\b/gi,  "altimeter 4");
+
+    // ── ATC OPERATIONAL TERMS ─────────────────────────────────────────────
+    t = t.replace(/\bclear\s+to\s+land\b/gi,       "cleared to land");
+    t = t.replace(/\bclear\s+for\s+takeoff\b/gi,   "cleared for takeoff");
+    t = t.replace(/\bclear\s+for\s+the\b/gi,       "cleared for the");
+    t = t.replace(/\bclear\s+to\b/gi,              "cleared to");
+    t = t.replace(/\bholds?\s+short\b/gi,          "hold short");
+    t = t.replace(/\bline\s+up\s+and\s+weight\b/gi,"line up and wait");
+    t = t.replace(/\btax\s+i\b/gi,                 "taxi");
+    t = t.replace(/\btaxy\b/gi,                    "taxi");
+    t = t.replace(/\brun\s+way\b/gi,               "runway");
+    t = t.replace(/\brun-way\b/gi,                 "runway");
+    t = t.replace(/\btower\s+control\b/gi,         "tower");
+    t = t.replace(/\bdeparture\s+control\b/gi,     "departure");
+    t = t.replace(/\bapproach\s+control\b/gi,      "approach");
+    t = t.replace(/\bground\s+control\b/gi,        "ground");
+    t = t.replace(/\bsquak\b/gi,                   "squawk");
+    t = t.replace(/\bsquak\b/gi,                   "squawk");
+    t = t.replace(/\btransponder\s+code\b/gi,      "squawk");
+
+    // ── WIND DIRECTION SPOKEN AS FULL WORDS ───────────────────────────────
+    t = t.replace(/\bwind\s+calm\b/gi,             "wind calm");
+    t = t.replace(/\bwinds?\s+variable\b/gi,       "wind variable");
+
+    // ── KNOTS / UNITS ──────────────────────────────────────────────────────
+    t = t.replace(/\b(\d+)\s*knots?\b/gi,   "$1KT");
+    t = t.replace(/\b(\d+)\s*not\b/gi,      "$1KT");   // "12 not" → "12KT"
+    t = t.replace(/\b(\d+)\s*nautical\b/gi, "$1KT");
+    t = t.replace(/\bstatute\s+miles?\b/gi, "SM");
+    t = t.replace(/\bstat\s+miles?\b/gi,    "SM");
+
+    // ── INFORMATION IDENTIFIER ────────────────────────────────────────────
+    // Engine sometimes drops "information" and writes the letter as a word
+    t = t.replace(/\binformation\s+zelda\b/gi,  "information Z");
+    t = t.replace(/\binformation\s+echo\b/gi,   "information E");
+
+    // ── NINER ─────────────────────────────────────────────────────────────
+    t = t.replace(/\bnine-r\b/gi,   "niner");
+    t = t.replace(/\bnine\s+er\b/gi,"niner");
+
+    return t;
+  };
+
   // ── PHONETIC WORD → DIGIT/LETTER NORMALIZER ──────────────────────────────
   const PHONETIC_DIGITS = {
     "zero":"0","niner":"9","nine":"9","one":"1","two":"2","three":"3",
@@ -1328,18 +1428,11 @@ const commParseAtis = (text) => {
     const infoMatch = infoFull || infoWith || infoHave;
     if (infoMatch) r.info = infoMatch[1].toUpperCase();
 
-    // Wind — normalize gust homophones before matching.
-    // Speech engines transcribe "gusting" as "guessing", "gusting to" as
-    // "guessing to", and occasionally "gust" as "just". Fix all before regex.
-    const tWind = t
-      .replace(/\bguessing\b/gi, "gusting")
-      .replace(/\bgusted\b/gi,   "gusting")
-      .replace(/\bgust\s+to\b/gi, "gusting");
-
-    if (/wind\s+calm/i.test(tWind)) {
+    // Wind — after normalizeAtcSpeech all gust homophones are already corrected
+    if (/wind\s+calm/i.test(t)) {
       r.wind = "CALM";
     } else {
-      const wind = tWind.match(/wind\s+(\d{1,3})\s+(?:at\s+)?(\d{1,3})(?:\s+(?:gusts?|gusting|gust)\s+(\d{1,3}))?/i);
+      const wind = t.match(/wind\s+(\d{1,3})\s+(?:at\s+)?(\d{1,3})(?:\s+(?:gusts?|gusting|gust)\s+(\d{1,3}))?/i);
       if (wind) r.wind = wind[3] ? `${wind[1]}° AT ${wind[2]} GUSTING ${wind[3]}` : `${wind[1]}° AT ${wind[2]}KT`;
     }
 
@@ -1365,15 +1458,8 @@ const commParseAtis = (text) => {
         : altm[1];
     }
 
-    // Visibility — normalize homophones before matching.
-    // Speech engines commonly transcribe "four" as "for" and "to" as "two"
-    // in this context, so we fix those before the digit pattern runs.
-    const tVis = t
-      .replace(/\bvisibility\s+for\b/gi, "visibility 4")
-      .replace(/\bvisibility\s+to\b/gi,  "visibility 2")
-      .replace(/\bvisibility\s+too\b/gi, "visibility 2")
-      .replace(/\bvisibility\s+won\b/gi, "visibility 1");
-    const vis = tVis.match(/visibility\s+(\d+(?:\.\d+)?)/i);
+    // Visibility — after normalizeAtcSpeech homophones are already corrected
+    const vis = t.match(/visibility\s+(\d+(?:\.\d+)?)/i);
     if (vis) r.visibility = `${vis[1]}SM`;
 
     // Sky condition
@@ -1480,14 +1566,17 @@ const commParseGround = (text) => {
     setCommTranscript(isFinal ? "" : text);
     if (!isFinal) return;
 
+    // ── ATC correction pass — fix speech engine homophones before anything else
+    const corrected = normalizeAtcSpeech(text);
+
     // ── Standard watchdog + tx log ────────────────────────────────────────
-    const type   = commDetectType(text);
-    const tokens = (type==="landing"||type==="pattern") ? commParseLanding(text) : null;
-    const nwkraft= (type==="ifr_departure"||type==="ifr_approach"||commForceIfr) ? commParseNwkraft(text) : null;
-    const entry  = { id:++commTxIdRef.current, text, ts:new Date(), type, tokens, nwkraft };
+    const type   = commDetectType(corrected);
+    const tokens = (type==="landing"||type==="pattern") ? commParseLanding(corrected) : null;
+    const nwkraft= (type==="ifr_departure"||type==="ifr_approach"||commForceIfr) ? commParseNwkraft(corrected) : null;
+    const entry  = { id:++commTxIdRef.current, text:corrected, ts:new Date(), type, tokens, nwkraft };
     setCommTxLog(prev=>[entry,...prev].slice(0,40));
     if (nwkraft) setCommIfrData(nwkraft);
-    if (commCallsignRxRef.current && commCallsignRxRef.current.test(text)) commTriggerWatchdog(entry);
+    if (commCallsignRxRef.current && commCallsignRxRef.current.test(corrected)) commTriggerWatchdog(entry);
 
     // ── ARMED BUFFER ACCUMULATION ─────────────────────────────────────────
     // Every final chunk is appended to the buffer AND immediately shown in
@@ -1496,7 +1585,7 @@ const commParseGround = (text) => {
     // expected to press STOP when done. This prevents any premature commit.
 
     if (atisArmStateRef.current === "armed") {
-      const newBuf = (atisBufferRef.current + " " + text).trim();
+      const newBuf = (atisBufferRef.current + " " + corrected).trim();
       atisBufferRef.current = newBuf;
       setAtisRawText(newBuf); // live update so pilot sees accumulation
       clearTimeout(atisSilenceRef.current);
@@ -1504,7 +1593,7 @@ const commParseGround = (text) => {
     }
 
     if (gndArmStateRef.current === "armed") {
-      const newBuf = (gndBufferRef.current + " " + text).trim();
+      const newBuf = (gndBufferRef.current + " " + corrected).trim();
       gndBufferRef.current = newBuf;
       setGndRawText(newBuf);
       clearTimeout(gndSilenceRef.current);
@@ -1512,7 +1601,7 @@ const commParseGround = (text) => {
     }
 
     if (ifrArmStateRef.current === "armed") {
-      const newBuf = (ifrBufferRef.current + " " + text).trim();
+      const newBuf = (ifrBufferRef.current + " " + corrected).trim();
       ifrBufferRef.current = newBuf;
       setIfrRawText(newBuf);
       clearTimeout(ifrSilenceRef.current);
