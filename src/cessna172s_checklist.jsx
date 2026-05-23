@@ -1878,7 +1878,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
           </button>
         </div>
       </div>
-{/* PERSISTENT ATC COMM BANNER TIMELINE */}
+{/* EXPANDED HEADS-UP ROLLING RADIO COMM STACK */}
       <div 
         onClick={() => setCurrentPage("comm")} // Quick-jump to full logs if clicked
         style={{
@@ -1888,89 +1888,137 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
             : commWatchdogState === "alert" 
               ? "rgba(232,200,74,0.18)" 
               : lightMode ? "#cbd0e2" : "#141820",
-          borderBottom: `2px solid ${
+          borderBottom: `3px solid ${
             commWatchdogState === "unanswered" 
               ? "#e85a4a" 
               : commWatchdogState === "alert" 
                 ? "#e8c84a" 
                 : commListening ? "#4ae8c8" : "#2a3040"
           }`,
-          padding: "6px 14px",
+          padding: "10px 16px",
           display: "flex",
-          alignItems: "center",
-          gap: 12,
+          flexDirection: "column",
+          gap: 8,
           cursor: "pointer",
           animation: commWatchdogState === "unanswered" ? "commFlash 0.5s ease infinite alternate" : "none",
           transition: "all 0.2s ease"
         }}
       >
-        {/* Status Indicator Icon */}
-        <div style={{
-          width: 8,
-          height: 8,
-          borderRadius: "50%",
-          background: commWatchdogState === "unanswered" 
-            ? "#e85a4a" 
-            : commWatchdogState === "alert" 
-              ? "#e8c84a" 
-              : commListening ? "#3dbe6c" : "#4a5068",
-          boxShadow: commListening ? "0 0 8px currentColor" : "none"
-        }} />
+        {/* TOP ROW: ACTIVE / LIVE TRANSMISSION STREAM */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
+          <div style={{
+            width: 10,
+            height: 10,
+            borderRadius: "50%",
+            background: commWatchdogState === "unanswered" 
+              ? "#e85a4a" 
+              : commWatchdogState === "alert" 
+                ? "#e8c84a" 
+                : commListening ? "#3dbe6c" : "#4a5068",
+            boxShadow: commListening ? "0 0 10px currentColor" : "none",
+            flexShrink: 0
+          }} />
 
-        {/* Real-time Ticker Feed */}
-        <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "baseline", gap: 8 }}>
-          <span style={{ 
-            fontFamily: "'Share Tech Mono', monospace", 
-            fontSize: 9, 
-            fontWeight: 700, 
-            color: commWatchdogState !== "clear" ? "#e8c84a" : "#7a8090", 
-            letterSpacing: 1 
-          }}>
-            {commWatchdogState !== "clear" ? "⚠ ATC GUARD ALERT:" : "📡 LIVE RADIO:"}
-          </span>
-          
-          <span style={{
-            fontFamily: "'Share Tech Mono', monospace",
-            fontSize: 12,
-            fontWeight: commWatchdogState !== "clear" ? 700 : 500,
-            color: commTranscript ? (lightMode ? "#b08000" : "#e8c84a") : (lightMode ? "#050a15" : "#e8e4d8"),
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-            fontStyle: commTranscript || commTxLog.length > 0 ? "normal" : "italic"
-          }}>
-            {commTranscript 
-              ? commTranscript 
-              : commTxLog.length > 0 
-                ? commTxLog[0].text 
-                : "Awaiting voice transmission streaming entries... Tap COMM WATCH to toggle microphone state."
-            }
-          </span>
+          <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ 
+              fontFamily: "'Share Tech Mono', monospace", 
+              fontSize: 11, // Increased size
+              fontWeight: 700, 
+              color: commWatchdogState !== "clear" ? "#e8c84a" : "#4ae8c8", 
+              letterSpacing: 1.5,
+              flexShrink: 0
+            }}>
+              {commWatchdogState !== "clear" ? "⚠ ATC GUARD ALERT:" : "📡 LIVE RADIO:"}
+            </span>
+            
+            <span style={{
+              fontFamily: "'Share Tech Mono', monospace",
+              fontSize: 15, // Increased text readability size
+              fontWeight: 700, // Hard bold so it pops out of corners
+              color: commTranscript ? (lightMode ? "#b08000" : "#e8c84a") : (lightMode ? "#050a15" : "#ffffff"),
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              flex: 1
+            }}>
+              {commTranscript 
+                ? commTranscript 
+                : commTxLog.length > 0 
+                  ? commTxLog[0].text 
+                  : "Awaiting incoming radio traffic..."
+              }
+            </span>
+          </div>
+
+          {/* Alert button */}
+          {commWatchdogState !== "clear" && (
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                commAckCall();
+              }}
+              style={{
+                fontFamily: "'Oswald', sans-serif",
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: 1,
+                padding: "4px 12px",
+                borderRadius: 4,
+                cursor: "pointer",
+                background: commWatchdogState === "unanswered" ? "#e85a4a" : "#e8c84a",
+                color: "#000",
+                border: "none",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
+                flexShrink: 0
+              }}
+            >
+              ACK CALL [{commAckCountdown}s]
+            </button>
+          )}
         </div>
 
-        {/* Quick-Action Alert Dismiss Trigger */}
-        {commWatchdogState !== "clear" && (
-          <button 
-            onClick={(e) => {
-              e.stopPropagation(); // Avoid triggering page navigation jump
-              commAckCall();
-            }}
-            style={{
-              fontFamily: "'Oswald', sans-serif",
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: 1,
-              padding: "3px 10px",
-              borderRadius: 3,
-              cursor: "pointer",
-              background: commWatchdogState === "unanswered" ? "#e85a4a" : "#e8c84a",
-              color: "#000",
-              border: "none",
-              boxShadow: "0 2px 6px rgba(0,0,0,0.3)"
-            }}
-          >
-            ACK CALL [{commAckCountdown}s]
-          </button>
+        {/* BOTTOM SECTION: ROLLING TIMELINE TRACK (Only paints if logs exist) */}
+        {commTxLog.length > 1 && (
+          <div style={{ 
+            display: "flex", 
+            flexDirection: "column", 
+            gap: 4,
+            borderTop: `1.5px solid ${lightMode ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.05)"}`,
+            paddingTop: 6
+          }}>
+            {commTxLog.slice(1, 5).map((log) => (
+              <div 
+                key={log.id} 
+                style={{ 
+                  display: "flex", 
+                  alignItems: "center", 
+                  gap: 10,
+                  fontSize: 11, 
+                  fontFamily: "'Share Tech Mono', monospace"
+                }}
+              >
+                {/* Micro timestamp tag */}
+                <span style={{ 
+                  color: lightMode ? "#4a5a78" : "#4a5068", 
+                  fontWeight: 600,
+                  flexShrink: 0 
+                }}>
+                  [{log.ts.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" })}Z]
+                </span>
+                
+                {/* Historical log data text line string */}
+                <span style={{ 
+                  color: lightMode ? "rgba(5,10,21,0.65)" : "rgba(232,228,216,0.55)", 
+                  overflow: "hidden", 
+                  textOverflow: "ellipsis", 
+                  whiteSpace: "nowrap",
+                  flex: 1
+                }}>
+                  {log.text}
+                </span>
+              </div>
+            ))}
+          </div>
         )}
       </div>
       {/* BODY */}
