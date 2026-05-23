@@ -1878,7 +1878,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
           </button>
         </div>
       </div>
-{/* EXPANDED HEADS-UP ROLLING RADIO COMM STACK — STREAMLINED TO 2 HISTORY LINES */}
+{/* EXPANDED HEADS-UP ROLLING RADIO COMM STACK — HIGH-CONTRAST LIGHT MODE */}
       {currentPage !== "comm" && (
         <div 
           onClick={() => setCurrentPage("comm")} // Quick-jump to full logs if clicked
@@ -1894,7 +1894,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                 ? "#e85a4a" 
                 : commWatchdogState === "alert" 
                   ? "#e8c84a" 
-                  : commListening ? "#4ae8c8" : "#2a3040"
+                  : commListening ? (lightMode ? "#1a6ab0" : "#4ae8c8") : "#2a3040"
             }`,
             padding: "12px 16px",
             display: "flex",
@@ -1914,8 +1914,8 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
               background: commWatchdogState === "unanswered" 
                 ? "#e85a4a" 
                 : commWatchdogState === "alert" 
-                  ? "#e8c84a" 
-                  : commListening ? "#3dbe6c" : "#4a5068",
+                ? "#e8c84a" 
+                : commListening ? (lightMode ? "#0b532b" : "#3dbe6c") : "#4a5068",
               boxShadow: commListening ? "0 0 10px currentColor" : "none",
               flexShrink: 0
             }} />
@@ -1925,7 +1925,9 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                 fontFamily: "'Share Tech Mono', monospace", 
                 fontSize: 13, 
                 fontWeight: 700, 
-                color: commWatchdogState !== "clear" ? "#e8c84a" : "#4ae8c8", 
+                color: commWatchdogState !== "clear" 
+                  ? "#e8c84a" 
+                  : lightMode ? "#0a2858" : "#4ae8c8", // High-visibility deep navy vs tactical teal
                 letterSpacing: 1.5,
                 flexShrink: 0
               }}>
@@ -1936,7 +1938,9 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                 fontFamily: "'Share Tech Mono', monospace",
                 fontSize: 18, 
                 fontWeight: 700, 
-                color: commTranscript ? (lightMode ? "#b08000" : "#e8c84a") : (commListening || commTxLog.length > 0 ? (lightMode ? "#050a15" : "#ffffff") : (lightMode ? "#4a5a78" : "#4a5068")),
+                color: commTranscript 
+                  ? (lightMode ? "#b08000" : "#e8c84a") 
+                  : (commListening || commTxLog.length > 0 ? (lightMode ? "#050a15" : "#ffffff") : (lightMode ? "#4a5a78" : "#4a5068")),
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
@@ -1970,9 +1974,18 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                   padding: "5px 14px",
                   borderRadius: 4,
                   cursor: "pointer",
-                  background: commListening ? "rgba(232,90,74,0.15)" : "rgba(74,232,200,0.12)",
-                  color: commListening ? "#e85a4a" : "#4ae8c8",
-                  border: `1.5px solid ${commListening ? "#e85a4a" : "#4ae8c8"}`,
+                  // Darken completely in light mode to avoid pale transparency washouts
+                  background: commListening 
+                    ? (lightMode ? "rgba(160,16,5,0.15)" : "rgba(232,90,74,0.15)") 
+                    : (lightMode ? "rgba(26,106,176,0.12)" : "rgba(74,232,200,0.12)"),
+                  color: commListening 
+                    ? (lightMode ? "#a01005" : "#e85a4a") 
+                    : (lightMode ? "#1a6ab0" : "#4ae8c8"),
+                  border: `1.5px solid ${
+                    commListening 
+                      ? (lightMode ? "#a01005" : "#e85a4a") 
+                      : (lightMode ? "#1a6ab0" : "#4ae8c8")
+                  }`,
                   boxShadow: commListening && commMicStatus === "active" ? "0 0 8px rgba(61,190,108,0.3)" : "none",
                   transition: "all 0.15s"
                 }}
@@ -2003,7 +2016,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
             </div>
           </div>
 
-          {/* BOTTOM SECTION: ROLLING TIMELINE TRACK — STREAMLINED SLICE TO 2 ITEMS */}
+          {/* BOTTOM SECTION: ROLLING TIMELINE TRACK */}
           {commTxLog.length > 1 && (
             <div style={{ 
               display: "flex", 
@@ -2012,7 +2025,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
               borderTop: `1.5px solid ${lightMode ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.05)"}`,
               paddingTop: 8
             }}>
-              {commTxLog.slice(1, 3).map((log) => ( // Changed slice end index from 5 to 3 to output exactly 2 entries
+              {commTxLog.slice(1, 3).map((log) => (
                 <div 
                   key={log.id} 
                   style={{ 
@@ -2025,14 +2038,14 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                   }}
                 >
                   <span style={{ 
-                    color: lightMode ? "#4a5a78" : "#4a5068", 
+                    color: lightMode ? "#202838" : "#4a5068", // Solid charcoal timestamp text for Day mode
                     fontWeight: 700,
                     flexShrink: 0 
                   }}>
                     [{log.ts.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" })}Z]
                   </span>
                   <span style={{ 
-                    color: lightMode ? "rgba(5,10,21,0.75)" : "rgba(232,228,216,0.65)", 
+                    color: lightMode ? "rgba(5,10,21,0.8)" : "rgba(232,228,216,0.65)", 
                     overflow: "hidden", 
                     textOverflow: "ellipsis", 
                     whiteSpace: "nowrap",
