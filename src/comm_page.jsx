@@ -21,9 +21,14 @@
 //   onToggleForce   — fn()
 //   ifrData         — { N,W,K,R,A,F,T }
 //   onSetIfrData    — fn(data)
+//   atisData        — { info,wind,altimeter,visibility,sky }
+//   onSetAtisData   — fn(data)
+//   gndData         — { clearedTo,route,altitude,frequency,taxi,squawk }
+//   onSetGndData    — fn(data)
+// ──────
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 // ─── ACCENT COLORS — always fixed (avionics brand palette) ───────────────────
 // Background, text, and border tokens come from the computed theme (T) below.
