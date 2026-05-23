@@ -654,9 +654,9 @@ export const MORE_REFS = [
     note: "§91.117 — No person may operate an aircraft at indicated airspeed in excess of these limits",
     cols: ["Rule", "Speed Limit"],
     rows: [
-      ["Below 10,000 ft MSL",                         "250 KIAS max"],
-      ["In Class B airspace",                         "250 KIAS max"],
-      ["Below Class B shelf",                         "200 KIAS max"],
+      ["Below 10,000 ft MSL",                          "250 KIAS max"],
+      ["In Class B airspace",                          "250 KIAS max"],
+      ["Below Class B shelf",                          "200 KIAS max"],
       ["In Class C or D surface area",                "200 KIAS max"],
       ["In tunnel / VFR corridor",                    "200 KIAS max"],
       ["Within 4 NM, 2500 AGL of primary Class C/D", "200 KIAS max"],
@@ -681,8 +681,8 @@ export const MORE_REFS = [
       ["B", "2-way radio, Mode C xpdr, ADS-B",     "Explicit ATC clearance"],
       ["C", "2-way radio, Mode C xpdr, ADS-B",     "ATC contact establ."],
       ["D", "2-way radio",                          "ATC contact establ."],
-      ["E", "None for VFR",                         "None for VFR"],
-      ["G", "None for VFR",                         "None"],
+      ["E", "None for VFR",                        "None for VFR"],
+      ["G", "None for VFR",                        "None"],
     ],
   },
   {
@@ -738,7 +738,7 @@ export const MORE_REFS = [
       ["PAPI — 1 red / 3 white",    "Slightly high"],
       ["PAPI — 4 white",            "Too high"],
       ["VASI — red over red",       "Too low (dead, you're dead)"],
-      ["VASI — white over red",     "On glidepath"],
+      ["VASI — white over red",      "On glidepath"],
       ["VASI — white over white",   "Too high"],
       ["REIL (flashing lights)",    "Runway end identifier"],
       ["MALSR / ALSF",              "Approach light system — aids transition"],
@@ -814,28 +814,37 @@ function ScratchpadCanvas({ storageKey }) {
   const [penColor, setPenColor] = useState("#e8e4d8");
 
   useEffect(() => {
-  const canvas = canvasRef.current;
-  if (!canvas) return;
-  try {
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
-      const img = new Image();
-      img.onload = () => canvas.getContext("2d").drawImage(img, 0, 0);
-      img.src = saved;
-    }
-  } catch {}
-}, [storageKey]);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const load = async () => {
+      try {
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+          const img = new Image();
+          img.onload = () => {
+            const ctx = canvas.getContext("2d");
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0);
+          };
+          img.onerror = () => {};
+          img.src = saved;
+        }
+      } catch {}
+    };
+    const timer = setTimeout(load, 50);
+    return () => clearTimeout(timer);
+  }, [storageKey]);
 
   const persist = () => {
-  clearTimeout(saveTimerRef.current);
-  saveTimerRef.current = setTimeout(() => {
-    try {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      localStorage.setItem(storageKey, canvas.toDataURL());
-    } catch {}
-  }, 600);
-};
+    clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      try {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        localStorage.setItem(storageKey, canvas.toDataURL());
+      } catch {}
+    }, 600);
+  };
 
   const getPos = (e) => {
     const canvas = canvasRef.current;
@@ -933,15 +942,14 @@ function DrawingNotepad({ title, footer, onClose, storageKey, initialImage, onSa
   }, [initialImage]);
 
   const persist = () => {
-  clearTimeout(saveTimerRef.current);
-  saveTimerRef.current = setTimeout(() => {
-    try {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      localStorage.setItem(storageKey, canvas.toDataURL());
-    } catch {}
-  }, 600);
-};
+    clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      if (!canvasRef.current) return;
+      const dataUrl = canvasRef.current.toDataURL();
+      try { localStorage.setItem(storageKey, dataUrl); } catch {}
+      if (onSave) onSave(dataUrl);
+    }, 400);
+  };
 
   const getPos = (e) => {
     const canvas = canvasRef.current;
@@ -968,11 +976,12 @@ function DrawingNotepad({ title, footer, onClose, storageKey, initialImage, onSa
     lastPos.current = pos;
   };
   const endDraw = (e) => { e.preventDefault(); drawingRef.current = false; lastPos.current = null; persist(); };
-const clearCanvas = () => {
-  if (!canvasRef.current) return;
-  canvasRef.current.getContext("2d").clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-  try { localStorage.removeItem(storageKey); } catch {}
-};
+  const clearCanvas = () => {
+    if (!canvasRef.current) return;
+    canvasRef.current.getContext("2d").clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    try { localStorage.removeItem(storageKey); } catch {}
+    if (onSave) onSave(null);
+  };
 
   const PEN_COLORS = ["#e8e4d8","#4ae888","#4ab8e8","#e8c84a","#e85a4a"];
   const PEN_SIZES = [1.5, 2.5, 4, 7];
@@ -1202,10 +1211,9 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
     if (commCallsignRxRef.current && commCallsignRxRef.current.test(text)) commTriggerWatchdog(entry);
   },[commForceIfr, commTriggerWatchdog]);
 
-  // Build comm worker blob inline (same architecture as comm_page.jsx worker)
+  // Worker background trace config
   const COMM_WORKER_BLOB = `const SAMPLE_RATE=16000,BUFFER_SIZE=16000*12; const ring=new Float32Array(BUFFER_SIZE);let wh=0; function rms(s){let sum=0;for(let i=0;i<s.length;i++)sum+=s[i]*s[i];return 20*Math.log10(Math.sqrt(sum/s.length)+1e-9);} function write(s){for(let i=0;i<s.length;i++){ring[wh]=s[i];wh=(wh+1)%BUFFER_SIZE;}} function read(sec){const n=Math.min(sec*SAMPLE_RATE,BUFFER_SIZE),out=new Float32Array(n),st=(wh-n+BUFFER_SIZE)%BUFFER_SIZE;for(let i=0;i<n;i++)out[i]=ring[(st+i)%BUFFER_SIZE];return out;} self.onmessage=function(e){   if(e.data.type==="AUDIO_CHUNK"){write(e.data.samples);self.postMessage({type:"BUFFER_READY",rmsDb:rms(e.data.samples)});return;}   if(e.data.type==="TRANSCRIPTION_RESULT"){self.postMessage({type:"TRANSCRIPT",text:e.data.text,isFinal:e.data.isFinal,ts:Date.now()});return;}   if(e.data.type==="GET_REPLAY"){self.postMessage({type:"REPLAY_PCM",pcm:read(e.data.seconds||10),sampleRate:SAMPLE_RATE});return;} };`;
 
-  // Spin up worker once on mount
   useEffect(() => {
     const blob=new Blob([COMM_WORKER_BLOB],{type:"application/javascript"});
     commWorkerBlobUrl.current=URL.createObjectURL(blob);
@@ -1219,10 +1227,8 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
     return()=>{commWorkerRef.current?.terminate();if(commWorkerBlobUrl.current)URL.revokeObjectURL(commWorkerBlobUrl.current);};
   }, [commHandleTranscript]);
 
-  // Rebuild callsign regex when aircraft prop changes
   useEffect(() => { commCallsignRxRef.current = buildCommRegex(aircraft?.tail); }, [aircraft?.tail, buildCommRegex]);
 
-  // Cleanup all comm resources on unmount
   useEffect(() => {
     return () => {
       commStopListening();
@@ -1239,18 +1245,14 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
     } catch { setCommReplayActive(false); }
   };
 
-const commStartListening = async () => {
+  const commStartListening = async () => {
     try {
-      // 1. WARM RESUME PATH: If stream exists, re-enable tracks and wake up contexts
       if (commStreamRef.current) {
         commStreamRef.current.getAudioTracks().forEach(track => { track.enabled = true; });
         if (commAudioCtxRef.current && commAudioCtxRef.current.state === "suspended") {
           await commAudioCtxRef.current.resume();
         }
-        
-        // Restart VU loop animation if it was cancelled during shutdown
         if (!commAnimFrameRef.current) {
-          // Re-instantiate the animVu function frame reference
           const analyser = commAudioCtxRef.current._analyser || commAudioCtxRef.current.createAnalyser();
           const vuBuf = new Uint8Array(analyser.frequencyBinCount);
           const animVu = () => {
@@ -1266,7 +1268,6 @@ const commStartListening = async () => {
           };
           commAnimFrameRef.current = requestAnimationFrame(animVu);
         }
-
         if (commRecognitionRef.current) {
           try { commRecognitionRef.current.start(); } catch(e) {}
         }
@@ -1275,7 +1276,6 @@ const commStartListening = async () => {
         return;
       }
 
-      // 2. COLD START PATH: First time opening the hardware microphone stream
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { channelCount: 1, sampleRate: 16000, echoCancellation: false, noiseSuppression: false, autoGainControl: false }
       });
@@ -1298,11 +1298,11 @@ const commStartListening = async () => {
       const analyser = ctx.createAnalyser(); 
       analyser.fftSize = 256; 
       source.connect(analyser);
-      ctx._analyser = analyser; // Attach to context so the warm-resume route can reference it
+      ctx._analyser = analyser;
       
       const vuBuf = new Uint8Array(analyser.frequencyBinCount);
       const animVu = () => {
-        commAnimFrameRef.current = requestAnimationFrame(animVu); // Always schedule first to survive suspends
+        commAnimFrameRef.current = requestAnimationFrame(animVu);
         if (!commAudioCtxRef.current || commAudioCtxRef.current.state === "suspended") {
           setCommRmsLevel(0);
           return;
@@ -1350,28 +1350,19 @@ const commStartListening = async () => {
   };
 
   const commStopListening = () => {
-    // 1. Stop the native speech engine
     if (commRecognitionRef.current) {
       try { commRecognitionRef.current.stop(); } catch(e) {}
     }
-    
-    // 2. Soft-mute the hardware stream track (keeps iOS hardware channel authorized)
     if (commStreamRef.current) {
       commStreamRef.current.getAudioTracks().forEach(track => { track.enabled = false; });
     }
-    
-    // 3. Suspend Audio Context calculation load to save battery power
     if (commAudioCtxRef.current && commAudioCtxRef.current.state === "running") {
       try { commAudioCtxRef.current.suspend(); } catch(e) {}
     }
-
-    // 4. Kill the active animation frame draw sequence cleanly on stop
     if (commAnimFrameRef.current) {
       cancelAnimationFrame(commAnimFrameRef.current);
       commAnimFrameRef.current = null;
     }
-    
-    // 5. Reset UI display variables back to idle baselines
     setCommListening(false);
     setCommMicStatus("idle");   
     setCommTranscript("");
@@ -1379,15 +1370,12 @@ const commStartListening = async () => {
   };
   const commAckCall = () => { commClearTimers(); setCommWatchdogState("clear"); setCommWatchdogTx(null); setCommAckCountdown(0); commPlayChime(false); };
   const commReplay = (seconds = 10) => { commWorkerRef.current?.postMessage({ type: "GET_REPLAY", seconds }); setCommReplayActive(true); setTimeout(() => setCommReplayActive(false), seconds * 1000); };
-  // ── END COMM AUDIO ENGINE
 
   // ── Theme tokens ──────────────────────────────────────────────────────────
-// ── Theme tokens ──────────────────────────────────────────────────────────
   const T = lightMode ? {
     appBg:"#e2e4ec", headerBg:"linear-gradient(135deg,#b8b0c8 0%,#c8ccd8 60%,#b8b0c8 100%)",
     headerBorder:"#1a6ab0", leftSideBg:"#c8cbd4", leftSideBorder:"#8a94a8",
-    leftTabActive:"rgba(26,106,176,0.18)", leftTabText:"#0a2858", leftTabDim:"#3a4868",
-    leftTabCount:"#1a3a6a", centerBg:"#eef0f6", centerBorder:"#8a94a8",
+    leftTabActive:"rgba(26,106,176,0.18)", leftTabDim:"#3a4868", leftTabCount:"#1a3a6a", leftTabText:"#0a2858", centerBg:"#eef0f6", centerBorder:"#8a94a8",
     itemLabel:"#050a15", itemAction:"#0c2340", itemBorder:"rgba(10,20,40,0.25)",
     itemCheckedOp:0.4, checkboxBorder:"#1a4a8a", checkboxDone:"rgba(20,120,60,0.25)",
     checkColor:"#0b532b", actionColor:"#1a4a8a",
@@ -1397,16 +1385,15 @@ const commStartListening = async () => {
     panelTabBg:"#b8b0c8", editBg:"#cbd0e2", editBorder:"#7a8498",
     editHintColor:"#202848", inputBg:"#ffffff", scratchBg:"#eef0f6",
     
-    // ── QUICK REFERENCE & SIDEBAR OVERLAYS HIGH-CONTRAST ──
     emgSidebarBg:  "#cbd0e2",
     emgSidebarBdr: "#8a94a8",
-    emgLabelColor: "#0a1428", // Deep contrast text header
+    emgLabelColor: "#0a1428",
     emgItemBdr:    "#a0a8b8",
     moreOverlayBg: "#f4f5fa",
     moreHeaderBg:  "linear-gradient(135deg,#c0c6d8,#d8dce8)",
     moreSidebarBg: "#d8dce8",
     moreSidebarBdr:"#8a94a8",
-    textMuted:     "#202838", // Significantly darkened charcoal for descriptions
+    textMuted:     "#202838",
   } : {
     appBg:"#0d0f12", headerBg:"linear-gradient(135deg,#0a0c10 0%,#141820 60%,#0a0c10 100%)",
     headerBorder:"#e8c84a", leftSideBg:"#141820", leftSideBorder:"#2a3040",
@@ -1420,16 +1407,15 @@ const commStartListening = async () => {
     cautionColor:"#d06050", noteBg:"rgba(184,168,64,0.06)", cautionBg:"rgba(208,96,80,0.06)",
     panelTabBg:"#141820", editBg:"#0d1018", editBorder:"#2a3040",
     editHintColor:"#4a5068", inputBg:"#141820", scratchBg:"#0a0c10", emgSidebarBg:  "#100c0c",
-emgSidebarBdr: "#281818",
-emgLabelColor: "#5a3030",
-emgItemBdr:    "#281818",
-moreOverlayBg: "rgba(8,10,14,0.96)",
-moreHeaderBg:  "linear-gradient(135deg,#0a0c10,#141820)",
-moreSidebarBg: "#0a0c10",
-moreSidebarBdr:"#2a1e3a",
+    emgSidebarBdr: "#281818",
+    emgLabelColor: "#5a3030",
+    emgItemBdr:    "#281818",
+    moreOverlayBg: "rgba(8,10,14,0.96)",
+    moreHeaderBg:  "linear-gradient(135deg,#0a0c10,#141820)",
+    moreSidebarBg: "#0a0c10",
+    moreSidebarBdr:"#2a1e3a",
   };
 
-  // ── Clock & timer ──────────────────────────────────────────────────────────
   useEffect(() => {
     const tick = () => {
       const n = new Date();
@@ -1459,66 +1445,66 @@ moreSidebarBdr:"#2a1e3a",
     return h > 0 ? `${h}:${z(m)}:${z(sec)}` : `${z(m)}:${z(sec)}`;
   };
 
-  // ── Storage load ──────────────────────────────────────────────────────────
+  // ── Synchronous Storage load (Swapped to localStorage for Safari) ──────────
   useEffect(() => {
-    const load = async () => {
+    const load = () => {
       try {
-        const ci = await window.storage.get("kneeboard-custom-items");
-        if (ci?.value) {
-          const parsed = JSON.parse(ci.value);
+        const ci = localStorage.getItem("kneeboard-custom-items");
+        if (ci) {
+          const parsed = JSON.parse(ci);
           const restored = {};
           Object.keys(parsed).forEach(k => {
             restored[k] = { ...parsed[k], removed: new Set(parsed[k].removed || []) };
           });
           setCustomItems(restored);
         }
-        const vs = await window.storage.get("kneeboard-vspeeds");
-        if (vs?.value) setVspeeds(JSON.parse(vs.value));
-        const pd = await window.storage.get("kneeboard-perfdata");
-        if (pd?.value) setPerfData(JSON.parse(pd.value));
-        const cd = await window.storage.get("kneeboard-climbdata");
-        if (cd?.value) setClimbData(JSON.parse(cd.value));
-        const crd = await window.storage.get("kneeboard-cruisedata");
-        if (crd?.value) setCruiseData(JSON.parse(crd.value));
-        const keys = await window.storage.list("notepad-");
-        if (keys?.keys) {
-          const imgs = {};
-          for (const key of keys.keys) {
-            const r = await window.storage.get(key);
-            if (r?.value) imgs[key] = r.value;
+        const vs = localStorage.getItem("kneeboard-vspeeds");
+        if (vs) setVspeeds(JSON.parse(vs));
+        const pd = localStorage.getItem("kneeboard-perfdata");
+        if (pd) setPerfData(JSON.parse(pd));
+        const cd = localStorage.getItem("kneeboard-climbdata");
+        if (cd) setClimbData(JSON.parse(cd));
+        const crd = localStorage.getItem("kneeboard-cruisedata");
+        if (crd) setCruiseData(JSON.parse(crd));
+        
+        // Inline Notepad index rebuild loops
+        const imgs = {};
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith("notepad-")) {
+            const val = localStorage.getItem(k);
+            if (val) imgs[k] = val;
           }
-          setNotepadImages(imgs);
         }
-      } catch {}
-      try {
+        setNotepadImages(imgs);
+        
         const sp = localStorage.getItem("scratchpad-text");
         if (sp) setScratchpadText(sp);
       } catch {}
     };
-    if (typeof window !== "undefined" && window.storage) load();
+    if (typeof window !== "undefined") load();
   }, []);
-  
-  // ── Custom items helpers ──────────────────────────────────────────────────
+
   const getSectionKey = (pageId, sectionTitle) => `${pageId}::${sectionTitle}`;
   const getSectionCustom = (pageId, sectionTitle) => {
     const key = getSectionKey(pageId, sectionTitle);
     return customItems[key] || { removed: new Set(), added: [], order: null, renames: {} };
   };
 
-  const saveCustomItems = async (next) => {
+  const saveCustomItems = (next) => {
     try {
       const serializable = {};
       Object.keys(next).forEach(k => {
         serializable[k] = { removed: [...next[k].removed], added: next[k].added, order: next[k].order || null, renames: next[k].renames || {} };
       });
-      await window.storage.set("kneeboard-custom-items", JSON.stringify(serializable));
+      localStorage.setItem("kneeboard-custom-items", JSON.stringify(serializable));
     } catch {}
   };
 
-  const saveVspeeds = async (next) => { try { await window.storage.set("kneeboard-vspeeds", JSON.stringify(next)); } catch {} };
-  const savePerfData = async (next) => { try { await window.storage.set("kneeboard-perfdata", JSON.stringify(next)); } catch {} };
-  const saveClimbData = async (next) => { try { await window.storage.set("kneeboard-climbdata", JSON.stringify(next)); } catch {} };
-  const saveCruiseData = async (next) => { try { await window.storage.set("kneeboard-cruisedata", JSON.stringify(next)); } catch {} };
+  const saveVspeeds = (next) => { try { localStorage.setItem("kneeboard-vspeeds", JSON.stringify(next)); } catch {} };
+  const savePerfData = (next) => { try { localStorage.setItem("kneeboard-perfdata", JSON.stringify(next)); } catch {} };
+  const saveClimbData = (next) => { try { localStorage.setItem("kneeboard-climbdata", JSON.stringify(next)); } catch {} };
+  const saveCruiseData = (next) => { try { localStorage.setItem("kneeboard-cruisedata", JSON.stringify(next)); } catch {} };
 
   const updateVspeed = (gi, ii, field, val) => {
     setVspeeds(prev => { const next = prev.map((g, gIdx) => gIdx !== gi ? g : { ...g, items: g.items.map((item, iIdx) => iIdx !== ii ? item : { ...item, [field]: val }) }); saveVspeeds(next); return next; });
@@ -1569,7 +1555,6 @@ moreSidebarBdr:"#2a1e3a",
 
   const dragRef = useRef({ fromIdx: null, sectionKey: null });
 
-  // ── TTS ───────────────────────────────────────────────────────────────────
   const getVoice = () => {
     const voices = window.speechSynthesis.getVoices();
     const preferred = ["Samantha","Daniel","Karen","Moira","Alex","Google UK English Female","Google US English"];
@@ -1603,7 +1588,7 @@ moreSidebarBdr:"#2a1e3a",
     window.speechSynthesis.cancel();
     const queue = mergedItems.map(item => ({ label: item.l, action: item.a || "" }));
     if (!queue.length) return;
-    ttsQueueRef.current = queue; ttsIdxRef.current = 0;
+    t_queueRef.current = queue; ttsIdxRef.current = 0;
     setTtsPaused(false); setTtsActive({ sectionKey, idx: -1 });
     speakItem(queue, 0, sectionKey);
   };
@@ -1615,9 +1600,7 @@ moreSidebarBdr:"#2a1e3a",
 
   const stopTTS = () => { window.speechSynthesis.cancel(); ttsQueueRef.current = []; setTtsActive(null); setTtsPaused(false); };
 
-  // ── Checklist logic ────────────────────────────────────────────────────────
   const toggleCheck = (key) => setChecked(prev => ({ ...prev, [key]: !prev[key] }));
-
   const resetPage = (pageId) => setChecked(prev => { const next = { ...prev }; Object.keys(next).forEach(k => { if (k.startsWith(pageId + "::")) delete next[k]; }); return next; });
 
   const countPage = (pageId) => {
@@ -1645,7 +1628,6 @@ moreSidebarBdr:"#2a1e3a",
   const isEmgPage = EMG_PAGES.some(p => p.id === currentPage);
   const activePg = isEmgPage ? EMG_PAGES.find(p => p.id === currentPage) : PAGES.find(p => p.id === currentPage);
 
-  // ── Inline rename ──────────────────────────────────────────────────────────
   const applyInlineRename = (pageId, sectionTitle, item, newLabel, newAction, addedIdx) => {
     const key = getSectionKey(pageId, sectionTitle);
     if (item.custom && addedIdx !== undefined) {
@@ -1666,7 +1648,6 @@ moreSidebarBdr:"#2a1e3a",
     setInlineEdit(null);
   };
 
-  // ── Render checklist ───────────────────────────────────────────────────────
   const renderChecklist = (pg) => {
     if (!pg) return null;
     const isEmg = EMG_PAGES.some(p => p.id === pg.id);
@@ -1677,7 +1658,6 @@ moreSidebarBdr:"#2a1e3a",
 
     return (
       <div key={pg.id} style={{ animation: "fadeIn 0.15s ease" }}>
-        {/* Page header */}
         <div style={{ background: lightMode ? "#dde2ee" : "#1a1f2a", borderBottom: `2px solid ${isEmg ? accentColor : "#4a9fe8"}`, padding: "8px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 10 }}>
           <div>
             <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 15, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: isEmg ? accentColor : "#4a9fe8" }}>
@@ -1695,7 +1675,6 @@ moreSidebarBdr:"#2a1e3a",
           </div>
         </div>
 
-        {/* Sections */}
         {pg.sections.map((section, si) => {
           const sectionKey = getSectionKey(pg.id, section.title);
           const custom = getSectionCustom(pg.id, section.title);
@@ -1703,7 +1682,6 @@ moreSidebarBdr:"#2a1e3a",
 
           return (
             <div key={si}>
-              {/* Section header */}
               {section.title && (
                 <div style={{ padding: "10px 14px 9px", background: T.sectionBg, borderBottom: `2px solid ${isEmg ? accentColor : "#4a9fe8"}`, borderTop: `1px solid ${lightMode ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.04)"}`, borderLeft: `4px solid ${isEmg ? accentColor : "#4a9fe8"}`, marginTop: 2, display: "flex", alignItems: "center", gap: 8 }}>
                   <div style={{ flex: 1 }}>
@@ -1723,7 +1701,6 @@ moreSidebarBdr:"#2a1e3a",
                 </div>
               )}
 
-              {/* Edit mode panel */}
               {isEditing && (
                 <div style={{ background: "#0d1018", border: "1px solid #2a3040", borderTop: "none", margin: "0 0 2px" }}>
                   <div style={{ padding: "6px 10px 4px", borderBottom: "1px solid #1a2030", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
@@ -1774,7 +1751,7 @@ moreSidebarBdr:"#2a1e3a",
                             </div>
                           ) : (
                             <>
-                              <span onClick={() => !isRemoved && setInlineEdit({ key: itemEditKey, l: item.l, a: item.a || "" })} style={{ flex: 1, fontFamily: "'Rajdhani',sans-serif", fontSize: 13, color: item.custom ? "#3dbe6c" : isRemoved ? "#3a4050" : "#e8e4d8", cursor: isRemoved ? "default" : "text", textDecoration: isRemoved ? "line-through" : "none", borderBottom: isRemoved ? "none" : "1px dashed rgba(232,200,74,0.2)", paddingBottom: 1 }}>{item.l}</span>
+                              <span onClick={() => !isRemoved && setInlineEdit({ key: itemEditKey, l: item.l, a: item.a || "" })} style={{ flex: 1, fontFamily: "'Rajdhani', sans-serif", fontSize: 13, color: item.custom ? "#3dbe6c" : isRemoved ? "#3a4050" : "#e8e4d8", cursor: isRemoved ? "default" : "text", textDecoration: isRemoved ? "line-through" : "none", borderBottom: isRemoved ? "none" : "1px dashed rgba(232,200,74,0.2)", paddingBottom: 1 }}>{item.l}</span>
                               <span onClick={() => !isRemoved && setInlineEdit({ key: itemEditKey, l: item.l, a: item.a || "" })} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: item.custom ? "#3dbe6c" : isRemoved ? "#3a4050" : "#e8c84a", cursor: isRemoved ? "default" : "text", borderBottom: isRemoved ? "none" : "1px dashed rgba(232,200,74,0.2)", paddingBottom: 1 }}>{item.a}</span>
                               {item.custom && <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, color: "#3dbe6c", opacity: 0.45 }}>★</span>}
                               {!item.custom && (custom.renames || {})[item.originalLabel || item.l] && <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, color: "#4a9fe8", opacity: 0.6 }}>✎</span>}
@@ -1784,7 +1761,6 @@ moreSidebarBdr:"#2a1e3a",
                       );
                     });
                   })()}
-                  {/* Add item form */}
                   <div style={{ padding: "8px 10px", background: "#0a0d14", borderTop: "1px solid #1a2030" }}>
                     <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#4a9fe8", letterSpacing: 1.5, marginBottom: 6 }}>＋ ADD ITEM</div>
                     <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -1796,7 +1772,6 @@ moreSidebarBdr:"#2a1e3a",
                 </div>
               )}
 
-              {/* Normal item render */}
               {!isEditing && (() => {
                 const merged = getMergedItems(pg.id, section.title, section.items);
                 const nonCheckable = section.items.filter(i => i.type);
@@ -1839,7 +1814,6 @@ moreSidebarBdr:"#2a1e3a",
     );
   };
 
-  // ── Main render ────────────────────────────────────────────────────────────
   return (
     <div style={{ fontFamily: "'Rajdhani','Oswald',sans-serif", background: T.appBg, color: "#e8e4d8", height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
       <style>{`
@@ -1854,7 +1828,6 @@ moreSidebarBdr:"#2a1e3a",
 
       {/* HEADER */}
       <div style={{ background: T.headerBg, borderBottom: `2px solid ${T.headerBorder}`, flexShrink: 0 }}>
-        {/* Top row */}
         <div style={{ padding: "8px 12px 6px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative" }}>
           <div style={{ flexShrink: 0, minWidth: 80 }}>
             {onBackToHangar && (
@@ -1877,7 +1850,6 @@ moreSidebarBdr:"#2a1e3a",
           </button>
         </div>
 
-        {/* Bottom row — timer | clocks | scratchpad */}
         <div style={{ padding: "5px 12px 7px", display: "flex", alignItems: "center", borderTop: "1px solid rgba(42,48,64,0.6)", position: "relative" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ textAlign: "left" }}>
@@ -1909,7 +1881,6 @@ moreSidebarBdr:"#2a1e3a",
 
       {/* BODY */}
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-        {/* Left sidebar — normal pages */}
         <div style={{ width: 90, flexShrink: 0, background: T.leftSideBg, borderRight: `1px solid ${T.leftSideBorder}`, display: "flex", flexDirection: "column", overflowY: "auto", overflowX: "hidden" }}>
           {PAGES.map(pg => {
             const isActive = currentPage === pg.id;
@@ -1923,7 +1894,6 @@ moreSidebarBdr:"#2a1e3a",
               </button>
             );
           })}
-          {/* MORE button — pinned to bottom of left sidebar */}
           <div style={{ marginTop: "auto" }}>
             <button className="tab-btn" onClick={() => setMoreOpen(true)} style={{ width: "100%", minHeight: 60, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, background: "transparent", outline: "none", borderTop: `1px solid ${T.leftSideBorder}`, borderRight: "none", borderBottom: "none", borderLeft: "3px solid transparent", cursor: "pointer", padding: "8px 4px", transition: "all 0.12s" }}>
               <svg viewBox="0 0 20 20" width={22} height={22} fill="none">
@@ -1936,9 +1906,7 @@ moreSidebarBdr:"#2a1e3a",
           </div>
         </div>
 
-        {/* Center — checklist OR comm page */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: T.centerBg, position: "relative" }}>
-          {/* Main content area — comm page gets height:100% fill; checklist scrolls */}
           <div style={{ flex: 1, overflow: currentPage === "comm" ? "hidden" : "auto", overflowX: "hidden", scrollbarWidth: "thin", display: "flex", flexDirection: "column" }}>
             {currentPage === "comm"
               ? <CommPage
@@ -1966,7 +1934,6 @@ moreSidebarBdr:"#2a1e3a",
             }
           </div>
 
-          {/* ── PERFORMANCE DRAWERS — hidden on comm page, absolute overlay on checklist pages ── */}
           {currentPage !== "comm" && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 40, pointerEvents: "none", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 4px 4px 4px" }}>
             <div style={{ pointerEvents: "auto", display: "flex", flexDirection: "column", gap: "0px" }}>
               {[
@@ -1980,7 +1947,6 @@ moreSidebarBdr:"#2a1e3a",
                 const isFirst = index === 0;
                 return (
                   <div key={acc.key} style={{ display: "flex", flexDirection: "column", borderRadius: "6px", overflow: "hidden", marginTop: isFirst ? "0px" : "-6px", boxShadow: `0 -4px 10px ${acc.color}${isOpen ? "40" : "20"}, 0 4px 12px rgba(0,0,0,0.8)`, borderTop: `1px solid ${isOpen ? acc.color : `${acc.color}55`}`, borderLeft: `1px solid ${isOpen ? acc.color : `${acc.color}55`}`, borderRight: `1px solid ${isOpen ? acc.color : `${acc.color}55`}`, borderBottom: isOpen ? `1px solid ${acc.color}` : "none", backgroundColor: isOpen ? acc.contentBg : "rgba(13,17,22,0.65)", backdropFilter: "blur(4px)", position: "relative", zIndex: isOpen ? 50 : 40 + index, transition: "all 0.2s ease" }}>
-                    {/* Header Row */}
                     <button onClick={toggle} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "6px 14px", cursor: "pointer", background: `linear-gradient(90deg, ${acc.headerBg} 0%, rgba(13,15,18,0.2) 60%, transparent 100%)`, backgroundColor: "transparent", border: "none", outline: "none", textAlign: "left", flexShrink: 0, userSelect: "none" }}>
                       <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: acc.color, fontWeight: 700, display: "inline-block", transform: isOpen ? "rotate(180deg)" : "rotate(90deg)", transition: "transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)" }}>▲</span>
                       <span style={{ fontFamily: "'Oswald',sans-serif", fontSize: 13, color: acc.color, fontWeight: 700, letterSpacing: 2, flex: 1 }}>{acc.label}</span>
@@ -1992,12 +1958,9 @@ moreSidebarBdr:"#2a1e3a",
                       {acc.key === "climb" && <button onClick={e => { e.stopPropagation(); setClimbEditing(v => !v); }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "3px 10px", borderRadius: 3, cursor: "pointer", background: climbEditing ? `${acc.color}25` : "transparent", color: climbEditing ? "#e8c84a" : acc.color, border: `1px solid ${climbEditing ? "#e8c84a" : acc.color}`, marginRight: 6 }}>{climbEditing ? "✓ DONE" : "✎ EDIT"}</button>}
                       {acc.key === "cruise" && cruiseEditing && <button onClick={e => { e.stopPropagation(); resetCruiseData(); }} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer", marginRight: 4 }}>↺ RESET</button>}
                       {acc.key === "cruise" && <button onClick={e => { e.stopPropagation(); setCruiseEditing(v => !v); }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "3px 10px", borderRadius: 3, cursor: "pointer", background: cruiseEditing ? `${acc.color}25` : "transparent", color: cruiseEditing ? "#e8c84a" : acc.color, border: `1px solid ${cruiseEditing ? "#e8c84a" : acc.color}`, marginRight: 6 }}>{cruiseEditing ? "✓ DONE" : "✎ EDIT"}</button>}
-                      <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: acc.color, opacity: 0.8 }}>▲</span>
                     </button>
-                    {/* Collapsible Content Area */}
                     <div style={{ maxHeight: isOpen ? "380px" : "0px", overflow: "hidden", transition: "max-height 0.3s cubic-bezier(0.25, 1, 0.5, 1)" }}>
                       <div style={{ maxHeight: "380px", overflowY: "auto", scrollbarWidth: "thin", padding: "8px 0 16px 0", borderTop: `1px solid ${acc.color}35` }}>
-                        {/* V-SPEEDS content */}
                         {acc.key === "vspeeds" && vspeeds.map((group, gi) => (
                           <div key={gi} style={{ padding: "10px 14px 4px" }}>
                             <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: acc.color, letterSpacing: 3, marginBottom: 6, opacity: 0.8 }}>{group.group.toUpperCase()}</div>
@@ -2015,7 +1978,6 @@ moreSidebarBdr:"#2a1e3a",
                             </div>
                           </div>
                         ))}
-                        {/* T/O & LANDING content */}
                         {acc.key === "perf" && perfData.map((section, si) => (
                           <div key={si} style={{ padding: "10px 14px 4px" }}>
                             <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 12, fontWeight: 700, color: "#e8c84a", letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
@@ -2032,7 +1994,6 @@ moreSidebarBdr:"#2a1e3a",
                             </div>
                           </div>
                         ))}
-                        {/* CLIMB PERFORMANCE content */}
                         {acc.key === "climb" && climbData.map((section, si) => (
                           <div key={si} style={{ padding: "10px 14px 4px" }}>
                             <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 12, fontWeight: 700, color: "#3dbe6c", letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
@@ -2049,7 +2010,6 @@ moreSidebarBdr:"#2a1e3a",
                             </div>
                           </div>
                         ))}
-                        {/* CRUISE PERFORMANCE content */}
                         {acc.key === "cruise" && cruiseData.map((section, si) => (
                           <div key={si} style={{ padding: "10px 14px 4px" }}>
                             <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 12, fontWeight: 700, color: acc.color, letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
@@ -2071,12 +2031,12 @@ moreSidebarBdr:"#2a1e3a",
                   </div>
                 );
               })}
-           </div>
+            </div>
           </div>}
         </div>
-{/* Right sidebar — emergency pages */}
+
+        {/* Right sidebar — emergency pages */}
         <div style={{ width: 90, flexShrink: 0, background: T.emgSidebarBg, borderLeft: `1px solid ${T.emgSidebarBdr}`, display: "flex", flexDirection: "column", overflowY: "auto", overflowX: "hidden", transition: "all 0.2s ease" }}>
-          {/* EMG label header */}
           <div style={{ width: "100%", padding: "6px 0 5px", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: `1px solid ${T.emgSidebarBdr}`, flexShrink: 0 }}>
             <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, fontWeight: 700, letterSpacing: 2, color: T.emgLabelColor, textTransform: "uppercase" }}>EMG</span>
           </div>
@@ -2084,7 +2044,7 @@ moreSidebarBdr:"#2a1e3a",
             const isActive = currentPage === pg.id;
             const count = countPage(pg.id);
             const isDone = count.total > 0 && count.done === count.total;
-return (
+            return (
               <button 
                 key={pg.id} 
                 className="tab-btn" 
@@ -2114,7 +2074,6 @@ return (
               </button>
             );
           })}
-          {/* COMM — bottom of right sidebar */}
           <div style={{ marginTop: "auto" }}>
             <button
               className="tab-btn"
@@ -2169,7 +2128,6 @@ return (
           </div>
           
           <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-            {/* MORE reference material sidebar list selection strip */}
             <div style={{ width: 160, flexShrink: 0, background: T.moreSidebarBg, borderRight: `1px solid ${T.moreSidebarBdr}`, overflowY: "auto", transition: "background 0.2s ease" }}>
               {MORE_REFS.map(ref => (
                 <button key={ref.id} onClick={() => setActiveMoreRef(ref.id)} style={{ width: "100%", textAlign: "left", padding: "10px 12px", cursor: "pointer", background: activeMoreRef === ref.id ? `${ref.color}12` : "transparent", border: "none", borderLeft: `3px solid ${activeMoreRef === ref.id ? ref.color : "transparent"}`, borderBottom: `1px solid ${T.moreSidebarBdr}`, transition: "all 0.12s" }}>
@@ -2192,36 +2150,32 @@ return (
                       <div style={{ display: "grid", gridTemplateColumns: `repeat(${ref.cols.length}, 1fr)`, background: `${ref.color}18` }}>
                         {ref.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, fontWeight: 700, color: ref.color, letterSpacing: 1.5, textTransform: "uppercase", padding: "8px 12px", borderRight: ci < ref.cols.length - 1 ? `1px solid ${ref.color}20` : "none" }}>{col}</div>)}
                       </div>
-      {ref.rows.map((row, ri) => (
-                    <div key={ri} style={{ display: "grid", gridTemplateColumns: `repeat(${ref.cols.length}, 1fr)`, background: ri % 2 === 0 ? (lightMode ? "rgba(0,0,0,0.03)" : "rgba(255,255,255,0.02)") : "transparent", borderTop: `1px solid ${lightMode ? "rgba(0,0,0,0.08)" : `${ref.color}12`}` }}>
-                      {row.map((cell, ci) => {
-                        // Read color dynamically based on theme mode to ensure high readability constraints
-                        let cellColor = lightMode ? "#050a15" : ref.color;
-                        if (!lightMode && ci === 0) cellColor = "#e8e4d8"; // Keep primary key distinct in dark mode
-                        
-                        // If the cell contains an alert keyword like green or red, maximize its specific visibility contrast
-                        const lowerCell = cell.toLowerCase();
-                        if (lightMode) {
-                          if (lowerCell.includes("green")) cellColor = "#0b532b"; // Forest Green
-                          if (lowerCell.includes("red")) cellColor = "#a01005";   // Fire Engine Red
-                        }
-
-                        return (
-                          <div key={ci} style={{ 
-                            fontFamily: ci === 0 ? "'Rajdhani',sans-serif" : "'Share Tech Mono',monospace", 
-                            fontSize: ci === 0 ? 14 : 12, 
-                            fontWeight: ci === 0 ? 700 : 500, 
-                            color: cellColor, 
-                            padding: "9px 12px", 
-                            lineHeight: 1.3, 
-                            borderRight: ci < ref.cols.length - 1 ? `1px solid ${lightMode ? "rgba(0,0,0,0.12)" : `${ref.color}12`}` : "none" 
-                          }}>
-                            {cell}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ))}
+                      {ref.rows.map((row, ri) => (
+                        <div key={ri} style={{ display: "grid", gridTemplateColumns: `repeat(${ref.cols.length}, 1fr)`, background: ri % 2 === 0 ? (lightMode ? "rgba(0,0,0,0.03)" : "rgba(255,255,255,0.02)") : "transparent", borderTop: `1px solid ${lightMode ? "rgba(0,0,0,0.08)" : `${ref.color}12`}` }}>
+                          {row.map((cell, ci) => {
+                            let cellColor = lightMode ? "#050a15" : ref.color;
+                            if (!lightMode && ci === 0) cellColor = "#e8e4d8";
+                            const lowerCell = cell.toLowerCase();
+                            if (lightMode) {
+                              if (lowerCell.includes("green")) cellColor = "#0b532b";
+                              if (lowerCell.includes("red")) cellColor = "#a01005";
+                            }
+                            return (
+                              <div key={ci} style={{ 
+                                fontFamily: ci === 0 ? "'Rajdhani',sans-serif" : "'Share Tech Mono',monospace", 
+                                fontSize: ci === 0 ? 14 : 12, 
+                                fontWeight: ci === 0 ? 700 : 500, 
+                                color: cellColor, 
+                                padding: "9px 12px", 
+                                lineHeight: 1.3, 
+                                borderRight: ci < ref.cols.length - 1 ? `1px solid ${lightMode ? "rgba(0,0,0,0.12)" : `${ref.color}12`}` : "none" 
+                              }}>
+                                {cell}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 );
@@ -2230,10 +2184,10 @@ return (
           </div>
         </div>
       )}
- {/* Scratchpad overlay */}
+
+      {/* Scratchpad overlay */}
       {scratchpadOpen && (
         <div style={{ position: "absolute", inset: 0, zIndex: 200, background: "rgba(8,10,14,0.96)", display: "flex", flexDirection: "column", animation: "fadeIn 0.15s ease" }}>
-          {/* Header */}
           <div style={{ background: "linear-gradient(135deg,#0a0c10,#141820)", borderBottom: "2px solid #e8c84a", padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
             <span style={{ fontFamily: "'Oswald',sans-serif", fontSize: 15, fontWeight: 700, letterSpacing: 3, color: "#e8c84a", textTransform: "uppercase" }}>PILOT SCRATCHPAD</span>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -2245,7 +2199,6 @@ return (
               <button onClick={() => setScratchpadOpen(false)} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: 1, padding: "5px 14px", borderRadius: 4, cursor: "pointer", background: "rgba(232,90,74,0.1)", color: "#e85a4a", border: "1px solid #e85a4a" }}>✕ CLOSE</button>
             </div>
           </div>
-          {/* Body */}
           <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", padding: "10px 14px 14px" }}>
             {scratchpadMode === "draw" ? (
               <div style={{ flex: 1, position: "relative", background: "#050e09", border: "1px solid #1e3528", borderRadius: 6, overflow: "hidden", cursor: "crosshair" }}>
