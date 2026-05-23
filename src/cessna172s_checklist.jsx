@@ -1495,7 +1495,6 @@ moreSidebarBdr:"#2a1e3a",
           setNotepadImages(imgs);
         }
         try { const sp = localStorage.getItem("scratchpad-text"); if (sp) setScratchpadText(sp); } catch {}
-      } catch {}
     };
     if (typeof window !== "undefined" && window.storage) load();
   }, []);
