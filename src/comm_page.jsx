@@ -498,10 +498,6 @@ export function CommPage({
   ifrRawText     = "",
   onArmIfr       = () => {},
   onClearIfrRaw  = () => {},
-  atisArmState   = "idle",
-  atisRawText    = "",
-  onArmAtis      = () => {},
-  onClearAtisRaw = () => {},
 }) {
   
   // ── Theme computed from prop — recalculates on every lightMode toggle ──────
