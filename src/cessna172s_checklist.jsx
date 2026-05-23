@@ -1241,8 +1241,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   const commStartListening = async () => {
   // Guard ONLY on real hardware state — not React state flag (async, may lag)
   if (commStreamRef.current) return;
-  // ...rest unchanged
-  
+
     try {
       const stream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,sampleRate:16000,echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
       commStreamRef.current=stream;
