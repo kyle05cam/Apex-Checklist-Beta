@@ -1144,6 +1144,130 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   const [atisArmed,  setAtisArmed]  = useState(false);
   const [gndArmed,   setGndArmed]   = useState(false);
   const [ifrArmed,   setIfrArmed]   = useState(false);
+
+  // ── PHONETIC WORD → DIGIT/LETTER NORMALIZER ──────────────────────────────
+  const PHONETIC_DIGITS = {
+    "zero":"0","niner":"9","nine":"9","one":"1","two":"2","three":"3",
+    "four":"4","five":"5","six":"6","seven":"7","eight":"8",
+  };
+  const PHONETIC_ALPHA_MAP = {
+    "alpha":"A","bravo":"B","charlie":"C","delta":"D","echo":"E",
+    "foxtrot":"F","golf":"G","hotel":"H","india":"I","juliett":"J",
+    "juliet":"J","kilo":"K","lima":"L","mike":"M","november":"N",
+    "oscar":"O","papa":"P","quebec":"Q","romeo":"R","sierra":"S",
+    "tango":"T","uniform":"U","victor":"V","whiskey":"W","xray":"X",
+    "yankee":"Y","zulu":"Z",
+  };
+  const normalizePhonetic = (text) => {
+    // Step 1 — spoken frequency decimals: "one two niner point four" → "129.4"
+    let t = text.replace(
+      /\b((?:(?:zero|one|two|three|four|five|six|seven|eight|niner|nine)\s+)+)point\s+((?:(?:zero|one|two|three|four|five|six|seven|eight|niner|nine)\s*)+)/gi,
+      (_, left, right) => {
+        const l = left.trim().split(/\s+/).map(w => PHONETIC_DIGITS[w.toLowerCase()]||w).join("");
+        const r = right.trim().split(/\s+/).map(w => PHONETIC_DIGITS[w.toLowerCase()]||w).join("");
+        return `${l}.${r}`;
+      }
+    );
+    // Step 2 — remaining digit words to numerals
+    t = t.replace(/\b(zero|one|two|three|four|five|six|seven|eight|niner|nine)\b/gi,
+      w => PHONETIC_DIGITS[w.toLowerCase()] || w
+    );
+    // Step 3 — phonetic alphabet letters in known ATC contexts only
+    t = t.replace(
+      /\b(information|with|squawk|ident|have)\s+(alpha|bravo|charlie|delta|echo|foxtrot|golf|hotel|india|juliett|juliet|kilo|lima|mike|november|oscar|papa|quebec|romeo|sierra|tango|uniform|victor|whiskey|xray|yankee|zulu)\b/gi,
+      (_, prefix, letter) => `${prefix} ${PHONETIC_ALPHA_MAP[letter.toLowerCase()] || letter.toUpperCase()}`
+    );
+    return t;
+  };
+
+  // ── ARM STATE — independent per card, multi-arm supported ────────────────
+  // "armed"  = listening, accumulating transcript buffer
+  // "done"   = capture complete, raw text visible, fields populated
+  // "idle"   = default
+  const [atisArmState,  setAtisArmState]  = useState("idle"); // "idle"|"armed"|"done"
+  const [gndArmState,   setGndArmState]   = useState("idle");
+  const [ifrArmState,   setIfrArmState]   = useState("idle");
+
+  // Raw captured text buffers — displayed below each card header after capture
+  const [atisRawText,   setAtisRawText]   = useState("");
+  const [gndRawText,    setGndRawText]    = useState("");
+  const [ifrRawText,    setIfrRawText]    = useState("");
+
+  // Accumulation refs — hold growing buffer between transcript callbacks
+  const atisBufferRef  = useRef("");
+  const gndBufferRef   = useRef("");
+  const ifrBufferRef   = useRef("");
+
+  // Silence timeout refs — 4 seconds of no new speech triggers parse
+  const atisSilenceRef = useRef(null);
+  const gndSilenceRef  = useRef(null);
+  const ifrSilenceRef  = useRef(null);
+
+  const SILENCE_MS = 4000; // 4-second pause = end of transmission
+
+  // Parse + commit a completed buffer to a card
+  const commitAtisBuffer = useCallback(() => {
+    const buf = atisBufferRef.current.trim();
+    if (!buf) return;
+    setAtisRawText(buf);
+    setCommAtisData(commParseAtis(buf));
+    setAtisArmState("done");
+    atisBufferRef.current = "";
+  }, []);
+
+  const commitGndBuffer = useCallback(() => {
+    const buf = gndBufferRef.current.trim();
+    if (!buf) return;
+    setGndRawText(buf);
+    setCommGndData(commParseGround(buf));
+    setGndArmState("done");
+    gndBufferRef.current = "";
+  }, []);
+
+  const commitIfrBuffer = useCallback(() => {
+    const buf = ifrBufferRef.current.trim();
+    if (!buf) return;
+    setIfrRawText(buf);
+    setCommIfrData(commParseNwkraft(buf));
+    setIfrArmState("done");
+    ifrBufferRef.current = "";
+  }, []);
+
+  // ARM toggle handlers — exposed as props to CommPage
+  const handleArmAtis = useCallback(() => {
+    if (atisArmState === "armed") {
+      // Manual stop — parse immediately
+      clearTimeout(atisSilenceRef.current);
+      commitAtisBuffer();
+    } else {
+      // Arm — reset buffer and start listening
+      atisBufferRef.current = "";
+      setAtisRawText("");
+      setAtisArmState("armed");
+    }
+  }, [atisArmState, commitAtisBuffer]);
+
+  const handleArmGnd = useCallback(() => {
+    if (gndArmState === "armed") {
+      clearTimeout(gndSilenceRef.current);
+      commitGndBuffer();
+    } else {
+      gndBufferRef.current = "";
+      setGndRawText("");
+      setGndArmState("armed");
+    }
+  }, [gndArmState, commitGndBuffer]);
+
+  const handleArmIfr = useCallback(() => {
+    if (ifrArmState === "armed") {
+      clearTimeout(ifrSilenceRef.current);
+      commitIfrBuffer();
+    } else {
+      ifrBufferRef.current = "";
+      setIfrRawText("");
+      setIfrArmState("armed");
+    }
+  }, [ifrArmState, commitIfrBuffer]);
   
   // Directive verbs for watchdog regex
   const COMM_DIRECTIVES = [
@@ -1356,44 +1480,38 @@ const commHandleTranscript = useCallback((text, isFinal) => {
     setCommTranscript(isFinal ? "" : text);
     if (!isFinal) return;
 
-    const norm = normalizePhonetic(text);
-    const type    = commDetectType(norm);
-    const tokens  = (type==="landing"||type==="pattern") ? commParseLanding(text) : null;
-    const isIfrTx = type==="ifr_departure" || type==="ifr_approach" || commForceIfr;
-    const nwkraft = isIfrTx ? commParseNwkraft(text) : null;
-    const entry   = { id:++commTxIdRef.current, text, ts:new Date(), type, tokens, nwkraft };
+    // ── Standard watchdog + tx log (unchanged) ────────────────────────────
+    const type   = commDetectType(text);
+    const tokens = (type==="landing"||type==="pattern") ? commParseLanding(text) : null;
+    const nwkraft= (type==="ifr_departure"||type==="ifr_approach"||commForceIfr) ? commParseNwkraft(text) : null;
+    const entry  = { id:++commTxIdRef.current, text, ts:new Date(), type, tokens, nwkraft };
     setCommTxLog(prev=>[entry,...prev].slice(0,40));
     if (nwkraft) setCommIfrData(nwkraft);
+    if (commCallsignRxRef.current && commCallsignRxRef.current.test(text)) commTriggerWatchdog(entry);
 
-    // ── Callsign detection ────────────────────────────────────────────────
-    const myCallsignHeard = commCallsignRxRef.current && commCallsignRxRef.current.test(norm);
-    if (myCallsignHeard) commTriggerWatchdog(entry);
+    // ── ARMED BUFFER ACCUMULATION ─────────────────────────────────────────
+    // Each armed card appends every final sentence into its buffer.
+    // Silence timer resets on each new sentence; fires commitX after 4s quiet.
 
-    // ── ATIS — no callsign gate, airport weather applies to everyone ──────
-    // Triggers on broadcast ("information B") AND pilot readback ("with B")
-    const isAtisBroadcast = /information\s+[A-Z]\b/i.test(norm) && /altimeter|wind|visibility/i.test(norm);
-    const isAtisReadback  = /\b(?:with|we\s+have|have\s+information)\s+[A-Z]\b/i.test(norm);
-    if (isAtisBroadcast || isAtisReadback || atisArmed) {
-      setCommAtisData(commParseAtis(text));
-      if (atisArmed) setAtisArmed(false); // auto-disarm after capture
+    if (atisArmState === "armed") {
+      atisBufferRef.current = (atisBufferRef.current + " " + text).trim();
+      clearTimeout(atisSilenceRef.current);
+      atisSilenceRef.current = setTimeout(commitAtisBuffer, SILENCE_MS);
     }
 
-    // ── GROUND CLEARANCE — requires callsign OR armed ─────────────────────
-    const isGndTx = /cleared\s+(?:to|as\s+filed)/i.test(norm) && /squawk|taxi/i.test(norm);
-    if (isGndTx && (myCallsignHeard || gndArmed)) {
-      setCommGndData(commParseGround(text));
-      if (gndArmed) setGndArmed(false);
+    if (gndArmState === "armed") {
+      gndBufferRef.current = (gndBufferRef.current + " " + text).trim();
+      clearTimeout(gndSilenceRef.current);
+      gndSilenceRef.current = setTimeout(commitGndBuffer, SILENCE_MS);
     }
 
-    // ── IFR / NWKRAFT — requires callsign OR armed ────────────────────────
-    const isIfrMatch = /cleared\s+(?:to|as\s+filed)/i.test(norm) && /squawk|departure/i.test(norm);
-    if (isIfrMatch && (myCallsignHeard || ifrArmed)) {
-      const parsed = commParseNwkraft(text);
-      setCommIfrData(parsed);
-      if (ifrArmed) setIfrArmed(false);
+    if (ifrArmState === "armed") {
+      ifrBufferRef.current = (ifrBufferRef.current + " " + text).trim();
+      clearTimeout(ifrSilenceRef.current);
+      ifrSilenceRef.current = setTimeout(commitIfrBuffer, SILENCE_MS);
     }
 
-  },[commForceIfr, commTriggerWatchdog, atisArmed, gndArmed, ifrArmed]);
+  }, [commForceIfr, commTriggerWatchdog, atisArmState, gndArmState, ifrArmState, commitAtisBuffer, commitGndBuffer, commitIfrBuffer]);
 
   // Worker background trace config
   const COMM_WORKER_BLOB = `const SAMPLE_RATE=16000,BUFFER_SIZE=16000*12; const ring=new Float32Array(BUFFER_SIZE);let wh=0; function rms(s){let sum=0;for(let i=0;i<s.length;i++)sum+=s[i]*s[i];return 20*Math.log10(Math.sqrt(sum/s.length)+1e-9);} function write(s){for(let i=0;i<s.length;i++){ring[wh]=s[i];wh=(wh+1)%BUFFER_SIZE;}} function read(sec){const n=Math.min(sec*SAMPLE_RATE,BUFFER_SIZE),out=new Float32Array(n),st=(wh-n+BUFFER_SIZE)%BUFFER_SIZE;for(let i=0;i<n;i++)out[i]=ring[(st+i)%BUFFER_SIZE];return out;} self.onmessage=function(e){   if(e.data.type==="AUDIO_CHUNK"){write(e.data.samples);self.postMessage({type:"BUFFER_READY",rmsDb:rms(e.data.samples)});return;}   if(e.data.type==="TRANSCRIPTION_RESULT"){self.postMessage({type:"TRANSCRIPT",text:e.data.text,isFinal:e.data.isFinal,ts:Date.now()});return;}   if(e.data.type==="GET_REPLAY"){self.postMessage({type:"REPLAY_PCM",pcm:read(e.data.seconds||10),sampleRate:SAMPLE_RATE});return;} };`;
@@ -2295,16 +2413,22 @@ const commHandleTranscript = useCallback((text, isFinal) => {
                   onToggleForce={() => setCommForceIfr(v => !v)}
                   ifrData={commIfrData}
                   onSetIfrData={setCommIfrData}
-                  atisData={commAtisData}
+                 atisData={commAtisData}
                   onSetAtisData={setCommAtisData}
-                  atisArmed={atisArmed}
-                  onArmAtis={() => setAtisArmed(v => !v)}
+                  atisArmState={atisArmState}
+                  atisRawText={atisRawText}
+                  onArmAtis={handleArmAtis}
+                  onClearAtisRaw={() => { setAtisRawText(""); setAtisArmState("idle"); }}
                   gndData={commGndData}
                   onSetGndData={setCommGndData}
-                  gndArmed={gndArmed}
-                  onArmGnd={() => setGndArmed(v => !v)}
-                  ifrArmed={ifrArmed}
-                  onArmIfr={() => setIfrArmed(v => !v)}
+                  gndArmState={gndArmState}
+                  gndRawText={gndRawText}
+                  onArmGnd={handleArmGnd}
+                  onClearGndRaw={() => { setGndRawText(""); setGndArmState("idle"); }}
+                  ifrArmState={ifrArmState}
+                  ifrRawText={ifrRawText}
+                  onArmIfr={handleArmIfr}
+                  onClearIfrRaw={() => { setIfrRawText(""); setIfrArmState("idle"); }}
                 />
               : renderChecklist(activePg)
             }
