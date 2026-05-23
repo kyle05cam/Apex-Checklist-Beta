@@ -1485,12 +1485,17 @@ moreSidebarBdr:"#2a1e3a",
         if (keys?.keys) {
           const imgs = {};
           for (const key of keys.keys) {
+            const keys = await window.storage.list("notepad-");
+        if (keys?.keys) {
+          const imgs = {};
+          for (const key of keys.keys) {
             const r = await window.storage.get(key);
             if (r?.value) imgs[key] = r.value;
           }
           setNotepadImages(imgs);
         }
-      try { const sp = localStorage.getItem("scratchpad-text"); if (sp) setScratchpadText(sp); } catch {}
+        try { const sp = localStorage.getItem("scratchpad-text"); if (sp) setScratchpadText(sp); } catch {}
+      } catch {}
     };
     if (typeof window !== "undefined" && window.storage) load();
   }, []);
