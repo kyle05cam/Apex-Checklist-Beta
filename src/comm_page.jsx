@@ -244,7 +244,7 @@ function MiniScribbleField({ T, label, value, onChange, color, placeholder }) {
 }
 
 // ─── ATIS CARD ────────────────────────────────────────────────────────────────
-function AtisCard({ T, data, onSetAtisData }) {
+function AtisCard({ T, data, onSetAtisData, armed, onArmAtis }) {
   const FIELDS = [
     { key:"info",       label:"INFORMATION", color:A.teal,   hint:"Ident letter" },
     { key:"wind",       label:"WIND",        color:A.blue,   hint:"Dir/speed (e.g. 270° AT 12KT)" },
@@ -259,7 +259,17 @@ function AtisCard({ T, data, onSetAtisData }) {
           <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:14, fontWeight:700, letterSpacing:3, color:A.teal }}>ATIS</div>
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:1 }}>AUTO-FILL · AI PARSED</div>
         </div>
-        <button onClick={() => onSetAtisData({ info:"",wind:"",altimeter:"",visibility:"",sky:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, padding:"3px 9px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLEAR</button>
+        <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+          <button onClick={onArmAtis} style={{
+            fontFamily:"'Share Tech Mono',monospace", fontSize:8, padding:"3px 9px", borderRadius:3, cursor:"pointer",
+            background: armed ? `${A.teal}22` : "transparent",
+            color: armed ? A.teal : T.textDim,
+            border:`1px solid ${armed ? A.teal : T.border}`,
+            animation: armed ? "commGlow 1.5s ease infinite" : "none",
+            transition:"all 0.15s",
+          }}>{armed ? "⏺ ARMED" : "ARM"}</button>
+          <button onClick={() => onSetAtisData({ info:"",wind:"",altimeter:"",visibility:"",sky:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, padding:"3px 9px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺</button>
+        </div>
       </div>
       <div style={{ padding:"8px 12px", display:"flex", flexDirection:"column", gap:6 }}>
         {FIELDS.map(f => (
@@ -274,7 +284,7 @@ function AtisCard({ T, data, onSetAtisData }) {
 }
 
 // ─── GROUND CLEARANCE CARD ────────────────────────────────────────────────────
-function GndCard({ T, data, onSetGndData }) {
+function GndCard({ T, data, onSetGndData, armed, onArmGnd }) {
   const FIELDS = [
     { key:"clearedTo",  label:"CLEARED TO",  color:A.green,  hint:"Destination" },
     { key:"route",      label:"ROUTE",       color:A.blue,   hint:"Via / as filed" },
@@ -290,7 +300,17 @@ function GndCard({ T, data, onSetGndData }) {
           <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:14, fontWeight:700, letterSpacing:3, color:A.green }}>GROUND CLEARANCE</div>
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:1 }}>AUTO-FILL · AI PARSED</div>
         </div>
-        <button onClick={() => onSetGndData({ clearedTo:"",route:"",altitude:"",frequency:"",taxi:"",squawk:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, padding:"3px 9px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLEAR</button>
+        <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+          <button onClick={onArmGnd} style={{
+            fontFamily:"'Share Tech Mono',monospace", fontSize:8, padding:"3px 9px", borderRadius:3, cursor:"pointer",
+            background: armed ? `${A.green}22` : "transparent",
+            color: armed ? A.green : T.textDim,
+            border:`1px solid ${armed ? A.green : T.border}`,
+            animation: armed ? "commGlow 1.5s ease infinite" : "none",
+            transition:"all 0.15s",
+          }}>{armed ? "⏺ ARMED" : "ARM"}</button>
+          <button onClick={() => onSetGndData({ clearedTo:"",route:"",altitude:"",frequency:"",taxi:"",squawk:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, padding:"3px 9px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺</button>
+        </div>
       </div>
       <div style={{ padding:"8px 12px", display:"flex", flexDirection:"column", gap:6 }}>
         {FIELDS.map(f => (
@@ -407,8 +427,14 @@ export function CommPage({
   onSetIfrData   = () => {},
   atisData       = { info:"",wind:"",altimeter:"",visibility:"",sky:"" },
   onSetAtisData  = () => {},
+  atisArmed      = false,
+  onArmAtis      = () => {},
   gndData        = { clearedTo:"",route:"",altitude:"",frequency:"",taxi:"",squawk:"" },
   onSetGndData   = () => {},
+  gndArmed       = false,
+  onArmGnd       = () => {},
+  ifrArmed       = false,
+  onArmIfr       = () => {},
 }) {
   // ── Theme computed from prop — recalculates on every lightMode toggle ──────
   const T = buildTheme(lightMode);
@@ -693,15 +719,25 @@ export function CommPage({
               )}
 
               {/* Three smart cards */}
-              <AtisCard T={T} data={atisData} onSetAtisData={onSetAtisData} />
-              <GndCard  T={T} data={gndData}  onSetGndData={onSetGndData}  />
+              <AtisCard T={T} data={atisData} onSetAtisData={onSetAtisData} armed={atisArmed} onArmAtis={onArmAtis} />
+              <GndCard  T={T} data={gndData}  onSetGndData={onSetGndData} armed={gndArmed} onArmGnd={onArmGnd} />
               <div style={{ background:T.cardBg, border:`1px solid ${A.amber}28`, borderRadius:5, overflow:"hidden", transition:"background 0.2s" }}>
                 <div style={{ background:`${A.amber}10`, borderBottom:`2px solid ${A.amber}`, padding:"7px 12px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
                   <div>
                     <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:14, fontWeight:700, letterSpacing:3, color:A.amber }}>IFR CLEARANCE</div>
                     <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:1 }}>NWKRAFT FORMAT · AUTO-FILL</div>
                   </div>
-                  <button onClick={() => onSetIfrData({ N:"",W:"",K:"",R:"",A:"",F:"",T:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, padding:"3px 9px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLEAR</button>
+                  <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                    <button onClick={onArmIfr} style={{
+                      fontFamily:"'Share Tech Mono',monospace", fontSize:8, padding:"3px 9px", borderRadius:3, cursor:"pointer",
+                      background: ifrArmed ? `${A.amber}22` : "transparent",
+                      color: ifrArmed ? A.amber : T.textDim,
+                      border:`1px solid ${ifrArmed ? A.amber : T.border}`,
+                      animation: ifrArmed ? "commGlow 1.5s ease infinite" : "none",
+                      transition:"all 0.15s",
+                    }}>{ifrArmed ? "⏺ ARMED" : "ARM"}</button>
+                    <button onClick={() => onSetIfrData({ N:"",W:"",K:"",R:"",A:"",F:"",T:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, padding:"3px 9px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺</button>
+                  </div>
                 </div>
                 <div style={{ padding:"8px 12px", display:"flex", flexDirection:"column", gap:6 }}>
                   {NWKRAFT_FIELDS.map(f => (
