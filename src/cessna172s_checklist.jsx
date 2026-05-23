@@ -2190,11 +2190,36 @@ return (
                       <div style={{ display: "grid", gridTemplateColumns: `repeat(${ref.cols.length}, 1fr)`, background: `${ref.color}18` }}>
                         {ref.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, fontWeight: 700, color: ref.color, letterSpacing: 1.5, textTransform: "uppercase", padding: "8px 12px", borderRight: ci < ref.cols.length - 1 ? `1px solid ${ref.color}20` : "none" }}>{col}</div>)}
                       </div>
-                      {ref.rows.map((row, ri) => (
-                        <div key={ri} style={{ display: "grid", gridTemplateColumns: `repeat(${ref.cols.length}, 1fr)`, background: ri % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent", borderTop: `1px solid ${ref.color}12` }}>
-                          {row.map((cell, ci) => <div key={ci} style={{ fontFamily: ci === 0 ? "'Rajdhani',sans-serif" : "'Share Tech Mono',monospace", fontSize: ci === 0 ? 14 : 12, fontWeight: ci === 0 ? 600 : 400, color: ci === 0 ? "#e8e4d8" : ref.color, padding: "9px 12px", lineHeight: 1.3, borderRight: ci < ref.cols.length - 1 ? `1px solid ${ref.color}12` : "none" }}>{cell}</div>)}
-                        </div>
-                      ))}
+                     {ref.rows.map((row, ri) => (
+                    <div key={ri} style={{ display: "grid", gridTemplateColumns: `repeat(${ref.cols.length}, 1fr)`, background: ri % 2 === 0 ? (lightMode ? "rgba(0,0,0,0.03)" : "rgba(255,255,255,0.02)") : "transparent", borderTop: `1px solid ${lightMode ? "rgba(0,0,0,0.08)" : `${ref.color}12`}` }}>
+                      {row.map((cell, ci) => {
+                        // Read color dynamically based on theme mode to ensure high readability constraints
+                        let cellColor = lightMode ? "#050a15" : ref.color;
+                        if (!lightMode && ci === 0) cellColor = "#e8e4d8"; // Keep primary key distinct in dark mode
+                        
+                        // If the cell contains an alert keyword like green or red, maximize its specific visibility contrast
+                        const lowerCell = cell.toLowerCase();
+                        if (lightMode) {
+                          if (lowerCell.includes("green")) cellColor = "#0b532b"; // Forest Green
+                          if (lowerCell.includes("red")) cellColor = "#a01005";   // Fire Engine Red
+                        }
+
+                        return (
+                          <div key={ci} style={{ 
+                            fontFamily: ci === 0 ? "'Rajdhani',sans-serif" : "'Share Tech Mono',monospace", 
+                            fontSize: ci === 0 ? 14 : 12, 
+                            fontWeight: ci === 0 ? 700 : 500, 
+                            color: cellColor, 
+                            padding: "9px 12px", 
+                            lineHeight: 1.3, 
+                            borderRight: ci < ref.cols.length - 1 ? `1px solid ${lightMode ? "rgba(0,0,0,0.12)" : `${ref.color}12`}` : "none" 
+                          }}>
+                            {cell}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
                     </div>
                   </div>
                 );
