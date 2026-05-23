@@ -1083,6 +1083,8 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   const [commReplayActive,  setCommReplayActive]  = useState(false);
   const [commForceIfr,      setCommForceIfr]      = useState(false);
   const [commIfrData,       setCommIfrData]       = useState({ N:"",W:"",K:"",R:"",A:"",F:"",T:"" });
+  const [commAtisData,      setCommAtisData]      = useState({ info:"",wind:"",altimeter:"",visibility:"",sky:"" });
+  const [commGndData,       setCommGndData]        = useState({ clearedTo:"",route:"",altitude:"",frequency:"",taxi:"",squawk:"" });
   const commWorkerRef       = useRef(null);
   const commWorkerBlobUrl   = useRef(null);
   const commRecognitionRef  = useRef(null);
@@ -1159,6 +1161,62 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
     return r;
   };
 
+  const commParseAtis = (text) => {
+    const r = { info:"", wind:"", altimeter:"", visibility:"", sky:"" };
+    const t = text;
+    // Information identifier: "information alpha/bravo/..." or "information kilo"
+    const info = t.match(/information\s+([a-z]+)/i);
+    if (info) r.info = info[1].toUpperCase();
+    // Wind: "wind 270 at 12" / "wind calm"
+    const windCalm = /wind\s+calm/i.test(t);
+    if (windCalm) { r.wind = "CALM"; }
+    else {
+      const wind = t.match(/wind\s+(\d{1,3})\s+(?:at\s+)?(\d{1,3})(?:\s+gusts?\s+(\d{1,3}))?/i);
+      if (wind) r.wind = wind[3] ? `${wind[1]}° AT ${wind[2]}G${wind[3]}` : `${wind[1]}° AT ${wind[2]}KT`;
+    }
+    // Altimeter: "altimeter 29.92" or "two niner niner two"
+    const alt = t.match(/altimeter\s+([\d.]+)/i);
+    if (alt) r.altimeter = alt[1];
+    // Visibility: "visibility 10" / "visibility one zero"
+    const vis = t.match(/visibility\s+(\d+(?:\.\d+)?)/i);
+    if (vis) r.visibility = `${vis[1]}SM`;
+    // Sky: "few clouds 3500" / "scattered 2500" / "broken 1200" / "overcast 800" / "sky clear" / "clear below 12000"
+    const skyClr = /(?:sky\s+clear|cavok|clear\s+below)/i.test(t);
+    if (skyClr) { r.sky = "SKY CLEAR"; }
+    else {
+      const sky = t.match(/(few|scattered|broken|overcast)\s+(?:clouds?\s+)?(?:at\s+)?(\d[\d,]+)/i);
+      if (sky) r.sky = `${sky[1].toUpperCase()} ${parseInt(sky[2].replace(/,/g,"")).toLocaleString()}`;
+    }
+    return r;
+  };
+
+  const commParseGround = (text) => {
+    const r = { clearedTo:"", route:"", altitude:"", frequency:"", taxi:"", squawk:"" };
+    const t = text;
+    // Cleared to destination
+    const dest = t.match(/cleared\s+(?:to\s+)?([A-Z][A-Za-z\s]{2,30}?)(?:\s+via|\s+as\s+filed|\s+climb|\s+maintain|,|\s+runway|\s+taxi)/i);
+    if (dest) r.clearedTo = dest[1].trim().toUpperCase();
+    // Route
+    const via = t.match(/via\s+([A-Z0-9\s,\.]+?)(?:\s+maintain|\s+climb|\s+expect|\s+squawk|,|$)/i);
+    if (via) r.route = via[1].trim().toUpperCase();
+    else if (/as\s+filed/i.test(t)) r.route = "AS FILED";
+    // Altitude
+    const alt = t.match(/(?:maintain|climb\s+(?:and\s+)?maintain|climb\s+to)\s+(\d[\d,]+)/i);
+    if (alt) r.altitude = alt[1].replace(/,/g,"");
+    const exp = t.match(/expect\s+(\d[\d,]+)/i);
+    if (exp) r.altitude = (r.altitude ? r.altitude + " / EXP " : "EXP ") + exp[1];
+    // Frequency
+    const frq = t.match(/(?:contact|departure|frequency|on)\s+(\d{3}\.?\d+)/i);
+    if (frq) r.frequency = frq[1];
+    // Taxi
+    const taxi = t.match(/taxi\s+(?:to\s+)?(?:runway\s+)?([A-Z0-9\s,]+?)(?:\s+hold|\s+contact|\s+via|$)/i);
+    if (taxi) r.taxi = taxi[1].trim().toUpperCase();
+    // Squawk
+    const sqk = t.match(/squawk\s+(\d{4})/i);
+    if (sqk) r.squawk = sqk[1];
+    return r;
+  };
+  
   const commParseLanding = (text) => {
     const LEGS_RX=["upwind","crosswind","downwind","base","final","left\\s+downwind","right\\s+downwind","left\\s+base","right\\s+base","left\\s+traffic","right\\s+traffic","straight-in","overhead"];
     const annotated=[]; const t=text;
@@ -1208,6 +1266,14 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
     const entry   = { id:++commTxIdRef.current, text, ts:new Date(), type, tokens, nwkraft };
     setCommTxLog(prev=>[entry,...prev].slice(0,40));
     if (nwkraft) setCommIfrData(nwkraft);
+    // ── Auto-detect ATIS: "information [letter]" + ("altimeter" or "wind") ──
+    if (/information\s+[a-z]+/i.test(text) && /altimeter|wind|visibility/i.test(text)) {
+      setCommAtisData(commParseAtis(text));
+    }
+    // ── Auto-detect Ground clearance: destination + squawk or taxi ──
+    if (/cleared\s+to/i.test(text) && /squawk|taxi/i.test(text)) {
+      setCommGndData(commParseGround(text));
+    }
     if (commCallsignRxRef.current && commCallsignRxRef.current.test(text)) commTriggerWatchdog(entry);
   },[commForceIfr, commTriggerWatchdog]);
 
@@ -2111,6 +2177,10 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                   onToggleForce={() => setCommForceIfr(v => !v)}
                   ifrData={commIfrData}
                   onSetIfrData={setCommIfrData}
+                  atisData={commAtisData}
+                  onSetAtisData={setCommAtisData}
+                  gndData={commGndData}
+                  onSetGndData={setCommGndData}
                 />
               : renderChecklist(activePg)
             }
