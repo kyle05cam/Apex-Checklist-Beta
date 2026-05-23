@@ -513,6 +513,7 @@ export function CommPage({
   const tail         = aircraft ? aircraft.tail : "UNKNOWN";
   const isAlert      = watchdogState === "alert";
   const isUnanswered = watchdogState === "unanswered";
+  const isPending    = watchdogState === "pending";
 
   const VU_BARS  = 20;
   const vuActive = Math.round(Math.max(0, Math.min(1, rmsLevel)) * VU_BARS);
@@ -624,27 +625,61 @@ export function CommPage({
         </button>
       </div>
 
-      {/* ═══ SECTION B — ACK CALL ALERT ════════════════════════════════════ */}
-      {(isAlert || isUnanswered) && (
+      {/* ═══ SECTION B — WATCHDOG ALERT (3 states) ══════════════════════════ */}
+
+      {/* PENDING — quiet visual only, no sound, ATC still transmitting */}
+      {isPending && (
+        <div style={{
+          flexShrink:0, padding:"6px 14px",
+          background:`${A.teal}08`,
+          borderBottom:`1px solid ${A.teal}30`,
+          display:"flex", alignItems:"center", gap:10,
+          animation:"commSlideIn 0.2s ease",
+        }}>
+          <div style={{
+            width:8, height:8, borderRadius:"50%", flexShrink:0,
+            background:A.teal, opacity:0.7,
+            animation:"commGlow 1.5s ease infinite",
+          }}/>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:A.teal, letterSpacing:1.5 }}>
+              CALLSIGN DETECTED · AWAITING TRANSMISSION END
+            </div>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:T.textDim, marginTop:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+              {watchdogTx?.text || ""}
+            </div>
+          </div>
+          <button onClick={onAckCall} style={{
+            fontFamily:"'Share Tech Mono',monospace", fontSize:8, fontWeight:700, letterSpacing:1,
+            padding:"4px 10px", borderRadius:3, cursor:"pointer", flexShrink:0,
+            background:"transparent", color:A.teal, border:`1px solid ${A.teal}50`,
+          }}>
+            DISMISS
+          </button>
+        </div>
+      )}
+
+      {/* ALERT — 5s countdown, moderate urgency */}
+      {isAlert && (
         <div style={{
           flexShrink:0, padding:"10px 14px",
-          background: isUnanswered ? "rgba(232,90,74,0.22)" : "rgba(232,200,74,0.12)",
-          borderBottom:`2px solid ${isUnanswered ? A.red : A.amber}`,
+          background:"rgba(232,200,74,0.12)",
+          borderBottom:`2px solid ${A.amber}`,
           display:"flex", alignItems:"center", gap:12,
           animation:"commSlideIn 0.2s ease",
         }}>
           <div style={{
             width:36, height:36, borderRadius:"50%", flexShrink:0,
-            background: isUnanswered ? "rgba(232,90,74,0.3)" : "rgba(232,200,74,0.2)",
-            border:`2px solid ${isUnanswered ? A.red : A.amber}`,
+            background:"rgba(232,200,74,0.2)",
+            border:`2px solid ${A.amber}`,
             display:"flex", alignItems:"center", justifyContent:"center", fontSize:18,
-            animation: isUnanswered ? "commPulse 0.8s ease infinite" : "commPulse 1.5s ease infinite",
+            animation:"commPulse 1.5s ease infinite",
           }}>
-            {isUnanswered ? "🔴" : "📡"}
+            📡
           </div>
           <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:13, fontWeight:700, letterSpacing:2, color:isUnanswered?A.red:A.amber }}>
-              {isUnanswered ? "⚠ UNANSWERED CALL" : `CALLSIGN ALERT — ${ackCountdown}s`}
+            <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:13, fontWeight:700, letterSpacing:2, color:A.amber }}>
+              CALLSIGN ALERT — {ackCountdown}s
             </div>
             <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:T.textMain, marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
               {watchdogTx?.text || ""}
@@ -653,9 +688,46 @@ export function CommPage({
           <button onClick={onAckCall} style={{
             fontFamily:"'Oswald',sans-serif", fontSize:13, fontWeight:700, letterSpacing:2,
             padding:"8px 18px", borderRadius:4, cursor:"pointer", flexShrink:0,
-            background: isUnanswered ? A.red : A.amber, color:"#000", border:"none",
-            boxShadow: isUnanswered ? `0 0 20px ${A.red}80` : `0 0 12px ${A.amber}60`,
-            animation: isUnanswered ? "commPulse 0.8s ease infinite" : "none",
+            background:A.amber, color:"#000", border:"none",
+            boxShadow:`0 0 12px ${A.amber}60`,
+          }}>
+            PTT · ACK CALL
+          </button>
+        </div>
+      )}
+
+      {/* UNANSWERED — full alarm, flashing, persistent chime */}
+      {isUnanswered && (
+        <div style={{
+          flexShrink:0, padding:"10px 14px",
+          background:"rgba(232,90,74,0.22)",
+          borderBottom:`2px solid ${A.red}`,
+          display:"flex", alignItems:"center", gap:12,
+          animation:"commSlideIn 0.2s ease",
+        }}>
+          <div style={{
+            width:36, height:36, borderRadius:"50%", flexShrink:0,
+            background:"rgba(232,90,74,0.3)",
+            border:`2px solid ${A.red}`,
+            display:"flex", alignItems:"center", justifyContent:"center", fontSize:18,
+            animation:"commPulse 0.8s ease infinite",
+          }}>
+            🔴
+          </div>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:13, fontWeight:700, letterSpacing:2, color:A.red }}>
+              ⚠ UNANSWERED CALL
+            </div>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:T.textMain, marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+              {watchdogTx?.text || ""}
+            </div>
+          </div>
+          <button onClick={onAckCall} style={{
+            fontFamily:"'Oswald',sans-serif", fontSize:13, fontWeight:700, letterSpacing:2,
+            padding:"8px 18px", borderRadius:4, cursor:"pointer", flexShrink:0,
+            background:A.red, color:"#000", border:"none",
+            boxShadow:`0 0 20px ${A.red}80`,
+            animation:"commPulse 0.8s ease infinite",
           }}>
             PTT · ACK CALL
           </button>
