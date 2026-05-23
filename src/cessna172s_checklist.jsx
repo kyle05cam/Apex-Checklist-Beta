@@ -2143,8 +2143,8 @@ return (
 
       {/* More refs overlay */}
       {moreOpen && (
-<div style={{ position: "absolute", inset: 0, zIndex: 200, background: T.moreOverlayBg, display: "flex", flexDirection: "column", animation: "fadeIn 0.15s ease", transition: "background 0.2s ease" }}>
-<div style={{ background: T.moreHeaderBg, borderBottom: "2px solid #c87ae8", padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+        <div style={{ position: "absolute", inset: 0, zIndex: 200, background: T.moreOverlayBg, display: "flex", flexDirection: "column", animation: "fadeIn 0.15s ease", transition: "background 0.2s ease" }}>
+          <div style={{ background: T.moreHeaderBg, borderBottom: "2px solid #c87ae8", padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <svg viewBox="0 0 20 20" width={16} height={16} fill="none">
                 <line x1="2" y1="5" x2="18" y2="5" stroke="#c87ae8" strokeWidth="1.8" strokeLinecap="round"/>
@@ -2153,18 +2153,19 @@ return (
               </svg>
               <span style={{ fontFamily: "'Oswald',sans-serif", fontSize: 15, fontWeight: 700, letterSpacing: 3, color: "#c87ae8" }}>QUICK REFERENCE</span>
             </div>
-            <button onClick={() => setMoreOpen(false)} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: 1, padding: "4px 14px", borderRadius: 4, cursor: "pointer", background: "rgba(232,90,74,0.1)", color: "#e85a4a", border: "1px solid #e85a4a" }}>✕ CLOSE</button>
+            <button onClick={() => setMoreOpen(false)} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: 1, padding: "4px 14px", borderRadius: 4, cursor:"pointer", background: "rgba(232,90,74,0.1)", color: "#e85a4a", border: "1px solid #e85a4a" }}>✕ CLOSE</button>
           </div>
+          
           <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-            <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
             {/* MORE reference material sidebar list selection strip */}
             <div style={{ width: 160, flexShrink: 0, background: T.moreSidebarBg, borderRight: `1px solid ${T.moreSidebarBdr}`, overflowY: "auto", transition: "background 0.2s ease" }}>
               {MORE_REFS.map(ref => (
-                <button key={ref.id} onClick={() => setActiveMoreRef(ref.id)} style={{ width: "100%", textAlign: "left", padding: "10px 12px", cursor: "pointer", background: activeMoreRef === ref.id ? `${ref.color}12` : "transparent", border: "none", borderLeft: `3px solid ${activeMoreRef === ref.id ? ref.color : "transparent"}`, borderBottom: "1px solid rgba(42,30,58,0.8)", transition: "all 0.12s" }}>
+                <button key={ref.id} onClick={() => setActiveMoreRef(ref.id)} style={{ width: "100%", textAlign: "left", padding: "10px 12px", cursor: "pointer", background: activeMoreRef === ref.id ? `${ref.color}12` : "transparent", border: "none", borderLeft: `3px solid ${activeMoreRef === ref.id ? ref.color : "transparent"}`, borderBottom: `1px solid ${T.moreSidebarBdr}`, transition: "all 0.12s" }}>
                   <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, fontWeight: 700, letterSpacing: 0.5, color: activeMoreRef === ref.id ? ref.color : T.textMuted || T.emgLabelColor, textTransform: "uppercase", lineHeight: 1.3 }}>{ref.title}</div>
                 </button>
               ))}
             </div>
+            
             <div style={{ flex: 1, overflowY: "auto", padding: "16px 18px", scrollbarWidth: "thin" }}>
               {(() => {
                 const ref = MORE_REFS.find(r => r.id === activeMoreRef);
@@ -2192,7 +2193,6 @@ return (
           </div>
         </div>
       )}
-
       {/* Scratchpad overlay */}
       {scratchpadOpen && (
         <div style={{ position: "absolute", inset: 0, zIndex: 200, background: "rgba(8,10,14,0.96)", display: "flex", flexDirection: "column", animation: "fadeIn 0.15s ease" }}>
