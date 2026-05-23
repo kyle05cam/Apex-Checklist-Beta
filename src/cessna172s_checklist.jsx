@@ -1393,7 +1393,9 @@ const commStartListening = async () => {
     sectionBorder:"#1a6ab0", sectionTitle:"#0a2858", noteColor:"#5a6a20",
     cautionColor:"#8a2010", noteBg:"rgba(120,140,20,0.08)", cautionBg:"rgba(180,40,20,0.06)",
     panelTabBg:"#c8ccd8", editBg:"#dde0ec", editBorder:"#9098b8",
-    editHintColor:"#404878", inputBg:"#f8f9fc", scratchBg:"#f0f2f8",
+    editHintColor:"#404878", inputBg:"#f8f9fc", scratchBg:"#f0f2f8", emgSidebarBg:  "#e0e2ec",
+    emgSidebarBdr: "#b0b6c8", emgLabelColor: "#4a5888", emgItemBdr:    "#c0c6d8", moreOverlayBg: "rgba(240,242,248,0.97)",
+    moreHeaderBg:  "linear-gradient(135deg,#e4e6f0,#eceef6)", moreSidebarBg: "#e8eaf4", moreSidebarBdr:"#c0c6d8",
   } : {
     appBg:"#0d0f12", headerBg:"linear-gradient(135deg,#0a0c10 0%,#141820 60%,#0a0c10 100%)",
     headerBorder:"#e8c84a", leftSideBg:"#141820", leftSideBorder:"#2a3040",
@@ -1406,7 +1408,14 @@ const commStartListening = async () => {
     sectionBorder:"#e8c84a", sectionTitle:"#e8e4d8", noteColor:"#b8a840",
     cautionColor:"#d06050", noteBg:"rgba(184,168,64,0.06)", cautionBg:"rgba(208,96,80,0.06)",
     panelTabBg:"#141820", editBg:"#0d1018", editBorder:"#2a3040",
-    editHintColor:"#4a5068", inputBg:"#141820", scratchBg:"#0a0c10",
+    editHintColor:"#4a5068", inputBg:"#141820", scratchBg:"#0a0c10", emgSidebarBg:  "#100c0c",
+emgSidebarBdr: "#281818",
+emgLabelColor: "#5a3030",
+emgItemBdr:    "#281818",
+moreOverlayBg: "rgba(8,10,14,0.96)",
+moreHeaderBg:  "linear-gradient(135deg,#0a0c10,#141820)",
+moreSidebarBg: "#0a0c10",
+moreSidebarBdr:"#2a1e3a",
   };
 
   // ── Clock & timer ──────────────────────────────────────────────────────────
@@ -1921,6 +1930,7 @@ const commStartListening = async () => {
           <div style={{ flex: 1, overflow: currentPage === "comm" ? "hidden" : "auto", overflowX: "hidden", scrollbarWidth: "thin", display: "flex", flexDirection: "column" }}>
             {currentPage === "comm"
               ? <CommPage
+                  lightMode={lightMode}
                   aircraft={aircraft}
                   listening={commListening}
                   micStatus={commMicStatus}
@@ -2052,18 +2062,18 @@ const commStartListening = async () => {
            </div>
           </div>}
         </div>
-        {/* Right sidebar — emergency pages */}
-        <div style={{ width: 90, flexShrink: 0, background: "#100c0c", borderLeft: "1px solid #281818", display: "flex", flexDirection: "column", overflowY: "auto", overflowX: "hidden" }}>
-          {/* EMG label header */}
-          <div style={{ width: "100%", padding: "6px 0 5px", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid #281818", flexShrink: 0 }}>
-            <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, fontWeight: 700, letterSpacing: 2, color: "#5a3030", textTransform: "uppercase" }}>EMG</span>
+        {/* Right sidebar — emergency pages /}
+<div style={{ width: 90, flexShrink: 0, background: T.emgSidebarBg, borderLeft: 1px solid ${T.emgSidebarBdr}, display: "flex", flexDirection: "column", overflowY: "auto", overflowX: "hidden", transition: "all 0.2s ease" }}>
+{/ EMG label header */}
+<div style={{ width: "100%", padding: "6px 0 5px", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: 1px solid ${T.emgSidebarBdr}, flexShrink: 0 }}>
+<span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, fontWeight: 700, letterSpacing: 2, color: T.emgLabelColor, textTransform: "uppercase" }}>EMG</span>
           </div>
           {EMG_PAGES.map(pg => {
             const isActive = currentPage === pg.id;
             const count = countPage(pg.id);
             const isDone = count.total > 0 && count.done === count.total;
             return (
-              <button key={pg.id} className="tab-btn" onClick={() => setCurrentPage(pg.id)} style={{ width: "100%", minHeight: 76, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5, background: isActive ? `${pg.color}18` : "transparent", outline: "none", borderTop: "none", borderLeft: "none", borderBottom: "1px solid #281818", borderRight: `3px solid ${isActive ? pg.color : "transparent"}`, cursor: "pointer", padding: "10px 4px", transition: "all 0.12s" }}>
+              <button key={pg.id} className="tab-btn" onClick={() => setCurrentPage(pg.id)} style={{ width: "100%", minHeight: 76, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5, background: isActive ? ${pg.color}18 : "transparent", outline: "none", borderTop: "none", borderLeft: "none", borderBottom: 1px solid ${T.emgItemBdr}, borderRight: 3px solid ${isActive ? pg.color : "transparent"}, cursor: "pointer", padding: "10px 4px", transition: "all 0.12s" }}>
                 <div style={{ color: isActive ? pg.color : pg.dimColor, transition: "color 0.12s" }}>{pg.icon(28)}</div>
                 <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, fontWeight: 700, letterSpacing: 0.5, color: isActive ? pg.color : pg.dimColor, textAlign: "center", whiteSpace: "pre-line", lineHeight: 1.2, textTransform: "uppercase" }}>{pg.label}</div>
                 {count.total > 0 && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: isDone ? "#3dbe6c" : pg.dimColor }}>{count.done}/{count.total}</div>}
@@ -2111,8 +2121,8 @@ const commStartListening = async () => {
 
       {/* More refs overlay */}
       {moreOpen && (
-        <div style={{ position: "absolute", inset: 0, zIndex: 200, background: "rgba(8,10,14,0.96)", display: "flex", flexDirection: "column", animation: "fadeIn 0.15s ease" }}>
-          <div style={{ background: "linear-gradient(135deg,#0a0c10,#141820)", borderBottom: "2px solid #c87ae8", padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+<div style={{ position: "absolute", inset: 0, zIndex: 200, background: T.moreOverlayBg, display: "flex", flexDirection: "column", animation: "fadeIn 0.15s ease", transition: "background 0.2s ease" }}>
+<div style={{ background: T.moreHeaderBg, borderBottom: "2px solid #c87ae8", padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <svg viewBox="0 0 20 20" width={16} height={16} fill="none">
                 <line x1="2" y1="5" x2="18" y2="5" stroke="#c87ae8" strokeWidth="1.8" strokeLinecap="round"/>
@@ -2124,10 +2134,10 @@ const commStartListening = async () => {
             <button onClick={() => setMoreOpen(false)} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: 1, padding: "4px 14px", borderRadius: 4, cursor: "pointer", background: "rgba(232,90,74,0.1)", color: "#e85a4a", border: "1px solid #e85a4a" }}>✕ CLOSE</button>
           </div>
           <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-            <div style={{ width: 160, flexShrink: 0, background: "#0a0c10", borderRight: "1px solid #2a1e3a", overflowY: "auto" }}>
+            <div style={{ width: 160, flexShrink: 0, background: T.moreSidebarBg, borderRight: 1px solid ${T.moreSidebarBdr}, overflowY: "auto", transition: "background 0.2s ease" }}>
               {MORE_REFS.map(ref => (
                 <button key={ref.id} onClick={() => setActiveMoreRef(ref.id)} style={{ width: "100%", textAlign: "left", padding: "10px 12px", cursor: "pointer", background: activeMoreRef === ref.id ? `${ref.color}12` : "transparent", border: "none", borderLeft: `3px solid ${activeMoreRef === ref.id ? ref.color : "transparent"}`, borderBottom: "1px solid rgba(42,30,58,0.8)", transition: "all 0.12s" }}>
-                  <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, fontWeight: 700, letterSpacing: 0.5, color: activeMoreRef === ref.id ? ref.color : "#6a5878", textTransform: "uppercase", lineHeight: 1.3 }}>{ref.title}</div>
+                  <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, fontWeight: 700, letterSpacing: 0.5, color: activeMoreRef === ref.id ? ref.color : T.textMuted || T.emgLabelColor, textTransform: "uppercase", lineHeight: 1.3 }}>{ref.title}</div>
                 </button>
               ))}
             </div>
