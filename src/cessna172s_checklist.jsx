@@ -1096,6 +1096,55 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   const commTxIdRef         = useRef(0);
   const commCallsignRxRef   = useRef(null);
 
+  // ── PHONETIC WORD → DIGIT NORMALIZER ─────────────────────────────────────
+  // ATC always speaks numbers as individual words. Speech recognition returns
+  // "two niner niner two" — not "2992". This runs before every parser.
+  const PHONETIC_DIGITS = {
+    "zero":"0","niner":"9","nine":"9","one":"1","two":"2","three":"3",
+    "four":"4","five":"5","six":"6","seven":"7","eight":"8",
+  };
+  const PHONETIC_ALPHA = {
+    "alpha":"A","bravo":"B","charlie":"C","delta":"D","echo":"E",
+    "foxtrot":"F","golf":"G","hotel":"H","india":"I","juliett":"J",
+    "juliet":"J","kilo":"K","lima":"L","mike":"M","november":"N",
+    "oscar":"O","papa":"P","quebec":"Q","romeo":"R","sierra":"S",
+    "tango":"T","uniform":"U","victor":"V","whiskey":"W","xray":"X",
+    "yankee":"Y","zulu":"Z",
+  };
+
+  // Converts spoken phonetic words into digit/letter equivalents so regexes
+  // that match digit strings work on real speech-recognition output.
+  const normalizePhonetic = (text) => {
+    // Step 1 — spoken frequency decimals: "one two niner point four" → "129.4"
+    // Matches digit-words on both sides of the word "point"
+    let t = text.replace(
+      /\b((?:(?:zero|one|two|three|four|five|six|seven|eight|niner|nine)\s+)+)point\s+((?:(?:zero|one|two|three|four|five|six|seven|eight|niner|nine)\s*)+)/gi,
+      (_, left, right) => {
+        const l = left.trim().split(/\s+/).map(w => PHONETIC_DIGITS[w.toLowerCase()]||w).join("");
+        const r = right.trim().split(/\s+/).map(w => PHONETIC_DIGITS[w.toLowerCase()]||w).join("");
+        return `${l}.${r}`;
+      }
+    );
+    // Step 2 — convert remaining isolated digit words to numerals
+    // Only converts known phonetic digit words so normal speech is untouched
+    t = t.replace(/\b(zero|one|two|three|four|five|six|seven|eight|niner|nine)\b/gi,
+      w => PHONETIC_DIGITS[w.toLowerCase()] || w
+    );
+    // Step 3 — convert phonetic alphabet letters (for squawk codes + idents)
+    // Only fires inside known contexts to avoid converting normal words
+    t = t.replace(
+      /\b(information|with|squawk|ident)\s+(alpha|bravo|charlie|delta|echo|foxtrot|golf|hotel|india|juliett|juliet|kilo|lima|mike|november|oscar|papa|quebec|romeo|sierra|tango|uniform|victor|whiskey|xray|yankee|zulu)\b/gi,
+      (_, prefix, letter) => `${prefix} ${PHONETIC_ALPHA[letter.toLowerCase()] || letter.toUpperCase()}`
+    );
+    return t;
+  };
+
+  // ── ARM STATE — one boolean per card ─────────────────────────────────────
+  // When armed, card captures the next matching transmission then auto-disarms.
+  const [atisArmed,  setAtisArmed]  = useState(false);
+  const [gndArmed,   setGndArmed]   = useState(false);
+  const [ifrArmed,   setIfrArmed]   = useState(false);
+  
   // Directive verbs for watchdog regex
   const COMM_DIRECTIVES = [
     // Original Baseline Core
@@ -1144,76 +1193,122 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
     return "general";
   };
 
-  const commParseNwkraft = (text) => {
-    const r={N:"",W:"",K:"",R:"",A:"",F:"",T:""};
-    const dest=text.match(/cleared\s+(?:to\s+)?([A-Z][A-Z0-9\s]{2,20}?)(?:\s+via|\s+as\s+filed|\s+climb|\s+maintain|,)/i);
-    if(dest) r.N=dest[1].trim();
-    r.W=text.toLowerCase().includes("ifr")?"IFR FLIGHT PLAN":"";
-    const sqk=text.match(/squawk\s+(\d{4})/i); if(sqk) r.K=sqk[1];
-    const via=text.match(/via\s+([A-Z0-9\s,]+?)(?:\s+maintain|\s+climb|\s+expect|$)/i);
-    if(via) r.R=via[1].trim(); else if(text.toLowerCase().includes("as filed")) r.R="AS FILED";
-    const alt=text.match(/(?:maintain|climb\s+and\s+maintain|climb\s+to)\s+(\d[\d,]+\s*(?:feet|ft)?)/i);
-    if(alt) r.A=alt[1].replace(/,/g,"").trim();
-    const exp=text.match(/expect\s+(\d[\d,]+)\s*(?:feet|ft)?/i);
-    if(exp) r.A=(r.A?r.A+" / EXP ":"EXP ")+exp[1];
-    const frq=text.match(/(?:contact|departure|frequency)\s+(\d{3}.\d+)/i); if(frq) r.F=frq[1];
-    r.T=r.K?`SQUAWK ${r.K}`:"";
+const commParseNwkraft = (text) => {
+    const r = { N:"", W:"", K:"", R:"", A:"", F:"", T:"" };
+    const t = normalizePhonetic(text);
+
+    // N — Name / destination
+    const dest = t.match(/cleared\s+(?:to\s+)?([A-Z][A-Z0-9\s]{2,20}?)(?:\s+via|\s+as\s+filed|\s+climb|\s+maintain|,)/i);
+    if (dest) r.N = dest[1].trim();
+    else if (/cleared\s+as\s+filed/i.test(t)) r.N = "AS FILED";
+
+    // W — Weather / flight rules
+    r.W = /\bifr\b/i.test(t) ? "IFR FLIGHT PLAN" : "";
+
+    // K — Squawk code (4 digits after normalization)
+    const sqk = t.match(/squawk\s+(\d{4})/i);
+    if (sqk) r.K = sqk[1];
+
+    // R — Route
+    const via = t.match(/via\s+([A-Z0-9\s,]+?)(?:\s+maintain|\s+climb|\s+expect|$)/i);
+    if (via) r.R = via[1].trim();
+    else if (/radar\s+vectors/i.test(t)) r.R = "RADAR VECTORS";
+    else if (/as\s+filed/i.test(t)) r.R = "AS FILED";
+
+    // A — Altitude
+    const alt = t.match(/(?:maintain|climb\s+and\s+maintain|climb\s+to)\s+(\d[\d,]+\s*(?:feet|ft)?)/i);
+    if (alt) r.A = alt[1].replace(/,/g,"").trim();
+    const exp = t.match(/expect\s+(\d[\d,]+)\s*(?:feet|ft)?/i);
+    if (exp) r.A = (r.A ? r.A + " / EXP " : "EXP ") + exp[1];
+
+    // F — Departure frequency (after normalization "one two niner point four" → "129.4")
+    const frq = t.match(/(?:contact|departure|frequency)\s+(\d{2,3}\.\d+)/i);
+    if (frq) r.F = frq[1];
+
+    // T — Transponder summary
+    r.T = r.K ? `SQUAWK ${r.K}` : "";
+
     return r;
   };
 
-  const commParseAtis = (text) => {
+const commParseAtis = (text) => {
     const r = { info:"", wind:"", altimeter:"", visibility:"", sky:"" };
-    const t = text;
-    // Information identifier: "information alpha/bravo/..." or "information kilo"
-    const info = t.match(/information\s+([a-z]+)/i);
-    if (info) r.info = info[1].toUpperCase();
-    // Wind: "wind 270 at 12" / "wind calm"
-    const windCalm = /wind\s+calm/i.test(t);
-    if (windCalm) { r.wind = "CALM"; }
-    else {
+    const t = normalizePhonetic(text);
+
+    // Information identifier — broadcast: "information B" or pilot readback:
+    // "with B", "we have B", "have information B"
+    const infoFull = t.match(/information\s+([A-Z])\b/i);
+    const infoWith = t.match(/\bwith\s+([A-Z])\b/i);
+    const infoHave = t.match(/\bwe\s+have\s+([A-Z])\b/i) || t.match(/\bhave\s+information\s+([A-Z])\b/i);
+    const infoMatch = infoFull || infoWith || infoHave;
+    if (infoMatch) r.info = infoMatch[1].toUpperCase();
+
+    // Wind: "wind 270 at 12" / "wind calm" — after phonetic normalization
+    // digits are already substituted so these patterns now work on spoken input
+    if (/wind\s+calm/i.test(t)) {
+      r.wind = "CALM";
+    } else {
       const wind = t.match(/wind\s+(\d{1,3})\s+(?:at\s+)?(\d{1,3})(?:\s+gusts?\s+(\d{1,3}))?/i);
       if (wind) r.wind = wind[3] ? `${wind[1]}° AT ${wind[2]}G${wind[3]}` : `${wind[1]}° AT ${wind[2]}KT`;
     }
-    // Altimeter: "altimeter 29.92" or "two niner niner two"
-    const alt = t.match(/altimeter\s+([\d.]+)/i);
-    if (alt) r.altimeter = alt[1];
-    // Visibility: "visibility 10" / "visibility one zero"
+
+    // Altimeter: "altimeter 2992" — after normalization "two niner niner two" → "2992"
+    const altm = t.match(/altimeter\s+(\d{2,4}(?:\.\d+)?)/i);
+    if (altm) {
+      // Format raw digits as decimal if needed: "2992" → "29.92"
+      const raw = altm[1].replace(/\./g,"");
+      r.altimeter = raw.length === 4 && !altm[1].includes(".")
+        ? `${raw.slice(0,2)}.${raw.slice(2)}`
+        : altm[1];
+    }
+
+    // Visibility: "visibility 10" or "visibility 1 0" after normalization
     const vis = t.match(/visibility\s+(\d+(?:\.\d+)?)/i);
     if (vis) r.visibility = `${vis[1]}SM`;
-    // Sky: "few clouds 3500" / "scattered 2500" / "broken 1200" / "overcast 800" / "sky clear" / "clear below 12000"
-    const skyClr = /(?:sky\s+clear|cavok|clear\s+below)/i.test(t);
-    if (skyClr) { r.sky = "SKY CLEAR"; }
-    else {
+
+    // Sky condition
+    if (/(?:sky\s+clear|cavok|clear\s+below)/i.test(t)) {
+      r.sky = "SKY CLEAR";
+    } else {
       const sky = t.match(/(few|scattered|broken|overcast)\s+(?:clouds?\s+)?(?:at\s+)?(\d[\d,]+)/i);
       if (sky) r.sky = `${sky[1].toUpperCase()} ${parseInt(sky[2].replace(/,/g,"")).toLocaleString()}`;
     }
     return r;
   };
 
-  const commParseGround = (text) => {
+const commParseGround = (text) => {
     const r = { clearedTo:"", route:"", altitude:"", frequency:"", taxi:"", squawk:"" };
-    const t = text;
+    const t = normalizePhonetic(text);
+
     // Cleared to destination
     const dest = t.match(/cleared\s+(?:to\s+)?([A-Z][A-Za-z\s]{2,30}?)(?:\s+via|\s+as\s+filed|\s+climb|\s+maintain|,|\s+runway|\s+taxi)/i);
     if (dest) r.clearedTo = dest[1].trim().toUpperCase();
-    // Route
+    else if (/cleared\s+as\s+filed/i.test(t)) r.clearedTo = "AS FILED";
+
+    // Route: "via [departure]", "radar vectors", "as filed"
     const via = t.match(/via\s+([A-Z0-9\s,\.]+?)(?:\s+maintain|\s+climb|\s+expect|\s+squawk|,|$)/i);
     if (via) r.route = via[1].trim().toUpperCase();
+    else if (/radar\s+vectors/i.test(t)) r.route = "RADAR VECTORS";
     else if (/as\s+filed/i.test(t)) r.route = "AS FILED";
-    // Altitude
+
+    // Altitude: "climb and maintain 5000" / "expect 7000"
     const alt = t.match(/(?:maintain|climb\s+(?:and\s+)?maintain|climb\s+to)\s+(\d[\d,]+)/i);
     if (alt) r.altitude = alt[1].replace(/,/g,"");
     const exp = t.match(/expect\s+(\d[\d,]+)/i);
     if (exp) r.altitude = (r.altitude ? r.altitude + " / EXP " : "EXP ") + exp[1];
-    // Frequency
-    const frq = t.match(/(?:contact|departure|frequency|on)\s+(\d{3}\.?\d+)/i);
+
+    // Frequency — after normalization "one two niner point four" → "129.4"
+    const frq = t.match(/(?:contact|departure|frequency|on)\s+(\d{2,3}\.\d+)/i);
     if (frq) r.frequency = frq[1];
-    // Taxi
-    const taxi = t.match(/taxi\s+(?:to\s+)?(?:runway\s+)?([A-Z0-9\s,]+?)(?:\s+hold|\s+contact|\s+via|$)/i);
+
+    // Taxi instructions
+    const taxi = t.match(/taxi\s+(?:to\s+)?(?:runway\s+)?([A-Z0-9][A-Z0-9\s,]*?)(?:\s+hold|\s+contact|\s+via|$)/i);
     if (taxi) r.taxi = taxi[1].trim().toUpperCase();
-    // Squawk
+
+    // Squawk — after normalization "four two one five" → "4215"
     const sqk = t.match(/squawk\s+(\d{4})/i);
     if (sqk) r.squawk = sqk[1];
+
     return r;
   };
   
@@ -1256,26 +1351,49 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
     commAckIntervalRef.current=setInterval(()=>{ rem--; setCommAckCountdown(rem); if(rem<=0){ clearInterval(commAckIntervalRef.current); setCommWatchdogState("unanswered"); commPlayChime(true); commBeepIntervalRef.current=setInterval(()=>commPlayChime(true),2000); }},1000);
   },[]);
 
-  const commHandleTranscript = useCallback((text, isFinal) => {
+const commHandleTranscript = useCallback((text, isFinal) => {
     if (!text?.trim()) return;
     setCommTranscript(isFinal ? "" : text);
     if (!isFinal) return;
-    const type    = commDetectType(text);
+
+    const norm = normalizePhonetic(text);
+    const type    = commDetectType(norm);
     const tokens  = (type==="landing"||type==="pattern") ? commParseLanding(text) : null;
-    const nwkraft = (type==="ifr_departure"||type==="ifr_approach"||commForceIfr) ? commParseNwkraft(text) : null;
+    const isIfrTx = type==="ifr_departure" || type==="ifr_approach" || commForceIfr;
+    const nwkraft = isIfrTx ? commParseNwkraft(text) : null;
     const entry   = { id:++commTxIdRef.current, text, ts:new Date(), type, tokens, nwkraft };
     setCommTxLog(prev=>[entry,...prev].slice(0,40));
     if (nwkraft) setCommIfrData(nwkraft);
-    // ── Auto-detect ATIS: "information [letter]" + ("altimeter" or "wind") ──
-    if (/information\s+[a-z]+/i.test(text) && /altimeter|wind|visibility/i.test(text)) {
+
+    // ── Callsign detection ────────────────────────────────────────────────
+    const myCallsignHeard = commCallsignRxRef.current && commCallsignRxRef.current.test(norm);
+    if (myCallsignHeard) commTriggerWatchdog(entry);
+
+    // ── ATIS — no callsign gate, airport weather applies to everyone ──────
+    // Triggers on broadcast ("information B") AND pilot readback ("with B")
+    const isAtisBroadcast = /information\s+[A-Z]\b/i.test(norm) && /altimeter|wind|visibility/i.test(norm);
+    const isAtisReadback  = /\b(?:with|we\s+have|have\s+information)\s+[A-Z]\b/i.test(norm);
+    if (isAtisBroadcast || isAtisReadback || atisArmed) {
       setCommAtisData(commParseAtis(text));
+      if (atisArmed) setAtisArmed(false); // auto-disarm after capture
     }
-    // ── Auto-detect Ground clearance: destination + squawk or taxi ──
-    if (/cleared\s+to/i.test(text) && /squawk|taxi/i.test(text)) {
+
+    // ── GROUND CLEARANCE — requires callsign OR armed ─────────────────────
+    const isGndTx = /cleared\s+(?:to|as\s+filed)/i.test(norm) && /squawk|taxi/i.test(norm);
+    if (isGndTx && (myCallsignHeard || gndArmed)) {
       setCommGndData(commParseGround(text));
+      if (gndArmed) setGndArmed(false);
     }
-    if (commCallsignRxRef.current && commCallsignRxRef.current.test(text)) commTriggerWatchdog(entry);
-  },[commForceIfr, commTriggerWatchdog]);
+
+    // ── IFR / NWKRAFT — requires callsign OR armed ────────────────────────
+    const isIfrMatch = /cleared\s+(?:to|as\s+filed)/i.test(norm) && /squawk|departure/i.test(norm);
+    if (isIfrMatch && (myCallsignHeard || ifrArmed)) {
+      const parsed = commParseNwkraft(text);
+      setCommIfrData(parsed);
+      if (ifrArmed) setIfrArmed(false);
+    }
+
+  },[commForceIfr, commTriggerWatchdog, atisArmed, gndArmed, ifrArmed]);
 
   // Worker background trace config
   const COMM_WORKER_BLOB = `const SAMPLE_RATE=16000,BUFFER_SIZE=16000*12; const ring=new Float32Array(BUFFER_SIZE);let wh=0; function rms(s){let sum=0;for(let i=0;i<s.length;i++)sum+=s[i]*s[i];return 20*Math.log10(Math.sqrt(sum/s.length)+1e-9);} function write(s){for(let i=0;i<s.length;i++){ring[wh]=s[i];wh=(wh+1)%BUFFER_SIZE;}} function read(sec){const n=Math.min(sec*SAMPLE_RATE,BUFFER_SIZE),out=new Float32Array(n),st=(wh-n+BUFFER_SIZE)%BUFFER_SIZE;for(let i=0;i<n;i++)out[i]=ring[(st+i)%BUFFER_SIZE];return out;} self.onmessage=function(e){   if(e.data.type==="AUDIO_CHUNK"){write(e.data.samples);self.postMessage({type:"BUFFER_READY",rmsDb:rms(e.data.samples)});return;}   if(e.data.type==="TRANSCRIPTION_RESULT"){self.postMessage({type:"TRANSCRIPT",text:e.data.text,isFinal:e.data.isFinal,ts:Date.now()});return;}   if(e.data.type==="GET_REPLAY"){self.postMessage({type:"REPLAY_PCM",pcm:read(e.data.seconds||10),sampleRate:SAMPLE_RATE});return;} };`;
@@ -2179,8 +2297,14 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
                   onSetIfrData={setCommIfrData}
                   atisData={commAtisData}
                   onSetAtisData={setCommAtisData}
+                  atisArmed={atisArmed}
+                  onArmAtis={() => setAtisArmed(v => !v)}
                   gndData={commGndData}
                   onSetGndData={setCommGndData}
+                  gndArmed={gndArmed}
+                  onArmGnd={() => setGndArmed(v => !v)}
+                  ifrArmed={ifrArmed}
+                  onArmIfr={() => setIfrArmed(v => !v)}
                 />
               : renderChecklist(activePg)
             }
