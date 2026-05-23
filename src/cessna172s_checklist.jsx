@@ -816,25 +816,14 @@ function ScratchpadCanvas({ storageKey }) {
   useEffect(() => {
   const canvas = canvasRef.current;
   if (!canvas) return;
-  const load = async () => {
-    try {
-      const result = await window.storage.get(storageKey);
-      if (result?.value) {
-        const img = new Image();
-        img.onload = () => {
-          // Canvas may have been cleared between async gap — redraw fresh
-          const ctx = canvas.getContext("2d");
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(img, 0, 0);
-        };
-        img.onerror = () => {}; // silently ignore corrupt stored data
-        img.src = result.value;
-      }
-    } catch {}
-  };
-  // Small defer ensures canvas bitmap is fully initialized before we paint
-  const timer = setTimeout(load, 50);
-  return () => clearTimeout(timer);
+  try {
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      const img = new Image();
+      img.onload = () => canvas.getContext("2d").drawImage(img, 0, 0);
+      img.src = saved;
+    }
+  } catch {}
 }, [storageKey]);
 
   const persist = () => {
@@ -944,14 +933,15 @@ function DrawingNotepad({ title, footer, onClose, storageKey, initialImage, onSa
   }, [initialImage]);
 
   const persist = () => {
-    clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
-      if (!canvasRef.current) return;
-      const dataUrl = canvasRef.current.toDataURL();
-      try { window.storage.set(storageKey, dataUrl); } catch {}
-      if (onSave) onSave(dataUrl);
-    }, 400);
-  };
+  clearTimeout(saveTimerRef.current);
+  saveTimerRef.current = setTimeout(() => {
+    try {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      localStorage.setItem(storageKey, canvas.toDataURL());
+    } catch {}
+  }, 600);
+};
 
   const getPos = (e) => {
     const canvas = canvasRef.current;
@@ -978,12 +968,11 @@ function DrawingNotepad({ title, footer, onClose, storageKey, initialImage, onSa
     lastPos.current = pos;
   };
   const endDraw = (e) => { e.preventDefault(); drawingRef.current = false; lastPos.current = null; persist(); };
-  const clearCanvas = () => {
-    if (!canvasRef.current) return;
-    canvasRef.current.getContext("2d").clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-    try { window.storage.delete(storageKey); } catch {}
-    if (onSave) onSave(null);
-  };
+const clearCanvas = () => {
+  if (!canvasRef.current) return;
+  canvasRef.current.getContext("2d").clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+  try { localStorage.removeItem(storageKey); } catch {}
+};
 
   const PEN_COLORS = ["#e8e4d8","#4ae888","#4ab8e8","#e8c84a","#e85a4a"];
   const PEN_SIZES = [1.5, 2.5, 4, 7];
@@ -1501,9 +1490,7 @@ moreSidebarBdr:"#2a1e3a",
           }
           setNotepadImages(imgs);
         }
-        const sp = await window.storage.get("scratchpad-text");
-        if (sp?.value) setScratchpadText(sp.value);
-      } catch {}
+      try { const sp = localStorage.getItem("scratchpad-text"); if (sp) setScratchpadText(sp); } catch {}
     };
     if (typeof window !== "undefined" && window.storage) load();
   }, []);
@@ -2264,9 +2251,9 @@ return (
             ) : (
               <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
                 <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#4a5068", letterSpacing: 1.5 }}>✎ FREE TEXT · AUTO-SAVED · {scratchpadText.length} CHARS</div>
-                <textarea value={scratchpadText} onChange={e => { setScratchpadText(e.target.value); try { window.storage.set("scratchpad-text", e.target.value); } catch {} }} placeholder="ATIS · CLEARANCES · FREQUENCIES · WEATHER · NOTAMS · PIREPS..." style={{ flex: 1, resize: "none", outline: "none", background: "#0a0e0a", border: "1px solid #1e3528", borderRadius: 6, color: "#e8e4d8", fontFamily: "'Share Tech Mono',monospace", fontSize: 14, lineHeight: 1.7, padding: "14px 16px", caretColor: "#e8c84a" }} />
+                <textarea value={scratchpadText} onChange={e => { setScratchpadText(e.target.value); try { localStorage.setItem("scratchpad-text", e.target.value); } catch {} }} placeholder="ATIS · CLEARANCES · FREQUENCIES · WEATHER · NOTAMS · PIREPS..." style={{ flex: 1, resize: "none", outline: "none", background: "#0a0e0a", border: "1px solid #1e3528", borderRadius: 6, color: "#e8e4d8", fontFamily: "'Share Tech Mono',monospace", fontSize: 14, lineHeight: 1.7, padding: "14px 16px", caretColor: "#e8c84a" }} />
                 <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                  <button onClick={() => { setScratchpadText(""); try { window.storage.delete("scratchpad-text"); } catch {}; }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "4px 12px", borderRadius: 3, cursor: "pointer", background: "transparent", color: "#6a3030", border: "1px solid #3a2020" }}>↺ CLEAR TEXT</button>
+                  <button onClick={() => { setScratchpadText(""); try { localStorage.removeItem("scratchpad-text"); } catch {}; }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "4px 12px", borderRadius: 3, cursor: "pointer", background: "transparent", color: "#6a3030", border: "1px solid #3a2020" }}>↺ CLEAR TEXT</button>
                 </div>
               </div>
             )}
