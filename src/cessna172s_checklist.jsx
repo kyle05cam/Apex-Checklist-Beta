@@ -1454,12 +1454,18 @@ const commParseGround = (text) => {
     commAckIntervalRef.current=setInterval(()=>{ rem--; setCommAckCountdown(rem); if(rem<=0){ clearInterval(commAckIntervalRef.current); setCommWatchdogState("unanswered"); commPlayChime(true); commBeepIntervalRef.current=setInterval(()=>commPlayChime(true),2000); }},1000);
   },[]);
 
-const commHandleTranscript = useCallback((text, isFinal) => {
+  // ── Stable ref that always holds the latest transcript handler ────────────
+  // This is the core fix: SpeechRecognition and the worker both call
+  // commHandleTranscriptRef.current() so they ALWAYS get the current closure,
+  // even if React hasn't re-rendered yet. No stale captures, no missed chunks.
+  const commHandleTranscriptRef = useRef(null);
+
+  const commHandleTranscript = useCallback((text, isFinal) => {
     if (!text?.trim()) return;
     setCommTranscript(isFinal ? "" : text);
     if (!isFinal) return;
 
-    // ── Standard watchdog + tx log (unchanged) ────────────────────────────
+    // ── Standard watchdog + tx log ────────────────────────────────────────
     const type   = commDetectType(text);
     const tokens = (type==="landing"||type==="pattern") ? commParseLanding(text) : null;
     const nwkraft= (type==="ifr_departure"||type==="ifr_approach"||commForceIfr) ? commParseNwkraft(text) : null;
@@ -1469,39 +1475,43 @@ const commHandleTranscript = useCallback((text, isFinal) => {
     if (commCallsignRxRef.current && commCallsignRxRef.current.test(text)) commTriggerWatchdog(entry);
 
     // ── ARMED BUFFER ACCUMULATION ─────────────────────────────────────────
-    // Reads ref mirrors (not state) to avoid stale closure issues.
-    // MIN_RECORD_MS guard: if a transcript chunk arrives while still inside
-    // the 8s minimum window, the silence delay is extended so natural ATIS
-    // pauses between weather elements never trigger a premature commit.
+    // Reads ref mirrors so this works correctly regardless of render timing.
+    // MIN_RECORD_MS guard prevents premature commit on natural ATIS pauses.
 
     if (atisArmStateRef.current === "armed") {
       atisBufferRef.current = (atisBufferRef.current + " " + text).trim();
       clearTimeout(atisSilenceRef.current);
-      const atisElapsed = atisArmTimeRef.current ? Date.now() - atisArmTimeRef.current : MIN_RECORD_MS + 1;
-      const atisDelay   = atisElapsed < MIN_RECORD_MS ? (MIN_RECORD_MS - atisElapsed + ATIS_SILENCE_MS) : ATIS_SILENCE_MS;
-      atisSilenceRef.current = setTimeout(commitAtisBuffer, atisDelay);
+      const elapsed = atisArmTimeRef.current ? Date.now() - atisArmTimeRef.current : MIN_RECORD_MS + 1;
+      const delay   = elapsed < MIN_RECORD_MS ? (MIN_RECORD_MS - elapsed + ATIS_SILENCE_MS) : ATIS_SILENCE_MS;
+      atisSilenceRef.current = setTimeout(commitAtisBuffer, delay);
     }
 
     if (gndArmStateRef.current === "armed") {
       gndBufferRef.current = (gndBufferRef.current + " " + text).trim();
       clearTimeout(gndSilenceRef.current);
-      const gndElapsed = gndArmTimeRef.current ? Date.now() - gndArmTimeRef.current : MIN_RECORD_MS + 1;
-      const gndDelay   = gndElapsed < MIN_RECORD_MS ? (MIN_RECORD_MS - gndElapsed + GND_SILENCE_MS) : GND_SILENCE_MS;
-      gndSilenceRef.current = setTimeout(commitGndBuffer, gndDelay);
+      const elapsed = gndArmTimeRef.current ? Date.now() - gndArmTimeRef.current : MIN_RECORD_MS + 1;
+      const delay   = elapsed < MIN_RECORD_MS ? (MIN_RECORD_MS - elapsed + GND_SILENCE_MS) : GND_SILENCE_MS;
+      gndSilenceRef.current = setTimeout(commitGndBuffer, delay);
     }
 
     if (ifrArmStateRef.current === "armed") {
       ifrBufferRef.current = (ifrBufferRef.current + " " + text).trim();
       clearTimeout(ifrSilenceRef.current);
-      const ifrElapsed = ifrArmTimeRef.current ? Date.now() - ifrArmTimeRef.current : MIN_RECORD_MS + 1;
-      const ifrDelay   = ifrElapsed < MIN_RECORD_MS ? (MIN_RECORD_MS - ifrElapsed + IFR_SILENCE_MS) : IFR_SILENCE_MS;
-      ifrSilenceRef.current = setTimeout(commitIfrBuffer, ifrDelay);
+      const elapsed = ifrArmTimeRef.current ? Date.now() - ifrArmTimeRef.current : MIN_RECORD_MS + 1;
+      const delay   = elapsed < MIN_RECORD_MS ? (MIN_RECORD_MS - elapsed + IFR_SILENCE_MS) : IFR_SILENCE_MS;
+      ifrSilenceRef.current = setTimeout(commitIfrBuffer, delay);
     }
 
   }, [commForceIfr, commTriggerWatchdog, commitAtisBuffer, commitGndBuffer, commitIfrBuffer]);
 
-  // Worker background trace config
-  const COMM_WORKER_BLOB = `const SAMPLE_RATE=16000,BUFFER_SIZE=16000*12; const ring=new Float32Array(BUFFER_SIZE);let wh=0; function rms(s){let sum=0;for(let i=0;i<s.length;i++)sum+=s[i]*s[i];return 20*Math.log10(Math.sqrt(sum/s.length)+1e-9);} function write(s){for(let i=0;i<s.length;i++){ring[wh]=s[i];wh=(wh+1)%BUFFER_SIZE;}} function read(sec){const n=Math.min(sec*SAMPLE_RATE,BUFFER_SIZE),out=new Float32Array(n),st=(wh-n+BUFFER_SIZE)%BUFFER_SIZE;for(let i=0;i<n;i++)out[i]=ring[(st+i)%BUFFER_SIZE];return out;} self.onmessage=function(e){   if(e.data.type==="AUDIO_CHUNK"){write(e.data.samples);self.postMessage({type:"BUFFER_READY",rmsDb:rms(e.data.samples)});return;}   if(e.data.type==="TRANSCRIPTION_RESULT"){self.postMessage({type:"TRANSCRIPT",text:e.data.text,isFinal:e.data.isFinal,ts:Date.now()});return;}   if(e.data.type==="GET_REPLAY"){self.postMessage({type:"REPLAY_PCM",pcm:read(e.data.seconds||10),sampleRate:SAMPLE_RATE});return;} };`;
+  // Keep the ref in sync with the latest version of the handler every render.
+  // Cost: negligible. Benefit: every caller always gets the fresh closure.
+  commHandleTranscriptRef.current = commHandleTranscript;
+
+  // Worker handles AUDIO_CHUNK (ring buffer) and REPLAY_PCM only.
+  // Transcript routing is now done directly in SpeechRecognition.onresult
+  // so there is zero round-trip delay and zero stale-closure risk.
+  const COMM_WORKER_BLOB = `const SAMPLE_RATE=16000,BUFFER_SIZE=16000*12; const ring=new Float32Array(BUFFER_SIZE);let wh=0; function rms(s){let sum=0;for(let i=0;i<s.length;i++)sum+=s[i]*s[i];return 20*Math.log10(Math.sqrt(sum/s.length)+1e-9);} function write(s){for(let i=0;i<s.length;i++){ring[wh]=s[i];wh=(wh+1)%BUFFER_SIZE;}} function read(sec){const n=Math.min(sec*SAMPLE_RATE,BUFFER_SIZE),out=new Float32Array(n),st=(wh-n+BUFFER_SIZE)%BUFFER_SIZE;for(let i=0;i<n;i++)out[i]=ring[(st+i)%BUFFER_SIZE];return out;} self.onmessage=function(e){   if(e.data.type==="AUDIO_CHUNK"){write(e.data.samples);self.postMessage({type:"BUFFER_READY",rmsDb:rms(e.data.samples)});return;}   if(e.data.type==="GET_REPLAY"){self.postMessage({type:"REPLAY_PCM",pcm:read(e.data.seconds||10),sampleRate:SAMPLE_RATE});return;} };`;
 
   useEffect(() => {
     const blob=new Blob([COMM_WORKER_BLOB],{type:"application/javascript"});
@@ -1510,11 +1520,11 @@ const commHandleTranscript = useCallback((text, isFinal) => {
     commWorkerRef.current.onmessage=(e)=>{
       const{type}=e.data;
       if(type==="BUFFER_READY") setCommRmsLevel(Math.max(0,Math.min(1,(e.data.rmsDb+60)/60)));
-      if(type==="TRANSCRIPT")   commHandleTranscript(e.data.text,e.data.isFinal);
       if(type==="REPLAY_PCM")   commPlayPcm(e.data.pcm,e.data.sampleRate);
+      // TRANSCRIPT type removed — transcripts now route directly from SpeechRecognition
     };
     return()=>{commWorkerRef.current?.terminate();if(commWorkerBlobUrl.current)URL.revokeObjectURL(commWorkerBlobUrl.current);};
-  }, [commHandleTranscript]);
+  }, []); // stable — no deps, worker is created once and lives for the session
 
   useEffect(() => { commCallsignRxRef.current = buildCommRegex(aircraft?.tail); }, [aircraft?.tail, buildCommRegex]);
 
@@ -1618,8 +1628,11 @@ const commHandleTranscript = useCallback((text, isFinal) => {
             if (r.isFinal) f += r[0].transcript + " ";
             else p += r[0].transcript;
           }
+          // Interim: update live display directly
           if (p) setCommTranscript(p);
-          if (f.trim()) commWorkerRef.current?.postMessage({ type: "TRANSCRIPTION_RESULT", text: f.trim(), isFinal: true });
+          // Final: call handler via stable ref — always the latest closure,
+          // zero worker round-trip, guaranteed to see current arm state
+          if (f.trim()) commHandleTranscriptRef.current?.(f.trim(), true);
         };
         rec.onerror = (e) => { if (e.error === "not-allowed") setCommMicStatus("denied"); };
         rec.onend = () => { 
