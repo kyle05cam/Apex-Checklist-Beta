@@ -41,31 +41,31 @@ function buildTheme(light) {
   return light ? {
     // Page structure
     pageBg:       "#f4f5fa",
-    headerBg:     "linear-gradient(135deg,#e4e6f0,#eceef6)",
-    headerBorder: A.teal,
-    vuBg:         "rgba(220,224,238,0.9)",
-    tabBarBg:     "#e2e4ee",
-    tabBorder:    "#c0c6d8",
-    statusBg:     "#dde0ec",
-    replayBg:     "rgba(220,224,238,0.7)",
-    replayBgHot:  "rgba(58,154,212,0.18)",
-    overlayBg:    "rgba(240,242,248,0.98)",
-    overlayHdr:   "linear-gradient(90deg,rgba(26,106,176,0.12),transparent)",
+    headerBg:     "linear-gradient(135deg,#cbd0e2,#d8dce8)",
+    headerBorder: "#1a6ab0", // Swapped to deep blue anchor line for contrast
+    vuBg:         "#e2e4ee",
+    tabBarBg:     "#d8dce8",
+    tabBorder:    "#8a94a8",
+    statusBg:     "#cbd0e2",
+    replayBg:     "#dde0ec",
+    replayBgHot:  "rgba(26,106,176,0.22)",
+    overlayBg:    "#f4f5fa",
+    overlayHdr:   "linear-gradient(90deg,rgba(26,106,176,0.15),transparent)",
     cardBg:       "#ffffff",
-    cardBgAlt:    "rgba(240,242,248,0.95)",
-    inputBg:      "#f8f9fc",
-    inputBdr:     (c) => `${c}50`,
-    // Text
-    textMain:     "#0a1428",
-    textMuted:    "#5a6680",
-    textDim:      "#8898b0",
+    cardBgAlt:    "#dde0ec",
+    inputBg:      "#ffffff",
+    inputBdr:      (c) => c === A.amber ? "#b08000" : `${c}80`, // Force amber text borders to be darker brown/gold
+    // High-Contrast Typography
+    textMain:     "#050a15", // Jet black core text
+    textMuted:    "#202b40", // Dark charcoal secondary text
+    textDim:      "#3a4860", // Visible dark blue-gray details
     // Borders
-    border:       "#c8cedd",
-    borderLight:  "#dde0ec",
+    border:       "#8a94a8",
+    borderLight:  "#cbd0e2",
     // Scrollbar
-    scrollBg:     "#d0d4e4",
+    scrollBg:     "#a0a8b8",
     // Dim dot
-    dimDot:       "#b0b6c8",
+    dimDot:       "#5a6680",
   } : {
     // Page structure
     pageBg:       "#0d0f12",
