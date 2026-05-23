@@ -1280,9 +1280,6 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
 
   // ── Theme tokens ──────────────────────────────────────────────────────────
   const T = lightMode ? {
-
-  // ── Theme tokens ──────────────────────────────────────────────────────────
-  const T = lightMode ? {
     appBg:"#e8eaf0", headerBg:"linear-gradient(135deg,#d0d4e0 0%,#c8ccd8 60%,#d0d4e0 100%)",
     headerBorder:"#1a6ab0", leftSideBg:"#d0d4e0", leftSideBorder:"#a0a8c0",
     leftTabActive:"rgba(26,106,176,0.12)", leftTabText:"#1a6ab0", leftTabDim:"#607090",
