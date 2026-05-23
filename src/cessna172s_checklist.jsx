@@ -1133,11 +1133,18 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
     t = t.replace(/\bbroadcasting\s+system\b/gi,  "reporting system");
     t = t.replace(/\bobservation\s+system\b/gi,   "reporting system");
 
+    // ── WIND SPEED AS TIME FORMAT ──────────────────────────────────────────
+    // Speech engine formats single-digit wind speeds as times: "6" → "6:00"
+    // Strip the colon and trailing zeros: "6:00" → "6", "12:00" → "12"
+    t = t.replace(/\b(\d{1,2}):00\b/g, "$1");
+    t = t.replace(/\b(\d{1,2}):(\d{2})\b/g, "$1$2"); // "6:15" → "615" edge case
+
     // ── GUST VARIANTS ─────────────────────────────────────────────────────
     t = t.replace(/\bguessing\b/gi,    "gusting");
     t = t.replace(/\bgusted\b/gi,      "gusting");
     t = t.replace(/\bjust\s+ing\b/gi,  "gusting");
     t = t.replace(/\btesting\b/gi,     "gusting");   // "testing 12" in wind context
+    t = t.replace(/\bgas\s+tank\b/gi,  "gusting");   // "gas tank 15" misread
     t = t.replace(/\bgust\s+to\b/gi,   "gusting");
 
     // ── VISIBILITY DIGITS ──────────────────────────────────────────────────
@@ -1428,34 +1435,45 @@ const commParseAtis = (text) => {
     const infoMatch = infoFull || infoWith || infoHave;
     if (infoMatch) r.info = infoMatch[1].toUpperCase();
 
-    // Wind — after normalizeAtcSpeech all gust homophones are already corrected
-    if (/wind\s+calm/i.test(t)) {
+    // Wind — after normalizeAtcSpeech all gust homophones are already corrected.
+    // Strip colons from time-formatted numbers: "6:00" → "600" then trim to 2 digits
+    // since the speech engine formats wind speeds like times (e.g. "6:00" for "6").
+    const tWind = t.replace(/\b(\d+):(\d{2})\b/g, (_, h, m) => m === "00" ? h : h + m);
+    if (/wind\s+calm/i.test(tWind)) {
       r.wind = "CALM";
     } else {
-      const wind = t.match(/wind\s+(\d{1,3})\s+(?:at\s+)?(\d{1,3})(?:\s+(?:gusts?|gusting|gust)\s+(\d{1,3}))?/i);
+      const wind = tWind.match(/wind\s+(\d{1,3})\s+(?:at\s+)?(\d{1,3})(?:\s+(?:gusts?|gusting|gust)\s+(\d{1,3}))?/i);
       if (wind) r.wind = wind[3] ? `${wind[1]}° AT ${wind[2]} GUSTING ${wind[3]}` : `${wind[1]}° AT ${wind[2]}KT`;
     }
 
-    // Altimeter — normalize homophones then format.
-    // Speech engines sometimes drop leading digit: "two niner eight" → "298"
-    // instead of "2985". For 3-digit results in the 290-299 range, treat as
-    // 29.XX by prepending "29" logic. Also trim 5-digit OCR errors like "29090".
-    const altm = t.match(/altimeter\s+(\d{2,5}(?:\.\d+)?)/i);
-    if (altm) {
-      let raw = altm[1].replace(/\./g,"");
-      // Trim 5-digit errors to 4 by dropping last digit
+    // Altimeter — find ALL matches and score them, prefer the cleanest 4-digit value.
+    // When the broadcast is read twice, the parser would otherwise pick the last
+    // (potentially garbled) match. Instead we score each candidate: a clean 4-digit
+    // value beats a 5-digit error or a 3-digit truncation.
+    const altmRx = /altimeter\s+(\d{2,5}(?:\.\d+)?)/gi;
+    let altmMatch, bestAltm = null, bestScore = -1;
+    while ((altmMatch = altmRx.exec(t)) !== null) {
+      let raw = altmMatch[1].replace(/\./g,"");
+      let score = 0;
+      if (raw.length === 4) score = 3;       // perfect — clean 4 digits
+      else if (raw.length === 3) score = 2;  // recoverable 3-digit
+      else if (raw.length === 5) score = 1;  // noisy 5-digit, trim needed
+      else score = 0;
+      if (score > bestScore) { bestScore = score; bestAltm = altmMatch[1]; }
+    }
+    if (bestAltm) {
+      let raw = bestAltm.replace(/\./g,"");
       if (raw.length === 5) raw = raw.slice(0, 4);
-      // Expand 3-digit to 4 — US altimeter always 28XX-31XX range
       if (raw.length === 3) {
         const n = parseInt(raw);
-        if (n >= 900 && n <= 999) raw = "2" + raw;      // 9XX → 29XX
-        else if (n >= 800 && n <= 899) raw = "2" + raw; // 8XX → 28XX (rare low)
-        else if (n >= 100 && n <= 199) raw = "3" + raw; // 1XX → 31XX (rare high)
-        else raw = "29" + raw.slice(1);                  // fallback
+        if (n >= 900 && n <= 999) raw = "2" + raw;
+        else if (n >= 800 && n <= 899) raw = "2" + raw;
+        else if (n >= 100 && n <= 199) raw = "3" + raw;
+        else raw = "29" + raw.slice(1);
       }
-      r.altimeter = raw.length === 4 && !altm[1].includes(".")
+      r.altimeter = raw.length === 4 && !bestAltm.includes(".")
         ? `${raw.slice(0,2)}.${raw.slice(2)}`
-        : altm[1];
+        : bestAltm;
     }
 
     // Visibility — after normalizeAtcSpeech homophones are already corrected
