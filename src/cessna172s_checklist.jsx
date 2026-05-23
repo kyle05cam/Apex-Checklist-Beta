@@ -1238,44 +1238,89 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
     } catch { setCommReplayActive(false); }
   };
 
-  const commStartListening = async () => {
-  // Guard ONLY on real hardware state — not React state flag (async, may lag)
-  if (commStreamRef.current) return;
-
+const commStartListening = async () => {
+    // Guard ONLY on real hardware state — not React state flag (async, may lag)
+    if (commStreamRef.current) return;
+  
     try {
-      const stream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,sampleRate:16000,echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
-      commStreamRef.current=stream;
-      const ctx=new(window.AudioContext||window.webkitAudioContext)({sampleRate:16000});
-      commAudioCtxRef.current=ctx;
-      const source=ctx.createMediaStreamSource(stream);
-      const proc=ctx.createScriptProcessor(4096,1,1);
-      source.connect(proc); proc.connect(ctx.destination);
-      proc.onaudioprocess=(e)=>{const s=new Float32Array(e.inputBuffer.getChannelData(0));commWorkerRef.current?.postMessage({type:"AUDIO_CHUNK",samples:s});};
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1,
+          sampleRate: 16000,
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false
+        }
+      });
+      commStreamRef.current = stream;
+      
+      const ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+      commAudioCtxRef.current = ctx;
+      
+      const source = ctx.createMediaStreamSource(stream);
+      const proc = ctx.createScriptProcessor(4096, 1, 1);
+      source.connect(proc); 
+      proc.connect(ctx.destination);
+      
+      proc.onaudioprocess = (e) => {
+        const s = new Float32Array(e.inputBuffer.getChannelData(0));
+        commWorkerRef.current?.postMessage({ type: "AUDIO_CHUNK", samples: s });
+      };
+      
       // VU animation via analyser
-      const analyser=ctx.createAnalyser(); analyser.fftSize=256; source.connect(analyser);
-      const vuBuf=new Uint8Array(analyser.frequencyBinCount);
-      const animVu=()=>{analyser.getByteFrequencyData(vuBuf);let sum=0;for(let i=0;i<vuBuf.length;i++)sum+=vuBuf[i]*vuBuf[i];setCommRmsLevel(Math.sqrt(sum/vuBuf.length)/255);commAnimFrameRef.current=requestAnimationFrame(animVu);};
-      commAnimFrameRef.current=requestAnimationFrame(animVu);
+      const analyser = ctx.createAnalyser(); 
+      analyser.fftSize = 256; 
+      source.connect(analyser);
+      
+      const vuBuf = new Uint8Array(analyser.frequencyBinCount);
+      const animVu = () => {
+        analyser.getByteFrequencyData(vuBuf);
+        let sum = 0;
+        for (let i = 0; i < vuBuf.length; i++) sum += vuBuf[i] * vuBuf[i];
+        setCommRmsLevel(Math.sqrt(sum / vuBuf.length) / 255);
+        commAnimFrameRef.current = requestAnimationFrame(animVu);
+      };
+      commAnimFrameRef.current = requestAnimationFrame(animVu);
+      
       // Web Speech API injection
-      if("webkitSpeechRecognition"in window||"SpeechRecognition"in window){
-        const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-        const rec=new SR(); rec.continuous=true; rec.interimResults=true; rec.lang="en-US"; rec.maxAlternatives=1;
-        rec.onresult=(e)=>{let p="",f="";for(let i=e.resultIndex;i<e.results.length;i++){const r=e.results[i];if(r.isFinal)f+=r[0].transcript+" ";else p+=r[0].transcript;}if(p)setCommTranscript(p);if(f.trim())commWorkerRef.current?.postMessage({type:"TRANSCRIPTION_RESULT",text:f.trim(),isFinal:true});};
-        rec.onerror=(e)=>{if(e.error==="not-allowed")setCommMicStatus("denied");};
-        rec.onend=()=>{try{rec.start();}catch{}};
-        rec.start(); commRecognitionRef.current=rec;
+      if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const rec = new SR(); 
+        rec.continuous = true; 
+        rec.interimResults = true; 
+        rec.lang = "en-US"; 
+        rec.maxAlternatives = 1;
+        
+        rec.onresult = (e) => {
+          let p = "", f = "";
+          for (let i = e.resultIndex; i < e.results.length; i++) {
+            const r = e.results[i];
+            if (r.isFinal) f += r[0].transcript + " ";
+            else p += r[0].transcript;
+          }
+          if (p) setCommTranscript(p);
+          if (f.trim()) commWorkerRef.current?.postMessage({ type: "TRANSCRIPTION_RESULT", text: f.trim(), isFinal: true });
+        };
+        rec.onerror = (e) => { if (e.error === "not-allowed") setCommMicStatus("denied"); };
+        rec.onend = () => { try { rec.start(); } catch {} };
+        rec.start(); 
+        commRecognitionRef.current = rec;
       }
-      setCommListening(true); setCommMicStatus("active");
-    } catch(err) { setCommMicStatus(err.name==="NotAllowedError"?"denied":"error"); }
+      
+      setCommListening(true); 
+      setCommMicStatus("active");
+    } catch (err) { 
+      setCommMicStatus(err.name === "NotAllowedError" ? "denied" : "error"); 
+    }
   };
 
-const commStopListening = () => {
+  const commStopListening = () => {
     // 1. Forcefully unbind all listeners before killing the recognition thread
     if (commRecognitionRef.current) {
       commRecognitionRef.current.onresult = null;
       commRecognitionRef.current.onerror = null;
       commRecognitionRef.current.onend = null;
-      try { commRecognitionRef.current.stop(); } catch(e) {}
+      try { commRecognitionRef.current.stop(); } catch (e) {}
       commRecognitionRef.current = null;
     }
     
@@ -1292,7 +1337,7 @@ const commStopListening = () => {
     }
     
     if (commAudioCtxRef.current) {
-      try { commAudioCtxRef.current.close(); } catch(e) {}
+      try { commAudioCtxRef.current.close(); } catch (e) {}
       commAudioCtxRef.current = null;
     }
     
@@ -1306,8 +1351,8 @@ const commStopListening = () => {
   };
 
   const commAckCall = () => { commClearTimers(); setCommWatchdogState("clear"); setCommWatchdogTx(null); setCommAckCountdown(0); commPlayChime(false); };
-  const commReplay = (seconds=10) => { commWorkerRef.current?.postMessage({type:"GET_REPLAY",seconds}); setCommReplayActive(true); setTimeout(()=>setCommReplayActive(false),seconds*1000); };
-  // ── END COMM AUDIO ENGINE 
+  const commReplay = (seconds = 10) => { commWorkerRef.current?.postMessage({ type: "GET_REPLAY", seconds }); setCommReplayActive(true); setTimeout(() => setCommReplayActive(false), seconds * 1000); };
+  // ── END COMM AUDIO ENGINE
 
   // ── Theme tokens ──────────────────────────────────────────────────────────
   const T = lightMode ? {
