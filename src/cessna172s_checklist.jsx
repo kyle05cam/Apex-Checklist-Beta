@@ -1879,173 +1879,173 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
         </div>
       </div>
 {/* EXPANDED HEADS-UP ROLLING RADIO COMM STACK WITH LIVE AUDIO TOGGLE */}
-      <div 
-        onClick={() => setCurrentPage("comm")} // Quick-jump to full logs if clicked
-        style={{
-          flexShrink: 0,
-          background: commWatchdogState === "unanswered" 
-            ? "rgba(232,90,74,0.25)" 
-            : commWatchdogState === "alert" 
-              ? "rgba(232,200,74,0.18)" 
-              : lightMode ? "#cbd0e2" : "#141820",
-          borderBottom: `3px solid ${
-            commWatchdogState === "unanswered" 
-              ? "#e85a4a" 
-              : commWatchdogState === "alert" 
-                ? "#e8c84a" 
-                : commListening ? "#4ae8c8" : "#2a3040"
-          }`,
-          padding: "10px 16px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 8,
-          cursor: "pointer",
-          animation: commWatchdogState === "unanswered" ? "commFlash 0.5s ease infinite alternate" : "none",
-          transition: "all 0.2s ease"
-        }}
-      >
-        {/* TOP ROW: ACTIVE / LIVE TRANSMISSION STREAM + NATIVE AUDIO TOGGLES */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
-          <div style={{
-            width: 10,
-            height: 10,
-            borderRadius: "50%",
+      {currentPage !== "comm" && (
+        <div 
+          onClick={() => setCurrentPage("comm")} // Quick-jump to full logs if clicked
+          style={{
+            flexShrink: 0,
             background: commWatchdogState === "unanswered" 
-              ? "#e85a4a" 
+              ? "rgba(232,90,74,0.25)" 
               : commWatchdogState === "alert" 
-                ? "#e8c84a" 
-                : commListening ? "#3dbe6c" : "#4a5068",
-            boxShadow: commListening ? "0 0 10px currentColor" : "none",
-            flexShrink: 0
-          }} />
-
-          <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ 
-              fontFamily: "'Share Tech Mono', monospace", 
-              fontSize: 11, 
-              fontWeight: 700, 
-              color: commWatchdogState !== "clear" ? "#e8c84a" : "#4ae8c8", 
-              letterSpacing: 1.5,
+                ? "rgba(232,200,74,0.18)" 
+                : lightMode ? "#cbd0e2" : "#141820",
+            borderBottom: `3px solid ${
+              commWatchdogState === "unanswered" 
+                ? "#e85a4a" 
+                : commWatchdogState === "alert" 
+                  ? "#e8c84a" 
+                  : commListening ? "#4ae8c8" : "#2a3040"
+            }`,
+            padding: "10px 16px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            cursor: "pointer",
+            animation: commWatchdogState === "unanswered" ? "commFlash 0.5s ease infinite alternate" : "none",
+            transition: "all 0.2s ease"
+          }}
+        >
+          {/* TOP ROW: ACTIVE / LIVE TRANSMISSION STREAM + NATIVE AUDIO TOGGLES */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
+            <div style={{
+              width: 10,
+              height: 10,
+              borderRadius: "50%",
+              background: commWatchdogState === "unanswered" 
+                ? "#e85a4a" 
+                : commWatchdogState === "alert" 
+                  ? "#e8c84a" 
+                  : commListening ? "#3dbe6c" : "#4a5068",
+              boxShadow: commListening ? "0 0 10px currentColor" : "none",
               flexShrink: 0
-            }}>
-              {commWatchdogState !== "clear" ? "⚠ ATC GUARD ALERT:" : "📡 LIVE RADIO:"}
-            </span>
-            
-            <span style={{
-              fontFamily: "'Share Tech Mono', monospace",
-              fontSize: 15, 
-              fontWeight: 700, 
-              color: commTranscript ? (lightMode ? "#b08000" : "#e8c84a") : (commListening || commTxLog.length > 0 ? (lightMode ? "#050a15" : "#ffffff") : (lightMode ? "#4a5a78" : "#4a5068")),
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              fontStyle: commTranscript || commTxLog.length > 0 ? "normal" : "italic",
-              flex: 1
-            }}>
-              {commTranscript 
-                ? commTranscript 
-                : commTxLog.length > 0 
-                  ? commTxLog[0].text 
-                  : commListening ? "Monitoring frequency... Awaiting traffic." : "Radio guard standby. Tap LISTEN to activate mic stream."
-              }
-            </span>
-          </div>
+            }} />
 
-          {/* INTERACTION ACTION CONTAINER ROW */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-            
-            {/* HEADS-UP MIC LISTEN MASTER TOGGLE */}
-            <button
-              onClick={() => {
-                if (commListening) {
-                  commStopListening();
-                } else {
-                  commStopListening();
-                  setTimeout(() => commStartListening(), 50);
-                }
-              }}
-              style={{
-                fontFamily: "'Oswald', sans-serif",
-                fontSize: 11,
-                fontWeight: 700,
+            <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ 
+                fontFamily: "'Share Tech Mono', monospace", 
+                fontSize: 11, 
+                fontWeight: 700, 
+                color: commWatchdogState !== "clear" ? "#e8c84a" : "#4ae8c8", 
                 letterSpacing: 1.5,
-                padding: "4px 12px",
-                borderRadius: 4,
-                cursor: "pointer",
-                background: commListening ? "rgba(232,90,74,0.15)" : "rgba(74,232,200,0.12)",
-                color: commListening ? "#e85a4a" : "#4ae8c8",
-                border: `1.5px solid ${commListening ? "#e85a4a" : "#4ae8c8"}`,
-                boxShadow: commListening && commMicStatus === "active" ? "0 0 8px rgba(61,190,108,0.3)" : "none",
-                transition: "all 0.15s"
-              }}
-            >
-              {commListening ? "⏹ STOP MIC" : "⏵ LISTEN"}
-            </button>
+                flexShrink: 0
+              }}>
+                {commWatchdogState !== "clear" ? "⚠ ATC GUARD ALERT:" : "📡 LIVE RADIO:"}
+              </span>
+              
+              <span style={{
+                fontFamily: "'Share Tech Mono', monospace",
+                fontSize: 15, 
+                fontWeight: 700, 
+                color: commTranscript ? (lightMode ? "#b08000" : "#e8c84a") : (commListening || commTxLog.length > 0 ? (lightMode ? "#050a15" : "#ffffff") : (lightMode ? "#4a5a78" : "#4a5068")),
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                fontStyle: commTranscript || commTxLog.length > 0 ? "normal" : "italic",
+                flex: 1
+              }}>
+                {commTranscript 
+                  ? commTranscript 
+                  : commTxLog.length > 0 
+                    ? commTxLog[0].text 
+                    : commListening ? "Monitoring frequency... Awaiting traffic." : "Radio guard standby. Tap LISTEN to activate mic stream."
+                }
+              </span>
+            </div>
 
-            {/* Watchdog manual dismissal trigger */}
-            {commWatchdogState !== "clear" && (
-              <button 
-                onClick={commAckCall}
+            {/* INTERACTION ACTION CONTAINER ROW */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+              <button
+                onClick={() => {
+                  if (commListening) {
+                    commStopListening();
+                  } else {
+                    commStopListening();
+                    setTimeout(() => commStartListening(), 50);
+                  }
+                }}
                 style={{
                   fontFamily: "'Oswald', sans-serif",
                   fontSize: 11,
                   fontWeight: 700,
-                  letterSpacing: 1,
+                  letterSpacing: 1.5,
                   padding: "4px 12px",
                   borderRadius: 4,
                   cursor: "pointer",
-                  background: commWatchdogState === "unanswered" ? "#e85a4a" : "#e8c84a",
-                  color: "#000",
-                  border: "none",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.4)"
+                  background: commListening ? "rgba(232,90,74,0.15)" : "rgba(74,232,200,0.12)",
+                  color: commListening ? "#e85a4a" : "#4ae8c8",
+                  border: `1.5px solid ${commListening ? "#e85a4a" : "#4ae8c8"}`,
+                  boxShadow: commListening && commMicStatus === "active" ? "0 0 8px rgba(61,190,108,0.3)" : "none",
+                  transition: "all 0.15s"
                 }}
               >
-                ACK CALL [{commAckCountdown}s]
+                {commListening ? "⏹ STOP MIC" : "⏵ LISTEN"}
               </button>
-            )}
-          </div>
-        </div>
 
-        {/* BOTTOM SECTION: ROLLING TIMELINE TRACK */}
-        {commTxLog.length > 1 && (
-          <div style={{ 
-            display: "flex", 
-            flexDirection: "column", 
-            gap: 4,
-            borderTop: `1.5px solid ${lightMode ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.05)"}`,
-            paddingTop: 6
-          }}>
-            {commTxLog.slice(1, 5).map((log) => (
-              <div 
-                key={log.id} 
-                style={{ 
-                  display: "flex", 
-                  alignItems: "center", 
-                  gap: 10,
-                  fontSize: 11, 
-                  fontFamily: "'Share Tech Mono', monospace"
-                }}
-              >
-                <span style={{ 
-                  color: lightMode ? "#4a5a78" : "#4a5068", 
-                  fontWeight: 600,
-                  flexShrink: 0 
-                }}>
-                  [{log.ts.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" })}Z]
-                </span>
-                <span style={{ 
-                  color: lightMode ? "rgba(5,10,21,0.65)" : "rgba(232,228,216,0.55)", 
-                  overflow: "hidden", 
-                  textOverflow: "ellipsis", 
-                  whiteSpace: "nowrap",
-                  flex: 1
-                }}>
-                  {log.text}
-                </span>
-              </div>
-            ))}
+              {commWatchdogState !== "clear" && (
+                <button 
+                  onClick={commAckCall}
+                  style={{
+                    fontFamily: "'Oswald', sans-serif",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: 1,
+                    padding: "4px 12px",
+                    borderRadius: 4,
+                    cursor: "pointer",
+                    background: commWatchdogState === "unanswered" ? "#e85a4a" : "#e8c84a",
+                    color: "#000",
+                    border: "none",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.4)"
+                  }}
+                >
+                  ACK CALL [{commAckCountdown}s]
+                </button>
+              )}
+            </div>
           </div>
-        )}
+
+          {/* BOTTOM SECTION: ROLLING TIMELINE TRACK */}
+          {commTxLog.length > 1 && (
+            <div style={{ 
+              display: "flex", 
+              flexDirection: "column", 
+              gap: 4,
+              borderTop: `1.5px solid ${lightMode ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.05)"}`,
+              paddingTop: 6
+            }}>
+              {commTxLog.slice(1, 5).map((log) => (
+                <div 
+                  key={log.id} 
+                  style={{ 
+                    display: "flex", 
+                    alignItems: "center", 
+                    gap: 10,
+                    fontSize: 11, 
+                    fontFamily: "'Share Tech Mono', monospace"
+                  }}
+                >
+                  <span style={{ 
+                    color: lightMode ? "#4a5a78" : "#4a5068", 
+                    fontWeight: 600,
+                    flexShrink: 0 
+                  }}>
+                    [{log.ts.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" })}Z]
+                  </span>
+                  <span style={{ 
+                    color: lightMode ? "rgba(5,10,21,0.65)" : "rgba(232,228,216,0.55)", 
+                    overflow: "hidden", 
+                    textOverflow: "ellipsis", 
+                    whiteSpace: "nowrap",
+                    flex: 1
+                  }}>
+                    {log.text}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       </div>
       {/* BODY */}
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
