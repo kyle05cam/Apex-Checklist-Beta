@@ -1492,7 +1492,7 @@ moreSidebarBdr:"#2a1e3a",
         }
       try { const sp = localStorage.getItem("scratchpad-text"); if (sp) setScratchpadText(sp); } catch {}
     };
-    if (typeof window !== "undefined" && window.storage) load();
+        if (typeof window !== "undefined" && window.storage) load();
   }, []);
 
   // ── Custom items helpers ──────────────────────────────────────────────────
