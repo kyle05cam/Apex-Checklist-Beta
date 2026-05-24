@@ -19,7 +19,7 @@
 //   replayActive    — bool
 //   forceIfrMode    — bool
 //   onToggleForce   — fn()
-//   ifrData         — { N,W,K,R,A,F,T }
+//   ifrData         — { C,R,A,F,T }
 //   onSetIfrData    — fn(data)
 //   atisData        — { info,wind,altimeter,visibility,sky,caution }
 //   onSetAtisData   — fn(data)
@@ -102,15 +102,13 @@ function buildTheme(light) {
   };
 }
 
-// ─── NWKRAFT FIELD DEFINITIONS ────────────────────────────────────────────────
-const NWKRAFT_FIELDS = [
-  { key:"N", label:"N — NAME",        hint:"Clearance name / facility",  color:A.blue   },
-  { key:"W", label:"W — WEATHER",     hint:"Wx / filing weather",        color:A.teal   },
-  { key:"K", label:"K — KODE",        hint:"Squawk code",                color:A.amber  },
-  { key:"R", label:"R — ROUTE",       hint:"Route of flight",            color:A.green  },
-  { key:"A", label:"A — ALTITUDE",    hint:"Initial altitude / expect",  color:A.purple },
-  { key:"F", label:"F — FREQUENCY",   hint:"Departure frequency",        color:A.blue   },
-  { key:"T", label:"T — TRANSPONDER", hint:"Transponder instructions",   color:A.amber  },
+// ─── CRAFT FIELD DEFINITIONS ─────────────────────────────────────────────────
+const CRAFT_FIELDS = [
+  { key:"C", label:"C — CLEARANCE LIMIT", hint:"Destination / cleared to",   color:A.teal   },
+  { key:"R", label:"R — ROUTE",           hint:"Via / as filed / direct",     color:A.green  },
+  { key:"A", label:"A — ALTITUDE",        hint:"Initial altitude / expect",   color:A.purple },
+  { key:"F", label:"F — FREQUENCY",       hint:"Departure frequency",         color:A.blue   },
+  { key:"T", label:"T — TRANSPONDER",     hint:"Squawk code",                 color:A.amber  },
 ];
 
 // ─── LANDING CLEARANCE PILL STYLES ───────────────────────────────────────────
@@ -390,8 +388,8 @@ function GndCard({ T, data, onSetGndData, armState, rawText, onArm, onClearRaw }
   );
 }
 
-// ─── NWKRAFT CARD ─────────────────────────────────────────────────────────────
-function NwkraftCard({ T, data, tail, onClear, forceIfrMode, onToggleForce, onSetIfrData }) {
+// ─── CRAFT CARD ───────────────────────────────────────────────────────────────
+function CraftCard({ T, data, tail, onClear, forceIfrMode, onToggleForce, onSetIfrData }) {
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
       {/* Header */}
@@ -401,7 +399,7 @@ function NwkraftCard({ T, data, tail, onClear, forceIfrMode, onToggleForce, onSe
             IFR CLEARANCE
           </div>
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:1, marginTop:1 }}>
-            NWKRAFT FORMAT · {tail}
+            CRAFT FORMAT · {tail}
           </div>
         </div>
         <button onClick={onClear} style={{
@@ -411,7 +409,7 @@ function NwkraftCard({ T, data, tail, onClear, forceIfrMode, onToggleForce, onSe
       </div>
 
       {/* Fields */}
-      {NWKRAFT_FIELDS.map(f => (
+      {CRAFT_FIELDS.map(f => (
         <div key={f.key} style={{
           background:T.cardBg, border:`1px solid ${f.color}22`,
           borderLeft:`4px solid ${f.color}`, borderRadius:4, padding:"7px 12px",
@@ -433,15 +431,17 @@ function NwkraftCard({ T, data, tail, onClear, forceIfrMode, onToggleForce, onSe
         </div>
       ))}
 
-      {/* Squawk display */}
-      {data.K && (
+      {/* Squawk display — extracted from T field */}
+      {data.T && (
         <div style={{
           background:`${A.blue}12`, border:`1px solid ${A.blue}40`,
           borderRadius:5, padding:"8px 14px",
           display:"flex", alignItems:"center", gap:14,
         }}>
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:A.blue, letterSpacing:2 }}>SQUAWK</div>
-          <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:30, fontWeight:700, color:A.amber, letterSpacing:4 }}>{data.K}</div>
+          <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:30, fontWeight:700, color:A.amber, letterSpacing:4 }}>
+            {data.T.replace(/[^0-9]/g,"")||data.T}
+          </div>
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim }}>SET XPDR</div>
         </div>
       )}
@@ -482,7 +482,7 @@ export function CommPage({
   replayActive   = false,
   forceIfrMode   = false,
   onToggleForce  = () => {},
-  ifrData        = { N:"",W:"",K:"",R:"",A:"",F:"",T:"" },
+  ifrData        = { C:"",R:"",A:"",F:"",T:"" },
   onSetIfrData   = () => {},
   atisData       = { info:"",wind:"",altimeter:"",visibility:"",sky:"",caution:"" },
   onSetAtisData  = () => {},
@@ -829,7 +829,7 @@ export function CommPage({
                     </div>
                     {latest.nwkraft && (
                       <button onClick={() => showIfrOverlay(latest.nwkraft)} style={{ marginTop:8, fontFamily:"'Share Tech Mono',monospace", fontSize:8, fontWeight:700, letterSpacing:1, padding:"3px 10px", borderRadius:3, cursor:"pointer", background:`${A.amber}12`, color:A.amber, border:`1px solid ${A.amber}` }}>
-                        ✦ VIEW NWKRAFT
+                        ✦ VIEW CRAFT
                       </button>
                     )}
                   </div>
@@ -856,7 +856,7 @@ export function CommPage({
                   <div style={{ flex:1 }}>
                     <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:14, fontWeight:700, letterSpacing:3, color:A.amber }}>IFR CLEARANCE</div>
                     <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:1 }}>
-                      {ifrArmState==="armed" ? "● RECORDING…" : ifrArmState==="done" ? "CAPTURED · AI PARSED" : "NWKRAFT FORMAT · TAP ARM"}
+                      {ifrArmState==="armed" ? "● RECORDING…" : ifrArmState==="done" ? "CAPTURED · AI PARSED" : "CRAFT FORMAT · TAP ARM"}
                     </div>
                   </div>
                   <button onClick={onArmIfr} style={{
@@ -871,12 +871,12 @@ export function CommPage({
                   }}>
                     {ifrArmState==="armed" ? "⏹ STOP" : "● ARM"}
                   </button>
-                  <button onClick={() => onSetIfrData({ N:"",W:"",K:"",R:"",A:"",F:"",T:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
+                  <button onClick={() => onSetIfrData({ C:"",R:"",A:"",F:"",T:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
                 </div>
                 {ifrRawText ? (
                   <div style={{ padding:"10px 14px", borderBottom:`1px solid ${T.border}`, background: ifrArmState==="done" ? `${A.amber}10` : `${A.amber}06`, borderLeft: ifrArmState==="done" ? `4px solid ${A.amber}` : `4px solid ${A.amber}60` }}>
                     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:6, marginBottom:6 }}>
-                      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color: ifrArmState==="armed" ? A.amber : A.amber, letterSpacing:2, fontWeight:700 }}>
+                      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:A.amber, letterSpacing:2, fontWeight:700 }}>
                         {ifrArmState==="armed" ? "▶ LIVE BUFFER" : "✓ CAPTURED TEXT"}
                       </div>
                       {ifrArmState==="done" && <button onClick={onClearIfrRaw} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, padding:"2px 8px", borderRadius:2, cursor:"pointer", background:"transparent", color:T.textDim, border:`1px solid ${T.border}` }}>DISMISS</button>}
@@ -893,17 +893,17 @@ export function CommPage({
                   </div>
                 ) : null}
                 <div style={{ padding:"8px 12px", display:"flex", flexDirection:"column", gap:6 }}>
-                  {NWKRAFT_FIELDS.map(f => (
+                  {CRAFT_FIELDS.map(f => (
                     <MiniScribbleField key={f.key} T={T}
                       label={f.label.replace("— ","")} color={f.color} placeholder={f.hint}
                       value={ifrData[f.key]||""}
                       onChange={v => onSetIfrData({ ...ifrData, [f.key]: v })}
                     />
                   ))}
-                  {ifrData.K && (
+                  {ifrData.T && (
                     <div style={{ background:`${A.blue}12`, border:`1px solid ${A.blue}40`, borderRadius:4, padding:"7px 12px", display:"flex", alignItems:"center", gap:14, marginTop:2 }}>
                       <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:A.blue, letterSpacing:2 }}>SQUAWK</div>
-                      <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:28, fontWeight:700, color:A.amber, letterSpacing:4 }}>{ifrData.K}</div>
+                      <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:28, fontWeight:700, color:A.amber, letterSpacing:4 }}>{ifrData.T.replace(/[^0-9]/g,"")||ifrData.T}</div>
                       <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim }}>SET XPDR</div>
                     </div>
                   )}
@@ -982,7 +982,7 @@ export function CommPage({
             }}>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                 <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:13, fontWeight:700, letterSpacing:3, color:A.amber }}>
-                  ✦ IFR CLEARANCE CAPTURED
+                  ✦ IFR CLEARANCE CAPTURED — CRAFT
                 </div>
                 {forceIfrMode && (
                   <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:A.teal, background:`${A.teal}12`, border:`1px solid ${A.teal}38`, padding:"1px 6px", borderRadius:2, letterSpacing:1 }}>
@@ -997,11 +997,11 @@ export function CommPage({
               }}>✕ CLOSE</button>
             </div>
             <div style={{ padding:"12px 14px" }}>
-              <NwkraftCard
+              <CraftCard
                 T={T}
                 data={ifrData}
                 tail={tail}
-                onClear={() => onSetIfrData({ N:"",W:"",K:"",R:"",A:"",F:"",T:"" })}
+                onClear={() => onSetIfrData({ C:"",R:"",A:"",F:"",T:"" })}
                 forceIfrMode={forceIfrMode}
                 onToggleForce={onToggleForce}
                 onSetIfrData={onSetIfrData}
