@@ -1601,19 +1601,33 @@ const commParseTaxi = (text) => {
       r.route = expandTaxiways(raw).replace(/\s+/g," ").trim().toUpperCase();
     }
 
-    // ── HOLD SHORT — from hold short phrase or hold position ──
+    // ── HOLD SHORT — capture full phrase, not just the keyword ──
+    // Priority: runway number > full descriptive phrase > bare keyword
     const hsMatch = tRwy.match(/hold\s+short\s+(?:of\s+)?(?:runway\s+)?(\d{1,2}[LRC])/i);
-    if (hsMatch) r.holdShort = `RWY ${hsMatch[1].toUpperCase()}`;
-    else if (/hold\s+position/i.test(tFreq)) r.holdShort = "HOLD POSITION";
-    else if (/hold\s+short/i.test(tFreq)) r.holdShort = "HOLD SHORT";  // hold short without runway
+    if (hsMatch) {
+      r.holdShort = `RWY ${hsMatch[1].toUpperCase()}`;
+    } else {
+      // No runway number — capture descriptive phrase after "hold short"
+      // e.g. "hold short in the run up area" → "HOLD SHORT IN THE RUN UP AREA"
+      // Stop before any instruction keywords
+      const hsPhrase = tFreq.match(/hold\s+short\s+((?:in\s+the\s+|at\s+the\s+|in\s+)?[a-z\s]+?)(?:\s+advise|\s+contact|\s+and\s+advise|\s+run\s+up\s+complete|\s+when\s+ready|[,.]|$)/i);
+      if (hsPhrase && hsPhrase[1].trim().length > 1 && !/^and$/i.test(hsPhrase[1].trim())) {
+        r.holdShort = `HOLD SHORT ${hsPhrase[1].trim().toUpperCase()}`;
+      } else if (/hold\s+position/i.test(tFreq)) {
+        r.holdShort = "HOLD POSITION";
+      } else {
+        r.holdShort = "HOLD SHORT";
+      }
+    }
 
     // ── INSTRUCTIONS — contact/advise tower, run up, follow company ──
+    // Don't re-capture run up area in instructions if it's already in holdShort
     const instPatterns = [
       /advise\s+tower\s+on\s+[\d.]+/i,                                // advise tower on 122.98
       /contact\s+(?:tower|ground|approach|departure)[^,.]*/i,          // contact tower ...
       /advise\s+when\s+(?:run\s*up\s*complete|ready|airborne)[^,.]*/i, // advise when run up complete
       /advise\s+(?:run\s*up\s*complete|ready|airborne)[^,.]*/i,        // advise run up complete
-      /run\s*up\s*area/i,                                              // run up area (no trailing text)
+      ...(!r.holdShort.includes("RUN UP") ? [/run\s*up\s*area/i] : []), // only if not in holdShort
       /follow\s+(?:company|traffic|the)[^,.]*/i,
       /monitor\s+(?:tower|ground)[^,.]*/i,
       /when\s+ready[^,.]*/i,
@@ -2880,23 +2894,23 @@ const commParseGround = (text) => {
                   atisArmState={atisArmState}
                   atisRawText={atisRawText}
                   onArmAtis={handleArmAtis}
-                  onClearAtisRaw={() => { setAtisRawText(""); atisArmStateRef.current = "idle"; setAtisArmState("idle"); setCommAtisData({ info:"",wind:"",altimeter:"",visibility:"",sky:"",caution:"" }); }}
+                  onClearAtisRaw={() => { setAtisRawText(""); atisArmStateRef.current = "idle"; setAtisArmState("idle"); setCommAtisData({ info:"",wind:"",altimeter:"",visibility:"",sky:"",caution:"" }); clearTimeout(atisSilenceRef.current); }}
                   taxiData={commTaxiData}
                   onSetTaxiData={setCommTaxiData}
                   taxiArmState={taxiArmState}
                   taxiRawText={taxiRawText}
                   onArmTaxi={handleArmTaxi}
-                  onClearTaxiRaw={() => { setTaxiRawText(""); taxiArmStateRef.current = "idle"; setTaxiArmState("idle"); setCommTaxiData({ runway:"",route:"",holdShort:"",instructions:"" }); }}
+                  onClearTaxiRaw={() => { setTaxiRawText(""); taxiArmStateRef.current = "idle"; setTaxiArmState("idle"); setCommTaxiData({ runway:"",route:"",holdShort:"",instructions:"" }); clearTimeout(taxiSilenceRef.current); }}
                   gndData={commGndData}
                   onSetGndData={setCommGndData}
                   gndArmState={gndArmState}
                   gndRawText={gndRawText}
                   onArmGnd={handleArmGnd}
-                  onClearGndRaw={() => { setGndRawText(""); setGndArmState("idle"); }}
+                  onClearGndRaw={() => { setGndRawText(""); gndArmStateRef.current = "idle"; setGndArmState("idle"); setCommGndData({ clearedTo:"",route:"",altitude:"",frequency:"",taxi:"",squawk:"" }); clearTimeout(gndSilenceRef.current); }}
                   ifrArmState={ifrArmState}
                   ifrRawText={ifrRawText}
                   onArmIfr={handleArmIfr}
-                  onClearIfrRaw={() => { setIfrRawText(""); setIfrArmState("idle"); }}
+                  onClearIfrRaw={() => { setIfrRawText(""); ifrArmStateRef.current = "idle"; setIfrArmState("idle"); setCommIfrData({ C:"",R:"",A:"",F:"",T:"" }); clearTimeout(ifrSilenceRef.current); }}
                 />
               : renderChecklist(activePg)
             }
