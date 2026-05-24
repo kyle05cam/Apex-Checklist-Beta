@@ -589,18 +589,6 @@ export function CommPage({
           </div>
         </div>
 
-        {/* Force IFR */}
-        <button onClick={() => { onToggleForce(); if (!forceIfrMode) setIfrOverlay(true); }} style={{
-          fontFamily:"'Share Tech Mono',monospace", fontSize:8, fontWeight:700, letterSpacing:1,
-          padding:"4px 10px", borderRadius:3, cursor:"pointer",
-          background: forceIfrMode ? `${A.teal}18` : "transparent",
-          color: forceIfrMode ? A.teal : T.textDim,
-          border:`1px solid ${forceIfrMode ? A.teal : T.border}`,
-          transition:"all 0.15s",
-        }}>
-          {forceIfrMode ? "▶ IFR ON" : "IFR CAPTURE"}
-        </button>
-
         {/* Listen toggle */}
         <button
           onClick={() => {
