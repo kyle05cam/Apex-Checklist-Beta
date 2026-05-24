@@ -1085,6 +1085,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   const [commIfrData,       setCommIfrData]       = useState({ C:"",R:"",A:"",F:"",T:"" });
   const [commAtisData,      setCommAtisData]      = useState({ info:"",wind:"",altimeter:"",visibility:"",sky:"",caution:"" });
   const [commGndData,       setCommGndData]        = useState({ clearedTo:"",route:"",altitude:"",frequency:"",taxi:"",squawk:"" });
+  const [commTaxiData,      setCommTaxiData]      = useState({ runway:"",route:"",holdShort:"",instructions:"" });
   const commWorkerRef       = useRef(null);
   const commWorkerBlobUrl   = useRef(null);
   const commRecognitionRef  = useRef(null);
@@ -1262,24 +1263,29 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   // "done"   = capture complete, raw text visible, fields populated
   // "idle"   = default
   const [atisArmState,  setAtisArmState]  = useState("idle"); // "idle"|"armed"|"done"
+  const [taxiArmState,  setTaxiArmState]  = useState("idle");
   const [gndArmState,   setGndArmState]   = useState("idle");
   const [ifrArmState,   setIfrArmState]   = useState("idle");
 
   // Raw captured text buffers — displayed below each card header after capture
   const [atisRawText,   setAtisRawText]   = useState("");
+  const [taxiRawText,   setTaxiRawText]   = useState("");
   const [gndRawText,    setGndRawText]    = useState("");
   const [ifrRawText,    setIfrRawText]    = useState("");
 
   // Accumulation refs — hold growing buffer between transcript callbacks
   const atisBufferRef  = useRef("");
+  const taxiBufferRef  = useRef("");
   const gndBufferRef   = useRef("");
   const ifrBufferRef   = useRef("");
 
-  // Silence timeout refs — 4 seconds of no new speech triggers parse
+  // Silence timeout refs
   const atisSilenceRef  = useRef(null);
+  const taxiSilenceRef  = useRef(null);
   const gndSilenceRef   = useRef(null);
   const ifrSilenceRef   = useRef(null);
   const atisArmStateRef = useRef("idle"); // ref mirror of atisArmState — safe inside timers & callbacks
+  const taxiArmStateRef = useRef("idle"); // ref mirror of taxiArmState
   const gndArmStateRef  = useRef("idle"); // ref mirror of gndArmState
   const ifrArmStateRef  = useRef("idle"); // ref mirror of ifrArmState
 
@@ -1293,6 +1299,16 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
     setCommAtisData(commParseAtis(buf));
     setAtisArmState("done");
     atisBufferRef.current = "";
+  }, []);
+
+  const commitTaxiBuffer = useCallback(() => {
+    const buf = taxiBufferRef.current.trim();
+    taxiArmStateRef.current = buf ? "done" : "idle";
+    if (!buf) { setTaxiArmState("idle"); return; }
+    setTaxiRawText(buf);
+    setCommTaxiData(commParseTaxi(buf));
+    setTaxiArmState("done");
+    taxiBufferRef.current = "";
   }, []);
 
   const commitGndBuffer = useCallback(() => {
@@ -1329,6 +1345,19 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
       setAtisArmState("armed");
     }
   }, [commitAtisBuffer]);
+
+  const handleArmTaxi = useCallback(() => {
+    if (taxiArmStateRef.current === "armed") {
+      clearTimeout(taxiSilenceRef.current);
+      taxiArmStateRef.current = "idle";
+      commitTaxiBuffer();
+    } else {
+      taxiBufferRef.current   = "";
+      setTaxiRawText("");
+      taxiArmStateRef.current = "armed";
+      setTaxiArmState("armed");
+    }
+  }, [commitTaxiBuffer]);
 
   const handleArmGnd = useCallback(() => {
     if (gndArmStateRef.current === "armed") {
@@ -1442,6 +1471,66 @@ const commParseCraft = (text) => {
     // T — Transponder / squawk
     const sqk = t.match(/squawk\s+(\d{4})/i);
     if (sqk) r.T = `SQUAWK ${sqk[1]}`;
+
+    return r;
+  };
+
+const commParseTaxi = (text) => {
+    const r = { runway:"", route:"", holdShort:"", instructions:"" };
+    const t = normalizePhonetic(text);
+
+    // Expand phonetic runway suffixes: charlie→C, romeo→R, lima→L
+    const RUNWAY_PHONETIC = { charlie:"C", romeo:"R", lima:"L", left:"L", right:"R", center:"C" };
+    const expandRunway = (s) => s.replace(
+      /\b(\d{1,2})\s+(charlie|romeo|lima|left|right|center)\b/gi,
+      (_, num, suffix) => num + (RUNWAY_PHONETIC[suffix.toLowerCase()]||suffix.toUpperCase())
+    );
+    const tRwy = expandRunway(t);
+
+    // Expand phonetic taxiway names: "Yankee 1" → "Y1", "Bravo" → "B"
+    // Keep alphanumeric combos intact: "Y1", "B6", etc.
+    const TAXIWAY_PHONETIC = {
+      alpha:"A",bravo:"B",charlie:"C",delta:"D",echo:"E",foxtrot:"F",
+      golf:"G",hotel:"H",india:"I",juliet:"J",juliett:"J",kilo:"K",
+      lima:"L",mike:"M",november:"N",oscar:"O",papa:"P",quebec:"Q",
+      romeo:"R",sierra:"S",tango:"T",uniform:"U",victor:"V",
+      whiskey:"W",xray:"X",yankee:"Y",zulu:"Z",
+    };
+    const expandTaxiways = (s) => s.replace(
+      /\b(alpha|bravo|charlie|delta|echo|foxtrot|golf|hotel|india|juliett?|kilo|lima|mike|november|oscar|papa|quebec|romeo|sierra|tango|uniform|victor|whiskey|xray|yankee|zulu)\s*(\d*)\b/gi,
+      (_, name, num) => (TAXIWAY_PHONETIC[name.toLowerCase()]||name.toUpperCase()) + num
+    );
+
+    // runway — "taxi to runway 12C" / "taxi runway 12C"
+    const rwyMatch = tRwy.match(/(?:taxi\s+(?:to\s+)?(?:runway\s+)?|runway\s+)(\d{1,2}[LRC]?)/i);
+    if (rwyMatch) r.runway = `RWY ${rwyMatch[1].toUpperCase()}`;
+
+    // route — "via Yankee, Yankee 1, Bravo" — everything between "via" and "hold short"
+    const viaMatch = t.match(/via\s+(.+?)(?:\s+hold\s+short|\s+hold\s+position|,?\s+contact|,?\s+advise|$)/i);
+    if (viaMatch) {
+      r.route = expandTaxiways(viaMatch[1])
+        .replace(/\s*,\s*/g, " · ")  // "Y, Y1, B" → "Y · Y1 · B"
+        .replace(/\s+/g, " ")
+        .trim()
+        .toUpperCase();
+    }
+
+    // holdShort — "hold short of runway 12R" / "hold short runway 12R"
+    const hsMatch = tRwy.match(/hold\s+short\s+(?:of\s+)?(?:runway\s+)?(\d{1,2}[LRC]?)/i);
+    if (hsMatch) r.holdShort = `RWY ${hsMatch[1].toUpperCase()}`;
+    else if (/hold\s+position/i.test(t)) r.holdShort = "HOLD POSITION";
+
+    // instructions — contact tower, advise run up, follow company, etc.
+    const instPatterns = [
+      /contact\s+(?:tower|ground|approach|departure)[^,.]*/i,
+      /advise\s+(?:when\s+)?(?:run\s*up\s*complete|ready|airborne)[^,.]*/i,
+      /run\s*up\s*area[^,.]*/i,
+      /follow\s+(?:company|traffic|the)[^,.]*/i,
+      /monitor\s+tower[^,.]*/i,
+      /when\s+ready[^,.]*/i,
+    ];
+    const instMatches = instPatterns.map(rx => { const m = t.match(rx); return m ? m[0].trim() : null; }).filter(Boolean);
+    if (instMatches.length) r.instructions = instMatches.join(" · ").toUpperCase();
 
     return r;
   };
@@ -1743,6 +1832,14 @@ const commParseGround = (text) => {
       atisSilenceRef.current = setTimeout(commitAtisBuffer, 30000); // 30s safety fallback
     }
 
+    if (taxiArmStateRef.current === "armed") {
+      const newBuf = (taxiBufferRef.current + " " + corrected).trim();
+      taxiBufferRef.current = newBuf;
+      setTaxiRawText(newBuf);
+      clearTimeout(taxiSilenceRef.current);
+      taxiSilenceRef.current = setTimeout(commitTaxiBuffer, 30000);
+    }
+
     if (gndArmStateRef.current === "armed") {
       const newBuf = (gndBufferRef.current + " " + corrected).trim();
       gndBufferRef.current = newBuf;
@@ -1759,7 +1856,7 @@ const commParseGround = (text) => {
       ifrSilenceRef.current = setTimeout(commitIfrBuffer, 30000);
     }
 
-  }, [commForceIfr, commTriggerWatchdog, commWatchdogOnInterim, commWatchdogOnFinal, commitAtisBuffer, commitGndBuffer, commitIfrBuffer]);
+  }, [commForceIfr, commTriggerWatchdog, commWatchdogOnInterim, commWatchdogOnFinal, commitAtisBuffer, commitTaxiBuffer, commitGndBuffer, commitIfrBuffer]);
 
   // Keep the ref in sync with the latest version of the handler every render.
   // Cost: negligible. Benefit: every caller always gets the fresh closure.
@@ -2689,6 +2786,12 @@ const commParseGround = (text) => {
                   atisRawText={atisRawText}
                   onArmAtis={handleArmAtis}
                   onClearAtisRaw={() => { setAtisRawText(""); atisArmStateRef.current = "idle"; setAtisArmState("idle"); setCommAtisData({ info:"",wind:"",altimeter:"",visibility:"",sky:"",caution:"" }); }}
+                  taxiData={commTaxiData}
+                  onSetTaxiData={setCommTaxiData}
+                  taxiArmState={taxiArmState}
+                  taxiRawText={taxiRawText}
+                  onArmTaxi={handleArmTaxi}
+                  onClearTaxiRaw={() => { setTaxiRawText(""); taxiArmStateRef.current = "idle"; setTaxiArmState("idle"); setCommTaxiData({ runway:"",route:"",holdShort:"",instructions:"" }); }}
                   gndData={commGndData}
                   onSetGndData={setCommGndData}
                   gndArmState={gndArmState}
