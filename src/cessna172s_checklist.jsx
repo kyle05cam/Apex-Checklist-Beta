@@ -1216,6 +1216,59 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
     t = t.replace(/\bcleared\s+direkt\b/gi,  "cleared direct");
     t = t.replace(/\bdirect\s+to\b/gi,       "direct");         // "direct to X" = "direct X" in ATC
 
+    // ── TAXI & SURFACE MOVEMENT MISHEARINGS ───────────────────────────────
+    // IMPORTANT: runway re-insertion for word-digit case must happen FIRST,
+    // before "tax review" → "taxi via" replacement, so the lookahead still
+    // sees the original "tax" keyword to anchor the match.
+    // e.g. "one two right tax review" → "runway one two right taxi via"
+    t = t.replace(
+      /\b(zero|one|two|three|four|five|six|seven|eight|nine|niner)\s+(zero|one|two|three|four|five|six|seven|eight|nine|niner)?\s*(right|left|center)\s+(?=tax)/gi,
+      (_, d1, d2, dir) => `runway ${d1} ${d2 ? d2 + " " : ""}${dir} `
+    );
+
+    // "taxi via" is the most critical phrase for taxi parsing — many variants
+    t = t.replace(/\btax\s+review\b/gi,      "taxi via");   // most common mishearing
+    t = t.replace(/\btax\s+via\b/gi,         "taxi via");
+    t = t.replace(/\btaxi\s+the\b/gi,        "taxi via");
+    t = t.replace(/\btaxi\s+buy\b/gi,        "taxi via");
+    t = t.replace(/\btaxi\s+by\b/gi,         "taxi via");
+    t = t.replace(/\btaxi\s+vie\b/gi,        "taxi via");
+    t = t.replace(/\btaksi\b/gi,             "taxi");
+    t = t.replace(/\btaxiway\s+via\b/gi,     "taxi via");
+
+    // "hold short" variants
+    t = t.replace(/\bhold\s+in\s+the\s+holding\s+area\b/gi, "hold position");
+    t = t.replace(/\bholding\s+area\b/gi,    "hold position");
+    t = t.replace(/\bhold\s+your\s+position\b/gi, "hold position");
+    t = t.replace(/\bhold\s+at\b/gi,         "hold short");
+    t = t.replace(/\bholds\s+short\b/gi,     "hold short");
+
+    // Run-up / advisory variants
+    t = t.replace(/\badvised\s+on\b/gi,      "advise when");
+    t = t.replace(/\badvised\s+when\b/gi,    "advise when");
+    t = t.replace(/\badvised\b/gi,           "advise");
+    t = t.replace(/\brun-up\b/gi,            "run up");
+    t = t.replace(/\brunup\b/gi,             "run up");
+    t = t.replace(/\brun\s+up\s+complete\b/gi, "run up complete");
+    t = t.replace(/\brun\s+up\s+area\b/gi,   "run up area");
+
+    // Runway suffix spoken words — normalize before digit expansion
+    t = t.replace(/\brunway\s+(\d{1,2})\s+right\b/gi,  "runway $1R");
+    t = t.replace(/\brunway\s+(\d{1,2})\s+left\b/gi,   "runway $1L");
+    t = t.replace(/\brunway\s+(\d{1,2})\s+center\b/gi, "runway $1C");
+    // Re-insert "runway" when speech engine drops it entirely.
+    // Must handle BOTH numeric digits ("12 right taxi via") AND
+    // phonetic word digits ("one two right tax review") since normalizePhonetic
+    // hasn't run yet at this point in the pipeline.
+    // Numeric digit case — e.g. "12 right taxi via"
+    t = t.replace(/\b(\d{1,2})\s+(right|left|center)\s+(?=taxi|tax\s|hold\s|via\s)/gi,
+      "runway $1 $2 ");
+    // Word digit case — e.g. "one two right tax review" or "two seven left taxi"
+    t = t.replace(
+      /\b(zero|one|two|three|four|five|six|seven|eight|nine|niner)\s+(zero|one|two|three|four|five|six|seven|eight|nine|niner)?\s*(right|left|center)\s+(?=taxi|tax\s|hold\s|via\s)/gi,
+      "runway $1 $2 $3 ");
+    t = t.replace(/\bwrong\s+way\b/gi, "runway");  // occasional mishearing
+
     // ── NINER ─────────────────────────────────────────────────────────────
     t = t.replace(/\bnine-r\b/gi,   "niner");
     t = t.replace(/\bnine\s+er\b/gi,"niner");
@@ -1540,17 +1593,19 @@ const commParseTaxi = (text) => {
       r.route = expandTaxiways(raw).replace(/\s+/g," ").trim().toUpperCase();
     }
 
-    // ── HOLD SHORT — from hold short phrase ──
+    // ── HOLD SHORT — from hold short phrase or hold position ──
     const hsMatch = tRwy.match(/hold\s+short\s+(?:of\s+)?(?:runway\s+)?(\d{1,2}[LRC])/i);
     if (hsMatch) r.holdShort = `RWY ${hsMatch[1].toUpperCase()}`;
     else if (/hold\s+position/i.test(tFreq)) r.holdShort = "HOLD POSITION";
+    else if (/hold\s+short/i.test(tFreq)) r.holdShort = "HOLD SHORT";  // hold short without runway
 
-    // ── INSTRUCTIONS — contact/advise tower with frequency, run up, follow company ──
+    // ── INSTRUCTIONS — contact/advise tower, run up, follow company ──
     const instPatterns = [
-      /advise\s+tower\s+on\s+[\d.]+/i,                           // advise tower on 122.98
-      /contact\s+(?:tower|ground|approach|departure)[^,.]*/i,    // contact tower ...
-      /advise\s+(?:when\s+)?(?:run\s*up\s*complete|ready|airborne)[^,.]*/i,
-      /run\s*up\s*area[^,.]*/i,
+      /advise\s+tower\s+on\s+[\d.]+/i,                               // advise tower on 122.98
+      /contact\s+(?:tower|ground|approach|departure)[^,.]*/i,         // contact tower ...
+      /advise\s+when\s+(?:run\s*up\s*complete|ready|airborne)[^,.]*/i, // advise when run up complete
+      /advise\s+(?:run\s*up\s*complete|ready|airborne)[^,.]*/i,       // advise run up complete
+      /run\s*up\s*area[^,.]*/i,                                       // run up area
       /follow\s+(?:company|traffic|the)[^,.]*/i,
       /monitor\s+(?:tower|ground)[^,.]*/i,
       /when\s+ready[^,.]*/i,
