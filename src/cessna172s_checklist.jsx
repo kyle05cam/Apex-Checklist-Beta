@@ -1237,20 +1237,27 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
     t = t.replace(/\btaxiway\s+via\b/gi,     "taxi via");
 
     // "hold short" variants
+    t = t.replace(/\bold\s+short\b/gi,        "hold short");   // dropped H — most common
+    t = t.replace(/\bhold\s+short\b/gi,       "hold short");   // already correct — keep
     t = t.replace(/\bhold\s+in\s+the\s+holding\s+area\b/gi, "hold position");
-    t = t.replace(/\bholding\s+area\b/gi,    "hold position");
+    t = t.replace(/\bholding\s+area\b/gi,     "hold position");
     t = t.replace(/\bhold\s+your\s+position\b/gi, "hold position");
-    t = t.replace(/\bhold\s+at\b/gi,         "hold short");
-    t = t.replace(/\bholds\s+short\b/gi,     "hold short");
+    t = t.replace(/\bhold\s+at\b/gi,          "hold short");
+    t = t.replace(/\bholds\s+short\b/gi,      "hold short");
+    t = t.replace(/\bho\s+short\b/gi,         "hold short");   // slurred H
 
     // Run-up / advisory variants
-    t = t.replace(/\badvised\s+on\b/gi,      "advise when");
-    t = t.replace(/\badvised\s+when\b/gi,    "advise when");
-    t = t.replace(/\badvised\b/gi,           "advise");
-    t = t.replace(/\brun-up\b/gi,            "run up");
-    t = t.replace(/\brunup\b/gi,             "run up");
+    t = t.replace(/\bvalleys\s+on\b/gi,       "advise when");  // "advise on" → "valleys on"
+    t = t.replace(/\bvalise\s+on\b/gi,        "advise when");
+    t = t.replace(/\badvised\s+on\b/gi,       "advise when");
+    t = t.replace(/\badvised\s+when\b/gi,     "advise when");
+    t = t.replace(/\badvised\b/gi,            "advise");
+    t = t.replace(/\badvise\s+on\b/gi,        "advise when");
+    t = t.replace(/\bright\s+up\s+area\b/gi,  "run up area");  // "run up" → "right up"
+    t = t.replace(/\brun-up\b/gi,             "run up");
+    t = t.replace(/\brunup\b/gi,              "run up");
     t = t.replace(/\brun\s+up\s+complete\b/gi, "run up complete");
-    t = t.replace(/\brun\s+up\s+area\b/gi,   "run up area");
+    t = t.replace(/\brun\s+up\s+area\b/gi,    "run up area");
 
     // Runway suffix spoken words — normalize before digit expansion
     t = t.replace(/\brunway\s+(\d{1,2})\s+right\b/gi,  "runway $1R");
@@ -1586,8 +1593,9 @@ const commParseTaxi = (text) => {
 
     // ── ROUTE — "via X, Y, Z" up to "hold short" or instructions ──
     // Use tRwy (which went through normalizePhonetic + expandRunway) so digit
-    // words like "one" are already "1" before taxiway expansion runs
-    const viaMatch = tRwy.match(/via\s+(.+?)(?:\s+hold\s+short|\s+hold\s+position|,?\s*advise|,?\s*contact|$)/i);
+    // words like "one" are already "1" before taxiway expansion runs.
+    // Stop pattern also covers pre-normalization forms in case any slip through.
+    const viaMatch = tRwy.match(/via\s+(.+?)(?:\s+hold\s+short|\s+hold\s+position|\s+old\s+short|\s+run\s+up|\s+advise|\s+contact|,?\s*advise|$)/i);
     if (viaMatch) {
       let raw = viaMatch[1].replace(/,/g, " ").trim();
       r.route = expandTaxiways(raw).replace(/\s+/g," ").trim().toUpperCase();
@@ -1601,18 +1609,22 @@ const commParseTaxi = (text) => {
 
     // ── INSTRUCTIONS — contact/advise tower, run up, follow company ──
     const instPatterns = [
-      /advise\s+tower\s+on\s+[\d.]+/i,                               // advise tower on 122.98
-      /contact\s+(?:tower|ground|approach|departure)[^,.]*/i,         // contact tower ...
+      /advise\s+tower\s+on\s+[\d.]+/i,                                // advise tower on 122.98
+      /contact\s+(?:tower|ground|approach|departure)[^,.]*/i,          // contact tower ...
       /advise\s+when\s+(?:run\s*up\s*complete|ready|airborne)[^,.]*/i, // advise when run up complete
-      /advise\s+(?:run\s*up\s*complete|ready|airborne)[^,.]*/i,       // advise run up complete
-      /run\s*up\s*area[^,.]*/i,                                       // run up area
+      /advise\s+(?:run\s*up\s*complete|ready|airborne)[^,.]*/i,        // advise run up complete
+      /run\s*up\s*area/i,                                              // run up area (no trailing text)
       /follow\s+(?:company|traffic|the)[^,.]*/i,
       /monitor\s+(?:tower|ground)[^,.]*/i,
       /when\s+ready[^,.]*/i,
     ];
-    const instMatches = instPatterns
+    const rawInstMatches = instPatterns
       .map(rx => { const m = tFreq.match(rx); return m ? m[0].trim() : null; })
       .filter(Boolean);
+    // Deduplicate: remove any match that is a substring of a longer match
+    const instMatches = rawInstMatches.filter(
+      (a, _, arr) => !arr.some(b => b !== a && b.toLowerCase().includes(a.toLowerCase()))
+    );
     if (instMatches.length) r.instructions = instMatches.join(" · ").toUpperCase();
 
     return r;
