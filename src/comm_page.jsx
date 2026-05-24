@@ -278,17 +278,14 @@ function AtisCard({ T, data, onSetAtisData, armState, rawText, onArm, onClearRaw
         }}>
           {isArmed ? "⏹ STOP" : "● ARM"}
         </button>
-        {/* CLR button — far right */}
-        <button onClick={() => onSetAtisData({ info:"",wind:"",altimeter:"",visibility:"",sky:"",caution:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
+        {/* CLR button — far right — clears everything */}
+        <button onClick={onClearRaw} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
       </div>
       {/* ── Raw captured text — high-visibility pilot-readable block ── */}
       {rawText ? (
         <div style={{ padding:"10px 14px", borderBottom:`1px solid ${T.border}`, background: isDone ? `${A.teal}10` : `${A.teal}06`, borderLeft: isDone ? `4px solid ${A.teal}` : `4px solid ${A.amber}` }}>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:6, marginBottom:6 }}>
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color: isArmed ? A.amber : A.teal, letterSpacing:2, fontWeight:700 }}>
-              {isArmed ? "▶ LIVE BUFFER" : "✓ CAPTURED TEXT"}
-            </div>
-            {isDone && <button onClick={onClearRaw} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, padding:"2px 8px", borderRadius:2, cursor:"pointer", background:"transparent", color:T.textDim, border:`1px solid ${T.border}` }}>DISMISS</button>}
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color: isArmed ? A.amber : A.teal, letterSpacing:2, fontWeight:700, marginBottom:6 }}>
+            {isArmed ? "▶ LIVE BUFFER" : "✓ CAPTURED TEXT"}
           </div>
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:16, fontWeight:700, color: isArmed ? A.amber : T.textMain, lineHeight:1.6, letterSpacing:0.4 }}>
             {rawText}
@@ -340,17 +337,14 @@ function TaxiCard({ T, data, onSetTaxiData, armState, rawText, onArm, onClearRaw
         }}>
           {isArmed ? "⏹ STOP" : "● ARM"}
         </button>
-        <button onClick={() => onSetTaxiData({ runway:"",route:"",holdShort:"",instructions:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
+        <button onClick={onClearRaw} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
       </div>
 
       {/* ── Raw captured text ── */}
       {rawText ? (
         <div style={{ padding:"10px 14px", borderBottom:`1px solid ${T.border}`, background: isDone ? `${A.blue}10` : `${A.blue}06`, borderLeft: isDone ? `4px solid ${A.blue}` : `4px solid ${A.amber}` }}>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:6, marginBottom:6 }}>
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color: isArmed ? A.amber : A.blue, letterSpacing:2, fontWeight:700 }}>
-              {isArmed ? "▶ LIVE BUFFER" : "✓ CAPTURED TEXT"}
-            </div>
-            {isDone && <button onClick={onClearRaw} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, padding:"2px 8px", borderRadius:2, cursor:"pointer", background:"transparent", color:T.textDim, border:`1px solid ${T.border}` }}>DISMISS</button>}
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color: isArmed ? A.amber : A.blue, letterSpacing:2, fontWeight:700, marginBottom:6 }}>
+            {isArmed ? "▶ LIVE BUFFER" : "✓ CAPTURED TEXT"}
           </div>
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:16, fontWeight:700, color: isArmed ? A.amber : T.textMain, lineHeight:1.6, letterSpacing:0.4 }}>
             {rawText}
@@ -436,16 +430,13 @@ function GndCard({ T, data, onSetGndData, armState, rawText, onArm, onClearRaw }
         }}>
           {isArmed ? "⏹ STOP" : "● ARM"}
         </button>
-        <button onClick={() => onSetGndData({ clearedTo:"",route:"",altitude:"",frequency:"",taxi:"",squawk:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
+        <button onClick={onClearRaw} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
       </div>
       {/* ── Raw captured text ── */}
       {rawText ? (
         <div style={{ padding:"10px 14px", borderBottom:`1px solid ${T.border}`, background: isDone ? `${A.green}10` : `${A.green}06`, borderLeft: isDone ? `4px solid ${A.green}` : `4px solid ${A.amber}` }}>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:6, marginBottom:6 }}>
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color: isArmed ? A.amber : A.green, letterSpacing:2, fontWeight:700 }}>
-              {isArmed ? "▶ LIVE BUFFER" : "✓ CAPTURED TEXT"}
-            </div>
-            {isDone && <button onClick={onClearRaw} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, padding:"2px 8px", borderRadius:2, cursor:"pointer", background:"transparent", color:T.textDim, border:`1px solid ${T.border}` }}>DISMISS</button>}
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color: isArmed ? A.amber : A.green, letterSpacing:2, fontWeight:700, marginBottom:6 }}>
+            {isArmed ? "▶ LIVE BUFFER" : "✓ CAPTURED TEXT"}
           </div>
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:16, fontWeight:700, color: isArmed ? A.amber : T.textMain, lineHeight:1.6, letterSpacing:0.4 }}>
             {rawText}
@@ -970,15 +961,12 @@ export function CommPage({
                   }}>
                     {ifrArmState==="armed" ? "⏹ STOP" : "● ARM"}
                   </button>
-                  <button onClick={() => onSetIfrData({ C:"",R:"",A:"",F:"",T:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
+                  <button onClick={onClearIfrRaw} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
                 </div>
                 {ifrRawText ? (
                   <div style={{ padding:"10px 14px", borderBottom:`1px solid ${T.border}`, background: ifrArmState==="done" ? `${A.amber}10` : `${A.amber}06`, borderLeft: ifrArmState==="done" ? `4px solid ${A.amber}` : `4px solid ${A.amber}60` }}>
-                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:6, marginBottom:6 }}>
-                      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:A.amber, letterSpacing:2, fontWeight:700 }}>
-                        {ifrArmState==="armed" ? "▶ LIVE BUFFER" : "✓ CAPTURED TEXT"}
-                      </div>
-                      {ifrArmState==="done" && <button onClick={onClearIfrRaw} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, padding:"2px 8px", borderRadius:2, cursor:"pointer", background:"transparent", color:T.textDim, border:`1px solid ${T.border}` }}>DISMISS</button>}
+                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:A.amber, letterSpacing:2, fontWeight:700, marginBottom:6 }}>
+                      {ifrArmState==="armed" ? "▶ LIVE BUFFER" : "✓ CAPTURED TEXT"}
                     </div>
                     <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:16, fontWeight:700, color: ifrArmState==="armed" ? A.amber : T.textMain, lineHeight:1.6, letterSpacing:0.4 }}>
                       {ifrRawText}
