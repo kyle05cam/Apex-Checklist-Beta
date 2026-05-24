@@ -9,7 +9,7 @@
 //   rmsLevel        — 0–1
 //   transcript      — string
 //   txLog           — array  [{id,text,ts,type,tokens,nwkraft}]
-//   watchdogState   — "clear"|"alert"|"unanswered"
+//   watchdogState   — "clear"|"pending"|"alert"|"unanswered"
 //   watchdogTx      — object|null
 //   ackCountdown    — number
 //   onStartListen   — fn()
@@ -23,6 +23,8 @@
 //   onSetIfrData    — fn(data)
 //   atisData        — { info,wind,altimeter,visibility,sky,caution }
 //   onSetAtisData   — fn(data)
+//   taxiData        — { runway,route,holdShort,instructions }
+//   onSetTaxiData   — fn(data)
 //   gndData         — { clearedTo,route,altitude,frequency,taxi,squawk }
 //   onSetGndData    — fn(data)
 // ──────
@@ -312,6 +314,94 @@ function AtisCard({ T, data, onSetAtisData, armState, rawText, onArm, onClearRaw
   );
 }
 
+// ─── TAXI INSTRUCTIONS CARD ───────────────────────────────────────────────────
+function TaxiCard({ T, data, onSetTaxiData, armState, rawText, onArm, onClearRaw }) {
+  const isArmed = armState === "armed";
+  const isDone  = armState === "done";
+  return (
+    <div style={{ background:T.cardBg, border:`2px solid ${isArmed ? A.blue : isDone ? `${A.blue}60` : `${A.blue}28`}`, borderRadius:5, overflow:"hidden", transition:"all 0.2s" }}>
+      {/* ── Header ── */}
+      <div style={{ background: isArmed ? `${A.blue}20` : `${A.blue}12`, borderBottom:`2px solid ${A.blue}`, padding:"10px 12px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
+        <div style={{ flex:1 }}>
+          <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:14, fontWeight:700, letterSpacing:3, color:A.blue }}>TAXI INSTRUCTIONS</div>
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:1 }}>
+            {isArmed ? "● RECORDING…" : isDone ? "CAPTURED · AI PARSED" : "TAP ARM TO CAPTURE"}
+          </div>
+        </div>
+        <button onClick={onArm} style={{
+          fontFamily:"'Oswald',sans-serif", fontSize:13, fontWeight:700, letterSpacing:2,
+          padding:"10px 20px", borderRadius:5, cursor:"pointer", minWidth:90,
+          background: isArmed ? A.blue : `${A.blue}18`,
+          color: isArmed ? "#000" : A.blue,
+          border:`2px solid ${A.blue}`,
+          boxShadow: isArmed ? `0 0 14px ${A.blue}70` : "none",
+          animation: isArmed ? "commGlow 1.2s ease infinite" : "none",
+          transition:"all 0.15s",
+        }}>
+          {isArmed ? "⏹ STOP" : "● ARM"}
+        </button>
+        <button onClick={() => onSetTaxiData({ runway:"",route:"",holdShort:"",instructions:"" })} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
+      </div>
+
+      {/* ── Raw captured text ── */}
+      {rawText ? (
+        <div style={{ padding:"10px 14px", borderBottom:`1px solid ${T.border}`, background: isDone ? `${A.blue}10` : `${A.blue}06`, borderLeft: isDone ? `4px solid ${A.blue}` : `4px solid ${A.amber}` }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:6, marginBottom:6 }}>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color: isArmed ? A.amber : A.blue, letterSpacing:2, fontWeight:700 }}>
+              {isArmed ? "▶ LIVE BUFFER" : "✓ CAPTURED TEXT"}
+            </div>
+            {isDone && <button onClick={onClearRaw} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, padding:"2px 8px", borderRadius:2, cursor:"pointer", background:"transparent", color:T.textDim, border:`1px solid ${T.border}` }}>DISMISS</button>}
+          </div>
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:16, fontWeight:700, color: isArmed ? A.amber : T.textMain, lineHeight:1.6, letterSpacing:0.4 }}>
+            {rawText}
+          </div>
+        </div>
+      ) : isArmed ? (
+        <div style={{ padding:"10px 14px", borderBottom:`1px solid ${T.border}`, background:`${A.blue}05`, borderLeft:`4px solid ${A.blue}40` }}>
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:A.blue, letterSpacing:1, fontStyle:"italic", animation:"commPulse 1.5s ease infinite" }}>
+            — listening · minimum 8s recording window active —
+          </div>
+        </div>
+      ) : null}
+
+      {/* ── Data fields ── */}
+      <div style={{ padding:"8px 12px", display:"flex", flexDirection:"column", gap:6 }}>
+        {/* Runway — standard field */}
+        <MiniScribbleField T={T} label="RUNWAY" color={A.blue} placeholder="e.g. 12C"
+          value={data.runway||""} onChange={v => onSetTaxiData({ ...data, runway:v })} />
+
+        {/* Route — standard field */}
+        <MiniScribbleField T={T} label="TAXI VIA" color={A.teal} placeholder="e.g. Y · Y1 · B"
+          value={data.route||""} onChange={v => onSetTaxiData({ ...data, route:v })} />
+
+        {/* Hold Short — safety-critical, red, larger */}
+        <div style={{ background:`${A.red}08`, border:`1px solid ${A.red}30`, borderLeft:`4px solid ${A.red}`, borderRadius:4, padding:"8px 10px" }}>
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:A.red, letterSpacing:2, marginBottom:5, fontWeight:700 }}>
+            ⚠ HOLD SHORT
+          </div>
+          <input
+            type="text"
+            value={data.holdShort||""}
+            onChange={e => onSetTaxiData({ ...data, holdShort:e.target.value })}
+            placeholder="e.g. RWY 12R"
+            style={{
+              width:"100%", boxSizing:"border-box",
+              background:T.inputBg, border:`1px solid ${A.red}40`,
+              borderRadius:3, padding:"6px 10px", outline:"none",
+              fontFamily:"'Share Tech Mono',monospace", fontSize:16, fontWeight:700,
+              color: data.holdShort ? A.red : T.textDim, caretColor:A.red,
+            }}
+          />
+        </div>
+
+        {/* Instructions — secondary */}
+        <MiniScribbleField T={T} label="INSTRUCTIONS" color={A.amber} placeholder="e.g. Contact tower 119.9 when ready"
+          value={data.instructions||""} onChange={v => onSetTaxiData({ ...data, instructions:v })} />
+      </div>
+    </div>
+  );
+}
+
 // ─── GROUND CLEARANCE CARD ────────────────────────────────────────────────────
 function GndCard({ T, data, onSetGndData, armState, rawText, onArm, onClearRaw }) {
   const FIELDS = [
@@ -490,6 +580,12 @@ export function CommPage({
   atisRawText    = "",
   onArmAtis      = () => {},
   onClearAtisRaw = () => {},
+  taxiData       = { runway:"",route:"",holdShort:"",instructions:"" },
+  onSetTaxiData  = () => {},
+  taxiArmState   = "idle",
+  taxiRawText    = "",
+  onArmTaxi      = () => {},
+  onClearTaxiRaw = () => {},
   gndData        = { clearedTo:"",route:"",altitude:"",frequency:"",taxi:"",squawk:"" },
   onSetGndData   = () => {},
   gndArmState    = "idle",
@@ -848,6 +944,9 @@ export function CommPage({
              <AtisCard T={T} data={atisData} onSetAtisData={onSetAtisData}
                 armState={atisArmState} rawText={atisRawText}
                 onArm={onArmAtis} onClearRaw={onClearAtisRaw} />
+              <TaxiCard T={T} data={taxiData} onSetTaxiData={onSetTaxiData}
+                armState={taxiArmState} rawText={taxiRawText}
+                onArm={onArmTaxi} onClearRaw={onClearTaxiRaw} />
               <GndCard  T={T} data={gndData}  onSetGndData={onSetGndData}
                 armState={gndArmState} rawText={gndRawText}
                 onArm={onArmGnd} onClearRaw={onClearGndRaw} />
