@@ -582,7 +582,7 @@ export function CommPage({
 
         <div style={{ flex:1 }}>
           <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:14, fontWeight:700, letterSpacing:3, color:A.teal }}>
-            COMM WATCHDOG
+            SMART COMMUNICATION AI
           </div>
           <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:1.5, marginTop:1 }}>
             CALLSIGN: {tail} · {listening ? "MONITORING" : "STANDBY"}
