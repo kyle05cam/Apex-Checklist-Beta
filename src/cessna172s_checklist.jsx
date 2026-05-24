@@ -1477,7 +1477,19 @@ const commParseCraft = (text) => {
 
 const commParseTaxi = (text) => {
     const r = { runway:"", route:"", holdShort:"", instructions:"" };
+    // normalizePhonetic converts digit words → numerals, then tFreq adds frequency/tense fixes
     const t = normalizePhonetic(text);
+
+    // Normalize "advised tower on 12298" → "advise tower on 122.98"
+    // Speech engine drops the decimal in frequencies after "on" or "tower on"
+    const tFreq = t
+      .replace(/\badvised\b/gi, "advise")  // past tense → present
+      // Merge spaced single digits that belong together: "1 2" → "12" (only in runway context)
+      .replace(/\b(\d)\s+(\d)\b(?=\s+(?:left|right|center|charlie|romeo|lima))/gi, "$1$2")
+      .replace(/\b(tower\s+on|on\s+frequency|contact\s+tower\s+on|advise\s+tower\s+on)\s+(\d{3})(\d{2})\b/gi,
+        (_, prefix, a, b) => `${prefix} ${a}.${b}`)  // 12298 → 122.98
+      .replace(/\b(tower\s+on|on\s+frequency|contact\s+tower\s+on|advise\s+tower\s+on)\s+(\d{2})(\d{2})\b/gi,
+        (_, prefix, a, b) => `${prefix} ${a}.${b}`); // 1298 → 12.98 edge case
 
     // Expand phonetic runway suffixes: charlie→C, romeo→R, lima→L
     const RUNWAY_PHONETIC = { charlie:"C", romeo:"R", lima:"L", left:"L", right:"R", center:"C" };
@@ -1485,10 +1497,9 @@ const commParseTaxi = (text) => {
       /\b(\d{1,2})\s+(charlie|romeo|lima|left|right|center)\b/gi,
       (_, num, suffix) => num + (RUNWAY_PHONETIC[suffix.toLowerCase()]||suffix.toUpperCase())
     );
-    const tRwy = expandRunway(t);
+    const tRwy = expandRunway(tFreq);
 
     // Expand phonetic taxiway names: "Yankee 1" → "Y1", "Bravo" → "B"
-    // Keep alphanumeric combos intact: "Y1", "B6", etc.
     const TAXIWAY_PHONETIC = {
       alpha:"A",bravo:"B",charlie:"C",delta:"D",echo:"E",foxtrot:"F",
       golf:"G",hotel:"H",india:"I",juliet:"J",juliett:"J",kilo:"K",
@@ -1496,40 +1507,57 @@ const commParseTaxi = (text) => {
       romeo:"R",sierra:"S",tango:"T",uniform:"U",victor:"V",
       whiskey:"W",xray:"X",yankee:"Y",zulu:"Z",
     };
-    const expandTaxiways = (s) => s.replace(
-      /\b(alpha|bravo|charlie|delta|echo|foxtrot|golf|hotel|india|juliett?|kilo|lima|mike|november|oscar|papa|quebec|romeo|sierra|tango|uniform|victor|whiskey|xray|yankee|zulu)\s*(\d*)\b/gi,
-      (_, name, num) => (TAXIWAY_PHONETIC[name.toLowerCase()]||name.toUpperCase()) + num
-    );
+    // Expand each phonetic name+optional digit, then insert " > " between adjacent
+    // single-letter taxiway tokens so "Yankee Yankee 1 Bravo Hotel" → "Y > Y1 > B > H"
+    const expandTaxiways = (s) => {
+      // Step 1: replace each phonetic+digit with its letter(+digit)
+      let expanded = s.replace(
+        /\b(alpha|bravo|charlie|delta|echo|foxtrot|golf|hotel|india|juliett?|kilo|lima|mike|november|oscar|papa|quebec|romeo|sierra|tango|uniform|victor|whiskey|xray|yankee|zulu)\s*(\d*)\b/gi,
+        (_, name, num) => "__TW__" + (TAXIWAY_PHONETIC[name.toLowerCase()]||name.toUpperCase()) + num + "__TW__"
+      );
+      // Step 2: merge adjacent taxiway tokens separated by commas/spaces into " > " list
+      expanded = expanded.replace(/__TW__([A-Z0-9]+)__TW__(\s*[,]?\s*)(?=__TW__)/g, "$1 > ");
+      expanded = expanded.replace(/__TW__([A-Z0-9]+)__TW__/g, "$1");
+      return expanded;
+    };
 
-    // runway — "taxi to runway 12C" / "taxi runway 12C"
-    const rwyMatch = tRwy.match(/(?:taxi\s+(?:to\s+)?(?:runway\s+)?|runway\s+)(\d{1,2}[LRC]?)/i);
-    if (rwyMatch) r.runway = `RWY ${rwyMatch[1].toUpperCase()}`;
+    // ── RUNWAY — extract ONLY from the "taxi to runway X" phrase, NOT from hold short ──
+    // Strategy: find the runway designation that appears BEFORE "hold short" in the text.
+    // Also handle "runway 12R taxi via..." pattern where runway comes before the verb.
+    // We scan for all runway matches and take the first one (closest to start of transmission).
+    const allRwyMatches = [...tRwy.matchAll(/(?:runway\s+|rwy\s+)(\d{1,2}[LRC])/gi)];
+    const hsPos = tRwy.search(/hold\s+short/i);
+    // Take the first runway match that appears BEFORE "hold short"
+    const destRwy = allRwyMatches.find(m => hsPos === -1 || m.index < hsPos);
+    if (destRwy) r.runway = `RWY ${destRwy[1].toUpperCase()}`;
 
-    // route — "via Yankee, Yankee 1, Bravo" — everything between "via" and "hold short"
-    const viaMatch = t.match(/via\s+(.+?)(?:\s+hold\s+short|\s+hold\s+position|,?\s+contact|,?\s+advise|$)/i);
+    // ── ROUTE — "via X, Y, Z" up to "hold short" or instructions ──
+    // Use tRwy (which went through normalizePhonetic + expandRunway) so digit
+    // words like "one" are already "1" before taxiway expansion runs
+    const viaMatch = tRwy.match(/via\s+(.+?)(?:\s+hold\s+short|\s+hold\s+position|,?\s*advise|,?\s*contact|$)/i);
     if (viaMatch) {
-      r.route = expandTaxiways(viaMatch[1])
-        .replace(/\s*,\s*/g, " · ")  // "Y, Y1, B" → "Y · Y1 · B"
-        .replace(/\s+/g, " ")
-        .trim()
-        .toUpperCase();
+      let raw = viaMatch[1].replace(/,/g, " ").trim();
+      r.route = expandTaxiways(raw).replace(/\s+/g," ").trim().toUpperCase();
     }
 
-    // holdShort — "hold short of runway 12R" / "hold short runway 12R"
-    const hsMatch = tRwy.match(/hold\s+short\s+(?:of\s+)?(?:runway\s+)?(\d{1,2}[LRC]?)/i);
+    // ── HOLD SHORT — from hold short phrase ──
+    const hsMatch = tRwy.match(/hold\s+short\s+(?:of\s+)?(?:runway\s+)?(\d{1,2}[LRC])/i);
     if (hsMatch) r.holdShort = `RWY ${hsMatch[1].toUpperCase()}`;
-    else if (/hold\s+position/i.test(t)) r.holdShort = "HOLD POSITION";
+    else if (/hold\s+position/i.test(tFreq)) r.holdShort = "HOLD POSITION";
 
-    // instructions — contact tower, advise run up, follow company, etc.
+    // ── INSTRUCTIONS — contact/advise tower with frequency, run up, follow company ──
     const instPatterns = [
-      /contact\s+(?:tower|ground|approach|departure)[^,.]*/i,
+      /advise\s+tower\s+on\s+[\d.]+/i,                           // advise tower on 122.98
+      /contact\s+(?:tower|ground|approach|departure)[^,.]*/i,    // contact tower ...
       /advise\s+(?:when\s+)?(?:run\s*up\s*complete|ready|airborne)[^,.]*/i,
       /run\s*up\s*area[^,.]*/i,
       /follow\s+(?:company|traffic|the)[^,.]*/i,
-      /monitor\s+tower[^,.]*/i,
+      /monitor\s+(?:tower|ground)[^,.]*/i,
       /when\s+ready[^,.]*/i,
     ];
-    const instMatches = instPatterns.map(rx => { const m = t.match(rx); return m ? m[0].trim() : null; }).filter(Boolean);
+    const instMatches = instPatterns
+      .map(rx => { const m = tFreq.match(rx); return m ? m[0].trim() : null; })
+      .filter(Boolean);
     if (instMatches.length) r.instructions = instMatches.join(" · ").toUpperCase();
 
     return r;
