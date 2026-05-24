@@ -1082,7 +1082,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   const [commAckCountdown,  setCommAckCountdown]  = useState(0);
   const [commReplayActive,  setCommReplayActive]  = useState(false);
   const [commForceIfr,      setCommForceIfr]      = useState(false);
-  const [commIfrData,       setCommIfrData]       = useState({ N:"",W:"",K:"",R:"",A:"",F:"",T:"" });
+  const [commIfrData,       setCommIfrData]       = useState({ C:"",R:"",A:"",F:"",T:"" });
   const [commAtisData,      setCommAtisData]      = useState({ info:"",wind:"",altimeter:"",visibility:"",sky:"",caution:"" });
   const [commGndData,       setCommGndData]        = useState({ clearedTo:"",route:"",altitude:"",frequency:"",taxi:"",squawk:"" });
   const commWorkerRef       = useRef(null);
@@ -1310,7 +1310,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
     ifrArmStateRef.current = buf ? "done" : "idle";
     if (!buf) { setIfrArmState("idle"); return; }
     setIfrRawText(buf);
-    setCommIfrData(commParseNwkraft(buf));
+    setCommIfrData(commParseCraft(buf));
     setIfrArmState("done");
     ifrBufferRef.current = "";
   }, []);
@@ -1404,40 +1404,44 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
     return "general";
   };
 
-const commParseNwkraft = (text) => {
-    const r = { N:"", W:"", K:"", R:"", A:"", F:"", T:"" };
+const commParseCraft = (text) => {
+    // CRAFT = Clearance limit, Route, Altitude, Frequency, Transponder
+    const r = { C:"", R:"", A:"", F:"", T:"" };
     const t = normalizePhonetic(text);
 
-    // N — Name / destination
+    // C — Clearance limit (destination / cleared to)
     const dest = t.match(/cleared\s+(?:to\s+)?([A-Z][A-Z0-9\s]{2,20}?)(?:\s+via|\s+as\s+filed|\s+climb|\s+maintain|,)/i);
-    if (dest) r.N = dest[1].trim();
-    else if (/cleared\s+as\s+filed/i.test(t)) r.N = "AS FILED";
-
-    // W — Weather / flight rules
-    r.W = /\bifr\b/i.test(t) ? "IFR FLIGHT PLAN" : "";
-
-    // K — Squawk code (4 digits after normalization)
-    const sqk = t.match(/squawk\s+(\d{4})/i);
-    if (sqk) r.K = sqk[1];
+    if (dest) r.C = dest[1].trim();
+    else if (/cleared\s+as\s+filed/i.test(t)) r.C = "AS FILED";
+    else if (/cleared\s+direct/i.test(t)) {
+      const dir = t.match(/cleared\s+direct\s+([A-Z][A-Z0-9\s]{2,20}?)(?:\s+via|\s+climb|\s+maintain|,|$)/i);
+      if (dir) r.C = `DIRECT ${dir[1].trim()}`;
+    }
 
     // R — Route
     const via = t.match(/via\s+([A-Z0-9\s,]+?)(?:\s+maintain|\s+climb|\s+expect|$)/i);
     if (via) r.R = via[1].trim();
     else if (/radar\s+vectors/i.test(t)) r.R = "RADAR VECTORS";
     else if (/as\s+filed/i.test(t)) r.R = "AS FILED";
+    else if (/direct/i.test(t)) r.R = "DIRECT";
 
-    // A — Altitude
-    const alt = t.match(/(?:maintain|climb\s+and\s+maintain|climb\s+to)\s+(\d[\d,]+\s*(?:feet|ft)?)/i);
+    // A — Altitude (initial + expect)
+    const alt = t.match(/(?:maintain|climb\s+(?:and\s+)?maintain|climb\s+to)\s+(\d[\d,]+\s*(?:feet|ft)?)/i);
     if (alt) r.A = alt[1].replace(/,/g,"").trim();
-    const exp = t.match(/expect\s+(\d[\d,]+)\s*(?:feet|ft)?/i);
-    if (exp) r.A = (r.A ? r.A + " / EXP " : "EXP ") + exp[1];
+    const exp = t.match(/expect\s+(\d[\d,]+)(?:\s+(\d+)\s+minutes?\s+after\s+(?:departure|takeoff))?/i);
+    if (exp) {
+      const expAlt = exp[1].replace(/,/g,"");
+      const expMin = exp[2] ? ` / ${exp[2]} MIN AFT DEP` : "";
+      r.A = (r.A ? r.A + " / EXP " : "EXP ") + expAlt + expMin;
+    }
 
-    // F — Departure frequency (after normalization "one two niner point four" → "129.4")
+    // F — Departure frequency
     const frq = t.match(/(?:contact|departure|frequency)\s+(\d{2,3}\.\d+)/i);
     if (frq) r.F = frq[1];
 
-    // T — Transponder summary
-    r.T = r.K ? `SQUAWK ${r.K}` : "";
+    // T — Transponder / squawk
+    const sqk = t.match(/squawk\s+(\d{4})/i);
+    if (sqk) r.T = `SQUAWK ${sqk[1]}`;
 
     return r;
   };
@@ -1717,7 +1721,7 @@ const commParseGround = (text) => {
     // ── Standard watchdog + tx log ────────────────────────────────────────
     const type   = commDetectType(corrected);
     const tokens = (type==="landing"||type==="pattern") ? commParseLanding(corrected) : null;
-    const nwkraft= (type==="ifr_departure"||type==="ifr_approach"||commForceIfr) ? commParseNwkraft(corrected) : null;
+    const nwkraft= (type==="ifr_departure"||type==="ifr_approach"||commForceIfr) ? commParseCraft(corrected) : null;
     const entry  = { id:++commTxIdRef.current, text:corrected, ts:new Date(), type, tokens, nwkraft };
     setCommTxLog(prev=>[entry,...prev].slice(0,40));
     if (nwkraft) setCommIfrData(nwkraft);
