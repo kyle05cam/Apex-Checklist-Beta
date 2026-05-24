@@ -2858,14 +2858,18 @@ const commParseGround = (text) => {
                 cursor: "pointer", padding: "10px 4px", transition: "all 0.12s",
               }}
             >
+              {/* Microphone icon */}
               <svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="3" fill={currentPage==="comm"?"#4ae8c8":"#2a4a48"}/>
-                <path d="M12 12 Q8 7 4 3" stroke={currentPage==="comm"?"#4ae8c8":"#2a4a48"} strokeWidth="1.5" strokeLinecap="round"/>
-                <path d="M12 12 Q16 7 20 3" stroke={currentPage==="comm"?"#4ae8c8":"#2a4a48"} strokeWidth="1.5" strokeLinecap="round"/>
-                <line x1="12" y1="15" x2="12" y2="22" stroke={currentPage==="comm"?"#4ae8c8":"#2a4a48"} strokeWidth="2" strokeLinecap="round"/>
+                <rect x="9" y="2" width="6" height="11" rx="3"
+                  fill={currentPage==="comm" ? "#4ae8c8" : "#5a8a80"}
+                  stroke={currentPage==="comm" ? "#4ae8c8" : "#5a8a80"}
+                  strokeWidth="0.5"/>
+                <path d="M5 11a7 7 0 0 0 14 0" stroke={currentPage==="comm" ? "#4ae8c8" : "#5a8a80"} strokeWidth="2" strokeLinecap="round"/>
+                <line x1="12" y1="18" x2="12" y2="22" stroke={currentPage==="comm" ? "#4ae8c8" : "#5a8a80"} strokeWidth="2" strokeLinecap="round"/>
+                <line x1="9" y1="22" x2="15" y2="22" stroke={currentPage==="comm" ? "#4ae8c8" : "#5a8a80"} strokeWidth="2" strokeLinecap="round"/>
               </svg>
-              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, fontWeight:700, letterSpacing:0.5, color: currentPage==="comm"?"#4ae8c8":"#2a4a48", textAlign:"center", lineHeight:1.2, textTransform:"uppercase" }}>
-                COMM{"\n"}WATCH
+              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, fontWeight:700, letterSpacing:0.5, color: currentPage==="comm" ? "#4ae8c8" : "#5a8a80", textAlign:"center", lineHeight:1.2, textTransform:"uppercase" }}>
+                SMART{"\n"}COMS
               </div>
             </button>
           </div>
