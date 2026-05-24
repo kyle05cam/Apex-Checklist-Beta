@@ -371,7 +371,7 @@ function TaxiCard({ T, data, onSetTaxiData, armState, rawText, onArm, onClearRaw
           value={data.runway||""} onChange={v => onSetTaxiData({ ...data, runway:v })} />
 
         {/* Route — standard field */}
-        <MiniScribbleField T={T} label="TAXI VIA" color={A.teal} placeholder="e.g. Y · Y1 · B"
+        <MiniScribbleField T={T} label="TAXI VIA" color={A.teal} placeholder="e.g. Y > Y1 > B > H"
           value={data.route||""} onChange={v => onSetTaxiData({ ...data, route:v })} />
 
         {/* Hold Short — safety-critical, red, larger */}
