@@ -545,36 +545,29 @@ function CraftCard({ T, data, tail, onClear, forceIfrMode, onToggleForce, onSetI
 
 // ─── NEAREST FREQS TAB COMPONENT ─────────────────────────────────────────────
 function NearestFreqsTab({ T, A }) {
-  const [gpsState,    setGpsState]    = useState("idle"); // idle | loading | active | denied | error
-  const [position,    setPosition]    = useState(null);   // { lat, lon, accuracy, heading, speed }
-  const [airports,    setAirports]    = useState([]);
-  const [expandedId,  setExpandedId]  = useState(null);   // which airport card is expanded
-  const [lastUpdate,  setLastUpdate]  = useState(null);
-  const [radius,      setRadius]      = useState(30);     // NM search radius
+  const [gpsState,   setGpsState]   = useState("idle");
+  const [position,   setPosition]   = useState(null);
+  const [airports,   setAirports]   = useState([]);
+  const [expandedId, setExpandedId] = useState(null);
+  const [lastUpdate, setLastUpdate] = useState(null);
+  const [radius,     setRadius]     = useState(30);
   const watchIdRef = useRef(null);
 
-  // ── FREQ TYPE COLOR/LABEL ─────────────────────────────────────────────────
-  const freqMeta = (type) => FREQ_META[type] || { color: "#7a8090", label: type };
+  const freqMeta = (type) => FREQ_META[type] || { color:"#7a8090", label:type, priority:8 };
 
-  // ── GPS WATCH ─────────────────────────────────────────────────────────────
   const startGps = useCallback(() => {
-    if (!navigator.geolocation) {
-      setGpsState("error");
-      return;
-    }
+    if (!navigator.geolocation) { setGpsState("error"); return; }
     setGpsState("loading");
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
-        const { latitude: lat, longitude: lon, accuracy, heading, speed } = pos.coords;
+        const { latitude:lat, longitude:lon, accuracy, heading, speed } = pos.coords;
         setPosition({ lat, lon, accuracy, heading, speed });
         setAirports(getNearestAirports(lat, lon, 6, radius));
         setLastUpdate(new Date());
         setGpsState("active");
       },
-      (err) => {
-        setGpsState(err.code === 1 ? "denied" : "error");
-      },
-      { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
+      (err) => { setGpsState(err.code === 1 ? "denied" : "error"); },
+      { enableHighAccuracy:true, maximumAge:10000, timeout:15000 }
     );
   }, [radius]);
 
@@ -587,28 +580,28 @@ function NearestFreqsTab({ T, A }) {
     setPosition(null);
   }, []);
 
-  // Re-query airports when radius changes while GPS is active
+  // AUTO-START on mount — no button press needed
   useEffect(() => {
-    if (position && gpsState === "active") {
+    startGps();
+    return () => {
+      if (watchIdRef.current !== null)
+        navigator.geolocation.clearWatch(watchIdRef.current);
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-query when radius changes
+  useEffect(() => {
+    if (position && gpsState === "active")
       setAirports(getNearestAirports(position.lat, position.lon, 6, radius));
-    }
-  }, [radius]);
+  }, [radius]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Cleanup on unmount
-  useEffect(() => () => {
-    if (watchIdRef.current !== null)
-      navigator.geolocation.clearWatch(watchIdRef.current);
-  }, []);
-
-  // ── BEARING ───────────────────────────────────────────────────────────────
   const bearingTo = (lat1, lon1, lat2, lon2) => {
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const y = Math.sin(dLon) * Math.cos(lat2 * Math.PI / 180);
     const x = Math.cos(lat1 * Math.PI / 180) * Math.sin(lat2 * Math.PI / 180) -
               Math.sin(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.cos(dLon);
     const brng = ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360;
-    const dirs = ["N","NE","E","SE","S","SW","W","NW"];
-    return dirs[Math.round(brng / 45) % 8];
+    return ["N","NE","E","SE","S","SW","W","NW"][Math.round(brng / 45) % 8];
   };
 
   return (
@@ -616,132 +609,96 @@ function NearestFreqsTab({ T, A }) {
 
       {/* ── GPS Status Bar ── */}
       <div style={{
-        flexShrink:0, padding:"10px 14px",
-        background: gpsState === "active"
-          ? `${A.green}10`
-          : gpsState === "denied" || gpsState === "error"
-            ? `${A.red}10` : `${A.blue}08`,
+        flexShrink:0, padding:"8px 14px",
+        background: gpsState==="active" ? `${A.green}10`
+          : (gpsState==="denied"||gpsState==="error") ? `${A.red}10` : `${A.blue}08`,
         borderBottom:`1px solid ${T.border}`,
         display:"flex", alignItems:"center", gap:10,
       }}>
-        {/* Status dot */}
         <div style={{
-          width:10, height:10, borderRadius:"50%", flexShrink:0,
-          background: gpsState==="active" ? A.green : gpsState==="loading" ? A.amber : gpsState==="denied"||gpsState==="error" ? A.red : T.textDim,
+          width:9, height:9, borderRadius:"50%", flexShrink:0,
+          background: gpsState==="active" ? A.green : gpsState==="loading" ? A.amber
+            : (gpsState==="denied"||gpsState==="error") ? A.red : T.textDim,
           boxShadow: gpsState==="active" ? `0 0 8px ${A.green}` : "none",
           animation: gpsState==="loading" ? "commPulse 1s ease infinite" : "none",
         }}/>
-
         <div style={{ flex:1 }}>
-          {gpsState === "active" && position ? (
+          {gpsState==="active" && position ? (
             <div>
               <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:A.green, letterSpacing:1.5 }}>
-                GPS ACTIVE · {position.lat.toFixed(4)}° {position.lat >= 0 ? "N" : "S"} / {Math.abs(position.lon).toFixed(4)}° {position.lon >= 0 ? "E" : "W"}
+                GPS ACTIVE · {Math.abs(position.lat).toFixed(4)}°{position.lat>=0?"N":"S"} / {Math.abs(position.lon).toFixed(4)}°{position.lon>=0?"E":"W"}
               </div>
-              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, marginTop:2 }}>
+              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:T.textDim, marginTop:1 }}>
                 ACC ±{Math.round(position.accuracy)}M
-                {position.speed != null ? ` · GS ${Math.round((position.speed || 0) * 1.944)}KT` : ""}
-                {lastUpdate ? ` · UPDATED ${lastUpdate.toLocaleTimeString("en-US",{hour12:false,hour:"2-digit",minute:"2-digit",second:"2-digit"})}` : ""}
+                {position.speed!=null ? ` · GS ${Math.round((position.speed||0)*1.944)}KT` : ""}
+                {lastUpdate ? ` · ${lastUpdate.toLocaleTimeString("en-US",{hour12:false,hour:"2-digit",minute:"2-digit",second:"2-digit"})}` : ""}
               </div>
             </div>
-          ) : gpsState === "loading" ? (
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:A.amber, letterSpacing:1.5 }}>
-              ACQUIRING GPS SIGNAL…
-            </div>
-          ) : gpsState === "denied" ? (
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:A.red, letterSpacing:1.5 }}>
-              GPS ACCESS DENIED — enable location in iPad settings
-            </div>
-          ) : gpsState === "error" ? (
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:A.red, letterSpacing:1.5 }}>
-              GPS ERROR — check device settings
-            </div>
+          ) : gpsState==="loading" ? (
+            <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:A.amber, letterSpacing:1.5 }}>ACQUIRING GPS…</span>
+          ) : gpsState==="denied" ? (
+            <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:A.red, letterSpacing:1.5 }}>GPS DENIED — enable in iPad Settings → Privacy → Location</span>
+          ) : gpsState==="error" ? (
+            <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:A.red, letterSpacing:1.5 }}>GPS ERROR — tap retry</span>
           ) : (
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:T.textDim, letterSpacing:1.5 }}>
-              TAP START TO ENABLE GPS FREQUENCY LOOKUP
-            </div>
+            <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:T.textDim, letterSpacing:1.5 }}>LOCATING…</span>
           )}
         </div>
-
-        {/* Radius selector */}
-        {gpsState === "active" && (
-          <div style={{ display:"flex", gap:3, alignItems:"center" }}>
-            {[20, 30, 50].map(r => (
+        {/* Radius selector — only when active */}
+        {gpsState==="active" && (
+          <div style={{ display:"flex", gap:3 }}>
+            {[20,30,50].map(r => (
               <button key={r} onClick={() => setRadius(r)} style={{
                 fontFamily:"'Share Tech Mono',monospace", fontSize:8, padding:"3px 7px",
                 borderRadius:3, cursor:"pointer",
-                background: radius === r ? `${A.green}20` : "transparent",
-                color: radius === r ? A.green : T.textDim,
-                border:`1px solid ${radius === r ? A.green : T.border}`,
+                background: radius===r ? `${A.green}20` : "transparent",
+                color: radius===r ? A.green : T.textDim,
+                border:`1px solid ${radius===r ? A.green : T.border}`,
               }}>{r}NM</button>
             ))}
           </div>
         )}
-
-        {/* Start/Stop button */}
-        <button
-          onClick={() => gpsState === "active" || gpsState === "loading" ? stopGps() : startGps()}
-          style={{
-            fontFamily:"'Oswald',sans-serif", fontSize:11, fontWeight:700, letterSpacing:2,
-            padding:"5px 14px", borderRadius:4, cursor:"pointer", flexShrink:0,
-            background: gpsState === "active" ? `${A.red}18` : `${A.green}18`,
-            color: gpsState === "active" ? A.red : A.green,
-            border:`1.5px solid ${gpsState === "active" ? A.red : A.green}`,
-            transition:"all 0.15s",
-          }}
-        >
-          {gpsState === "active" ? "⏹ STOP" : gpsState === "loading" ? "…" : "▶ START"}
-        </button>
+        {/* Manual retry button for error/denied states */}
+        {(gpsState==="error"||gpsState==="idle") && (
+          <button onClick={startGps} style={{
+            fontFamily:"'Share Tech Mono',monospace", fontSize:8, padding:"4px 10px",
+            borderRadius:3, cursor:"pointer", flexShrink:0,
+            background:`${A.green}18`, color:A.green, border:`1px solid ${A.green}`,
+          }}>RETRY</button>
+        )}
       </div>
 
       {/* ── Airport cards ── */}
       <div style={{ flex:1, overflowY:"auto", scrollbarWidth:"thin", padding:"8px 0" }}>
 
-        {gpsState === "idle" && (
+        {(gpsState==="idle"||gpsState==="loading") && (
           <div style={{ padding:"40px 20px", textAlign:"center" }}>
-            <div style={{ fontSize:36, marginBottom:10, opacity:0.25 }}>📡</div>
-            <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:13, letterSpacing:3, color:T.textDim }}>
-              NEAREST FREQUENCIES
-            </div>
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:T.textDim, opacity:0.6, marginTop:8, lineHeight:1.6 }}>
-              TAP START TO BEGIN GPS TRACKING{"\n"}
-              SHOWS NEAREST AIRPORTS &amp; FREQUENCIES{"\n"}
-              UPDATES AUTOMATICALLY AS YOU FLY
-            </div>
-          </div>
-        )}
-
-        {gpsState === "loading" && (
-          <div style={{ padding:"40px 20px", textAlign:"center" }}>
+            <div style={{ fontSize:32, marginBottom:10, opacity:0.25 }}>📡</div>
             <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:A.amber, letterSpacing:2, animation:"commPulse 1.5s ease infinite" }}>
-              ACQUIRING POSITION…
+              {gpsState==="loading" ? "ACQUIRING GPS POSITION…" : "INITIALIZING…"}
+            </div>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, marginTop:8, lineHeight:1.8 }}>
+              NEAREST AIRPORTS & FREQUENCIES{"\n"}WILL APPEAR HERE AUTOMATICALLY
             </div>
           </div>
         )}
 
-        {gpsState === "active" && airports.length === 0 && (
+        {gpsState==="active" && airports.length===0 && (
           <div style={{ padding:"30px 20px", textAlign:"center" }}>
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:T.textDim, letterSpacing:1 }}>
-              NO AIRPORTS FOUND WITHIN {radius}NM
-            </div>
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, opacity:0.5, marginTop:4 }}>
-              Try increasing the search radius above
-            </div>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:T.textDim, letterSpacing:1 }}>NO AIRPORTS FOUND WITHIN {radius}NM</div>
+            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, opacity:0.5, marginTop:4 }}>Increase search radius above</div>
           </div>
         )}
 
-        {gpsState === "active" && airports.map((ap, idx) => {
+        {gpsState==="active" && airports.map((ap, idx) => {
           const isExpanded = expandedId === ap.id;
           const isFirst    = idx === 0;
-          // Sort freqs by priority, filter EMRG to bottom
-          const sortedFreqs = [...ap.freqs].sort((a, b) => {
-            const pa = (FREQ_META[a.type]||{priority:8}).priority;
-            const pb = (FREQ_META[b.type]||{priority:8}).priority;
-            return pa - pb;
-          });
-          const topFreqs    = sortedFreqs.filter(f => f.type !== "EMRG").slice(0, 3);
-          const bearing     = position ? bearingTo(position.lat, position.lon, ap.lat, ap.lon) : "—";
-          const typeColor   = ap.type === "LARGE" ? A.teal : ap.type === "TOWERED" ? A.blue : A.green;
+          const sortedFreqs = [...ap.freqs].sort((a,b) =>
+            (freqMeta(a.type).priority||8) - (freqMeta(b.type).priority||8)
+          );
+          const topFreqs  = sortedFreqs.filter(f => f.type!=="EMRG").slice(0,3);
+          const bearing   = position ? bearingTo(position.lat,position.lon,ap.lat,ap.lon) : "—";
+          const typeColor = ap.type==="LARGE" ? A.teal : ap.type==="TOWERED" ? A.blue : A.green;
 
           return (
             <div key={ap.id} style={{
@@ -749,38 +706,32 @@ function NearestFreqsTab({ T, A }) {
               background:T.cardBg,
               border:`1px solid ${isFirst ? `${A.green}60` : T.border}`,
               borderLeft:`4px solid ${isFirst ? A.green : typeColor}`,
-              borderRadius:5,
-              overflow:"hidden",
-              transition:"all 0.15s",
+              borderRadius:5, overflow:"hidden", transition:"all 0.15s",
             }}>
-              {/* Airport header — always visible */}
-              <div
-                onClick={() => setExpandedId(isExpanded ? null : ap.id)}
-                style={{
-                  padding:"10px 12px", cursor:"pointer",
-                  display:"flex", alignItems:"center", gap:10,
-                  background: isFirst ? `${A.green}08` : "transparent",
-                }}
-              >
+              {/* Header row — always visible, tap to expand */}
+              <div onClick={() => setExpandedId(isExpanded ? null : ap.id)} style={{
+                padding:"10px 12px", cursor:"pointer",
+                display:"flex", alignItems:"center", gap:10,
+                background: isFirst ? `${A.green}08` : "transparent",
+              }}>
                 {/* Distance badge */}
                 <div style={{
                   flexShrink:0, textAlign:"center",
                   background: isFirst ? `${A.green}20` : `${T.border}40`,
                   border:`1px solid ${isFirst ? A.green : T.border}`,
-                  borderRadius:4, padding:"4px 8px", minWidth:56,
+                  borderRadius:4, padding:"4px 8px", minWidth:58,
                 }}>
-                  <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:18, fontWeight:700, color:isFirst ? A.green : T.textMain, lineHeight:1 }}>
+                  <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:20, fontWeight:700, color:isFirst?A.green:T.textMain, lineHeight:1 }}>
                     {ap.distNm.toFixed(1)}
                   </div>
                   <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:T.textDim, letterSpacing:1 }}>
                     NM {bearing}
                   </div>
                 </div>
-
-                {/* Airport info */}
+                {/* Info */}
                 <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:2 }}>
-                    <span style={{ fontFamily:"'Oswald',sans-serif", fontSize:14, fontWeight:700, letterSpacing:2, color:typeColor }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:3 }}>
+                    <span style={{ fontFamily:"'Oswald',sans-serif", fontSize:15, fontWeight:700, letterSpacing:2, color:typeColor }}>
                       {ap.id}
                     </span>
                     <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:typeColor, background:`${typeColor}14`, border:`1px solid ${typeColor}30`, borderRadius:2, padding:"1px 5px", letterSpacing:1 }}>
@@ -792,85 +743,54 @@ function NearestFreqsTab({ T, A }) {
                       </span>
                     )}
                   </div>
-                  <div style={{ fontFamily:"'Rajdhani',sans-serif", fontSize:12, color:T.textMuted||T.textDim, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                  <div style={{ fontFamily:"'Rajdhani',sans-serif", fontSize:12, color:T.textDim, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", marginBottom:5 }}>
                     {ap.name}
                   </div>
-                  {/* Top 3 freqs inline preview */}
-                  <div style={{ display:"flex", gap:5, marginTop:5, flexWrap:"wrap" }}>
-                    {topFreqs.map((f, fi) => {
+                  {/* Top freq pills */}
+                  <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
+                    {topFreqs.map((f,fi) => {
                       const fm = freqMeta(f.type);
                       return (
-                        <div key={fi} style={{
-                          display:"flex", alignItems:"center", gap:3,
-                          background:`${fm.color}12`, border:`1px solid ${fm.color}30`,
-                          borderRadius:3, padding:"2px 6px",
-                        }}>
-                          <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:fm.color, letterSpacing:1 }}>
-                            {fm.label}
-                          </span>
-                          <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, fontWeight:700, color:fm.color }}>
-                            {f.freq}
-                          </span>
+                        <div key={fi} style={{ display:"flex", alignItems:"center", gap:3, background:`${fm.color}12`, border:`1px solid ${fm.color}30`, borderRadius:3, padding:"2px 6px" }}>
+                          <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:fm.color, letterSpacing:1 }}>{fm.label}</span>
+                          <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, fontWeight:700, color:fm.color }}>{f.freq}</span>
                         </div>
                       );
                     })}
                     {ap.freqs.length > topFreqs.length && (
                       <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:T.textDim, alignSelf:"center" }}>
-                        +{ap.freqs.length - topFreqs.length} more ▾
+                        +{ap.freqs.length - topFreqs.length} ▾
                       </span>
                     )}
                   </div>
                 </div>
-
-                {/* Expand chevron */}
-                <div style={{ fontSize:10, color:T.textDim, transform: isExpanded ? "rotate(180deg)" : "none", transition:"transform 0.2s", flexShrink:0 }}>
-                  ▼
-                </div>
+                <div style={{ fontSize:9, color:T.textDim, transform:isExpanded?"rotate(180deg)":"none", transition:"transform 0.2s", flexShrink:0 }}>▼</div>
               </div>
 
               {/* Expanded full frequency list */}
               {isExpanded && (
-                <div style={{
-                  borderTop:`1px solid ${T.border}`,
-                  padding:"8px 12px",
-                  display:"flex", flexDirection:"column", gap:4,
-                  animation:"commSlideIn 0.15s ease",
-                }}>
+                <div style={{ borderTop:`1px solid ${T.border}`, padding:"8px 12px", display:"flex", flexDirection:"column", gap:4, animation:"commSlideIn 0.15s ease" }}>
                   <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:2, marginBottom:4 }}>
-                    ALL FREQUENCIES · {ap.id} · ELEV {ap.elev.toLocaleString()} FT
+                    ALL FREQUENCIES · {ap.id} · ELEV {ap.elev.toLocaleString()} FT MSL
                   </div>
-                  {sortedFreqs.map((f, fi) => {
+                  {sortedFreqs.map((f,fi) => {
                     const fm = freqMeta(f.type);
                     return (
                       <div key={fi} style={{
                         display:"flex", alignItems:"center", gap:10,
                         padding:"7px 10px",
-                        background: f.type === "EMRG" ? `${A.red}08` : `${fm.color}06`,
+                        background: f.type==="EMRG" ? `${A.red}08` : `${fm.color}06`,
                         border:`1px solid ${fm.color}20`,
                         borderLeft:`3px solid ${fm.color}`,
                         borderRadius:3,
                       }}>
-                        {/* Type badge */}
-                        <div style={{
-                          flexShrink:0, width:60,
-                          fontFamily:"'Share Tech Mono',monospace", fontSize:8,
-                          fontWeight:700, letterSpacing:1, color:fm.color,
-                        }}>
+                        <div style={{ flexShrink:0, width:62, fontFamily:"'Share Tech Mono',monospace", fontSize:8, fontWeight:700, letterSpacing:1, color:fm.color }}>
                           {fm.label}
                         </div>
-                        {/* Frequency — large and readable */}
-                        <div style={{
-                          fontFamily:"'Oswald',sans-serif", fontSize:20,
-                          fontWeight:700, color: f.type === "EMRG" ? A.red : fm.color,
-                          letterSpacing:1, flex:1,
-                        }}>
+                        <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:22, fontWeight:700, color:f.type==="EMRG"?A.red:fm.color, letterSpacing:1, flex:1 }}>
                           {f.freq}
                         </div>
-                        {/* Name */}
-                        <div style={{
-                          fontFamily:"'Share Tech Mono',monospace", fontSize:8,
-                          color:T.textDim, textAlign:"right", flexShrink:0,
-                        }}>
+                        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, textAlign:"right", flexShrink:0 }}>
                           {f.name}
                         </div>
                       </div>
@@ -881,7 +801,6 @@ function NearestFreqsTab({ T, A }) {
             </div>
           );
         })}
-
       </div>
     </div>
   );
