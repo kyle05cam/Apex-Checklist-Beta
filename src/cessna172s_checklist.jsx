@@ -2562,17 +2562,45 @@ const commParseGround = (text) => {
 
       {/* ── TOPBAR ── */}
       <header className="efb-topbar">
+
+        {/* ── LEFT: back nav + flight timer ── */}
         <div className="efb-topbar-left">
           {onBackToHangar && (
-            <button className="efb-btn ghost" onClick={onBackToHangar}>
-              <Icon name="back" size={14}/> HANGAR
-            </button>
+            <>
+              <button className="efb-btn ghost" onClick={onBackToHangar}>
+                <Icon name="back" size={14}/> HANGAR
+              </button>
+              <span className="efb-divider-v"/>
+            </>
           )}
+          <div className="efb-flight-timer">
+            <span className="efb-flight-timer-label">FLT TIMER</span>
+            <span className={`efb-flight-timer-value${timerRunning ? " running" : ""}`}>
+              {formatTimer(timerSeconds)}
+            </span>
+            <button
+              className={`efb-btn sm${timerRunning ? " warn" : " ok"}`}
+              onClick={() => setTimerRunning(r => !r)}
+            >
+              {timerRunning ? "⏸ STOP" : timerSeconds > 0 ? "▶ CONT" : "▶ START"}
+            </button>
+            <button
+              className="efb-btn sm ghost icon-only"
+              onClick={() => { setTimerRunning(false); setTimerSeconds(0); }}
+              title="Reset timer"
+            >
+              <Icon name="reset" size={11}/>
+            </button>
+          </div>
         </div>
+
+        {/* ── CENTER: aircraft ident (left) + clocks (right, space-between) ── */}
         <div className="efb-topbar-center">
           <div className="efb-tail">
             <span className="efb-tail-no">{aircraft ? aircraft.tail : "N12345"}</span>
-            <span className="efb-tail-type">{aircraft ? aircraft.type : "C172S SKYHAWK"}</span>
+            <span className="efb-tail-type">
+              {aircraft ? aircraft.type : "CESSNA 172S SKYHAWK"}
+            </span>
           </div>
           <div className="efb-clocks">
             <div className="efb-clock">
@@ -2584,26 +2612,38 @@ const commParseGround = (text) => {
               <span className="efb-clock-value">{zuluTime}</span>
             </div>
           </div>
-          <div className="efb-flight-timer">
-            <span className="efb-flight-timer-label">FLT</span>
-            <span className={`efb-flight-timer-value${timerRunning ? " running" : ""}`}>{formatTimer(timerSeconds)}</span>
-            <button className="efb-btn sm ghost icon-only" onClick={() => setTimerRunning(r => !r)}>
-              <Icon name={timerRunning ? "stop" : "play"} size={12}/>
-            </button>
-            <button className="efb-btn sm ghost icon-only" onClick={() => { setTimerRunning(false); setTimerSeconds(0); }}>
-              <Icon name="reset" size={11}/>
-            </button>
-          </div>
         </div>
+
+        {/* ── RIGHT: POH · NOTES · theme toggle ── */}
         <div className="efb-topbar-right">
-          <button className="efb-btn ghost icon-only" onClick={() => setScratchpadOpen(true)}>
-            <Icon name="note" size={16}/>
+          <button
+            className="efb-btn ghost"
+            onClick={() => setActiveDrawer(prev =>
+              prev.size > 0
+                ? new Set()
+                : new Set(["vspeeds", "perf", "climb", "cruise"])
+            )}
+            title="Performance data (POH)"
+          >
+            <Icon name="note" size={14}/> POH
           </button>
-          <label className={`efb-toggle${lightMode ? " on" : ""}`} onClick={() => setLightMode(m => !m)}>
+          <button
+            className="efb-btn ghost"
+            onClick={() => setScratchpadOpen(true)}
+            title="Pilot scratchpad"
+          >
+            <Icon name="edit" size={14}/> NOTES
+          </button>
+          <span className="efb-divider-v"/>
+          <label
+            className={`efb-toggle${lightMode ? " on" : ""}`}
+            onClick={() => setLightMode(m => !m)}
+          >
             <span className="efb-toggle-track"><span className="efb-toggle-thumb"/></span>
             <span className="efb-toggle-label">{lightMode ? "DAY" : "NIGHT"}</span>
           </label>
         </div>
+
       </header>
       {/* ── RADIO PANEL ── */}
       {currentPage !== "comm" && (
