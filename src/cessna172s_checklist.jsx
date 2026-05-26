@@ -2645,60 +2645,76 @@ const commParseGround = (text) => {
         </div>
 
       </header>
-      {/* ── RADIO PANEL ── */}
+      {/* ── RADIO PANEL — row 2, full-width ATC monitoring strip ── */}
       {currentPage !== "comm" && (
         <div
           className="efb-radio-panel"
           data-watchdog={commWatchdogState}
           onClick={() => setCurrentPage("comm")}
         >
-          {/* Status indicator dot */}
-          <span className={`efb-status-dot${
-            commWatchdogState === "unanswered" ? " warn"
-            : commWatchdogState === "alert"     ? " accent"
-            : commListening                     ? " ok"
-            : ""
-          }`}/>
 
-          {/* Mode label — changes colour/text on watchdog alert */}
-          <span className={`efb-rp-label${commWatchdogState !== "clear" ? " alert" : ""}`}>
-            {commWatchdogState !== "clear" ? "⚠ ATC GUARD:" : "📡 RADIO:"}
-          </span>
+          {/* ── LEFT: signal icon + LIVE RADIO identity ── */}
+          <div className="efb-rp-left">
+            <div className={`efb-rp-signal${commListening ? " active" : ""}`}>
+              <Icon name="mic" size={15}/>
+            </div>
+            <div className="efb-rp-id">
+              <span className="efb-rp-id-label">LIVE RADIO</span>
+              <span className={`efb-rp-id-status${
+                commListening               ? " on"
+                : commWatchdogState !== "clear" ? " warn"
+                : ""
+              }`}>
+                {commListening
+                  ? "ACTIVE"
+                  : commWatchdogState !== "clear"
+                    ? "ALERT"
+                    : "STANDBY"
+                }
+              </span>
+            </div>
+          </div>
 
-          {/* Scrolling transcript / last log entry / idle hint */}
-          <span className={`efb-rp-transcript${
-            commTranscript          ? " live"
-            : commTxLog.length > 0  ? " logged"
-            : ""
-          }`}>
-            {commTranscript
-              ? commTranscript
-              : commTxLog.length > 0
-                ? commTxLog[0].text
-                : commListening
-                  ? "Monitoring frequency…"
-                  : "Radio guard standby. Tap to open."
-            }
-          </span>
+          {/* ── CENTER: transcription area with idle / live / log states ── */}
+          <div className="efb-rp-center">
+            {commWatchdogState !== "clear" && (
+              <span className="efb-rp-atc-badge">⚠ ATC GUARD</span>
+            )}
+            {commTranscript ? (
+              <span className="efb-rp-tx-text live">{commTranscript}</span>
+            ) : commTxLog.length > 0 ? (
+              <span className="efb-rp-tx-text">{commTxLog[0].text}</span>
+            ) : (
+              <span className="efb-rp-tx-idle">No Active Transmission</span>
+            )}
+          </div>
 
-          {/* Action buttons — stopPropagation so clicks don't bubble to nav */}
-          <div className="efb-rp-actions" onClick={e => e.stopPropagation()}>
+          {/* ── RIGHT: Smart Coms mode indicator + action buttons ── */}
+          <div className="efb-rp-right" onClick={e => e.stopPropagation()}>
+            <div className="efb-rp-mode">
+              <span className="efb-rp-mode-label">SMART COMS</span>
+              <span className={`efb-rp-mode-state${commForceIfr ? " ifr" : ""}`}>
+                {commForceIfr ? "IFR MODE" : "AUTO"}
+              </span>
+            </div>
+            <span className="efb-rp-sep"/>
+            {commWatchdogState !== "clear" && (
+              <button className="efb-btn sm warn" onClick={commAckCall}>
+                ACK [{commAckCountdown}s]
+              </button>
+            )}
             <button
-              className={`efb-btn sm${commListening ? " warn" : " ok"}`}
+              className={`efb-rp-listen-btn${commListening ? " active" : ""}`}
               onClick={() => {
                 if (commListening) { commStopListening(); }
                 else { commStopListening(); setTimeout(() => commStartListening(), 50); }
               }}
             >
               <Icon name={commListening ? "mic-off" : "mic"} size={13}/>
-              {commListening ? " STOP" : " LISTEN"}
+              <span>{commListening ? "STOP" : "LISTEN"}</span>
             </button>
-            {commWatchdogState !== "clear" && (
-              <button className="efb-btn sm warn" onClick={commAckCall}>
-                ACK [{commAckCountdown}s]
-              </button>
-            )}
           </div>
+
         </div>
       )}
 

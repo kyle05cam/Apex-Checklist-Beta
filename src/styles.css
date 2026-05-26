@@ -191,55 +191,196 @@ ul, li { list-style: none; padding: 0; margin: 0; }
 }
 
 /* ============================================================
-   Radio panel — row 2, full-width
+   Radio panel — row 2, full-width ATC monitoring strip
+   Three-zone layout: [LEFT: signal id] [CENTER: transcript] [RIGHT: controls]
    ============================================================ */
 .efb-radio-panel {
   grid-column: 1 / -1;
   grid-row: 2;
-  display: flex;
-  align-items: center;
-  gap: var(--s-4);
-  padding: 8px 14px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: stretch;
   background: var(--bg-1);
   border-bottom: 2px solid var(--line);
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s;
+  overflow: hidden;
 }
-.efb-radio-panel[data-watchdog="alert"]     { background: color-mix(in oklab, var(--accent) 8%, var(--bg-1)); border-color: var(--accent-line); }
-.efb-radio-panel[data-watchdog="unanswered"] { background: color-mix(in oklab, var(--warn) 12%, var(--bg-1)); border-color: var(--warn); animation: efb-warn-flash 0.5s ease infinite alternate; }
+.efb-radio-panel[data-watchdog="alert"] {
+  background: color-mix(in oklab, var(--accent) 8%, var(--bg-1));
+  border-color: var(--accent-line);
+}
+.efb-radio-panel[data-watchdog="unanswered"] {
+  background: color-mix(in oklab, var(--warn) 12%, var(--bg-1));
+  border-color: var(--warn);
+  animation: efb-warn-flash 0.5s ease infinite alternate;
+}
 
-/* Radio panel inner elements */
-.efb-rp-label {
+/* ── LEFT zone: signal icon + LIVE RADIO identity ── */
+.efb-rp-left {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 0 var(--s-4);
+  border-right: 1px solid var(--line);
+}
+.efb-rp-signal {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-md);
+  background: var(--bg-2);
+  border: 1px solid var(--line-strong);
+  display: grid;
+  place-items: center;
+  color: var(--t-tertiary);
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+.efb-rp-signal.active {
+  background: var(--ok-bg);
+  border-color: var(--ok-line);
+  color: var(--ok);
+  box-shadow: 0 0 0 3px var(--ok-bg);
+}
+.efb-rp-id {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.efb-rp-id-label {
+  font-family: var(--f-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--t-tertiary);
+}
+.efb-rp-id-status {
   font-family: var(--f-mono);
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  color: var(--t-secondary);
-  flex-shrink: 0;
-  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--t-tertiary);
+  transition: color 0.18s ease;
 }
-.efb-rp-label.alert { color: var(--warn); }
+.efb-rp-id-status.on   { color: var(--ok); }
+.efb-rp-id-status.warn { color: var(--warn); }
 
-.efb-rp-transcript {
+/* ── CENTER zone: transcription area ── */
+.efb-rp-center {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 0 var(--s-5);
+  min-width: 0;
+  overflow: hidden;
+}
+.efb-rp-tx-idle {
+  font-family: var(--f-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--t-quiet);
+  font-style: italic;
+}
+.efb-rp-tx-text {
   font-family: var(--f-mono);
   font-size: 13px;
   font-weight: 600;
-  color: var(--t-tertiary);
+  color: var(--t-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1;
   min-width: 0;
-  transition: color 0.2s ease;
+  transition: color 0.18s ease;
 }
-.efb-rp-transcript.live   { color: var(--accent); }
-.efb-rp-transcript.logged { color: var(--t-primary); }
+.efb-rp-tx-text.live { color: var(--accent); }
+.efb-rp-atc-badge {
+  font-family: var(--f-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--warn);
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-line);
+  border-radius: var(--r-sm);
+  padding: 2px var(--s-2);
+  flex-shrink: 0;
+  animation: efb-warn-flash 0.5s ease infinite alternate;
+}
 
-.efb-rp-actions {
+/* ── RIGHT zone: Smart Coms indicator + Listen button ── */
+.efb-rp-right {
   display: flex;
   align-items: center;
-  gap: var(--s-2);
+  gap: var(--s-3);
+  padding: 0 var(--s-4);
+  border-left: 1px solid var(--line);
+}
+.efb-rp-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-end;
+}
+.efb-rp-mode-label {
+  font-family: var(--f-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--t-tertiary);
+}
+.efb-rp-mode-state {
+  font-family: var(--f-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--t-secondary);
+  transition: color 0.18s ease;
+}
+.efb-rp-mode-state.ifr { color: var(--accent); }
+.efb-rp-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--line-strong);
   flex-shrink: 0;
+}
+/* Distinct blue LISTEN button — not a generic efb-btn */
+.efb-rp-listen-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  height: 30px;
+  padding: 0 var(--s-4);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r-md);
+  color: var(--accent);
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+  box-shadow: 0 0 0 0 var(--accent-bg);
+}
+.efb-rp-listen-btn:hover {
+  background: rgba(77,163,255,0.18);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+.efb-rp-listen-btn.active {
+  background: var(--warn-bg);
+  border-color: var(--warn-line);
+  color: var(--warn);
+}
+.efb-rp-listen-btn.active:hover {
+  background: rgba(255,107,107,0.18);
+  border-color: var(--warn);
 }
 
 /* ============================================================
