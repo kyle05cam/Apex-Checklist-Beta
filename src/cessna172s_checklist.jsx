@@ -500,13 +500,13 @@ export const VSPEEDS = [
   ]},
   { group: "Approach & Landing", items: [
     { code: "VAPP", value: "65",     unit: "KIAS", desc: "Final Approach" },
-    { code: "VSO",  value: "48",     unit: "KIAS", desc: "Stall, L/D" },
+    { code: "VSO",  value: "48",     unit: "KIAS", desc: "Stall, Landing",  caution: true },
     { code: "VFE",  value: "85/110", unit: "K",    desc: "Full/10 Flap" },
   ]},
   { group: "Structural Limits", items: [
     { code: "VA",   value: "105",    unit: "KIAS", desc: "Maneuvering" },
-    { code: "VNO",  value: "129",    unit: "KIAS", desc: "Max Structural" },
-    { code: "VNE",  value: "163",    unit: "KIAS", desc: "Never Exceed" },
+    { code: "VNO",  value: "129",    unit: "KIAS", desc: "Max Structural",  caution: true },
+    { code: "VNE",  value: "163",    unit: "KIAS", desc: "Never Exceed",    danger:  true },
   ]},
 ];
 
@@ -3041,8 +3041,8 @@ const commParseGround = (text) => {
             {/* Header */}
             <div className="efb-poh-head">
               <div>
-                <div className="efb-poh-eyebrow">CESSNA 172S SKYHAWK · POH REFERENCE</div>
-                <div className="efb-poh-aircraft">{aircraft?.tailNumber || "N12345"} · Quick Reference Data</div>
+                <div className="efb-poh-eyebrow">QUICK REFERENCE</div>
+                <div className="efb-poh-aircraft">{aircraft?.tailNumber || "N12345"} · Cessna 172S Skyhawk</div>
               </div>
               <button className="efb-btn ghost" onClick={() => setActiveDrawer(new Set())}>ESC ✕</button>
             </div>
@@ -3058,6 +3058,7 @@ const commParseGround = (text) => {
                 <button
                   key={tab.key}
                   className={`efb-poh-tab${pohTab === tab.key ? " active" : ""}`}
+                  style={pohTab === tab.key ? { color: "var(--t-primary)", borderBottomColor: tab.dot } : {}}
                   onClick={() => setPohTab(tab.key)}
                 >
                   <span className="efb-poh-tab-dot" style={{ background: tab.dot }}/>
@@ -3108,28 +3109,31 @@ const commParseGround = (text) => {
                 <div key={gi} className="efb-poh-group">
                   <div className="efb-poh-group-label">{group.group.toUpperCase()}</div>
                   <div className="efb-poh-cards">
-                    {group.items.map((item, ii) => (
-                      <div key={ii} className="efb-poh-card">
-                        <div className="efb-poh-card-top">
-                          <span className="efb-poh-card-code">
+                    {group.items.map((item, ii) => {
+                      const codeColor = item.danger ? "var(--warn)" : item.caution ? "var(--caution)" : "var(--accent)";
+                      return (
+                        <div key={ii} className="efb-poh-card">
+                          <div className="efb-poh-card-top">
+                            <span className="efb-poh-card-code" style={{ color: codeColor }}>
+                              {vspeedEditing
+                                ? <input value={item.code} onChange={e => updateVspeed(gi, ii, "code", e.target.value)} className="efb-poh-input" style={{ color: codeColor, borderColor: codeColor }}/>
+                                : item.code}
+                            </span>
+                            <span className="efb-poh-card-unit">{item.unit}</span>
+                          </div>
+                          <div className="efb-poh-card-value">
                             {vspeedEditing
-                              ? <input value={item.code} onChange={e => updateVspeed(gi, ii, "code", e.target.value)} className="efb-poh-input"/>
-                              : item.code}
-                          </span>
-                          <span className="efb-poh-card-unit">{item.unit}</span>
+                              ? <input value={item.value} onChange={e => updateVspeed(gi, ii, "value", e.target.value)} className="efb-poh-input wide"/>
+                              : item.value}
+                          </div>
+                          <div className="efb-poh-card-desc">
+                            {vspeedEditing
+                              ? <input value={item.desc} onChange={e => updateVspeed(gi, ii, "desc", e.target.value)} className="efb-poh-input full"/>
+                              : item.desc}
+                          </div>
                         </div>
-                        <div className="efb-poh-card-value">
-                          {vspeedEditing
-                            ? <input value={item.value} onChange={e => updateVspeed(gi, ii, "value", e.target.value)} className="efb-poh-input wide"/>
-                            : item.value}
-                        </div>
-                        <div className="efb-poh-card-desc">
-                          {vspeedEditing
-                            ? <input value={item.desc} onChange={e => updateVspeed(gi, ii, "desc", e.target.value)} className="efb-poh-input full"/>
-                            : item.desc}
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ))}
@@ -3137,7 +3141,7 @@ const commParseGround = (text) => {
               {/* ── T/O & LANDING ── */}
               {pohTab === "perf" && perfData.map((section, si) => (
                 <div key={si} className="efb-poh-group">
-                  <div className="efb-poh-group-label" style={{ color: "#e8c84a" }}>{section.group.toUpperCase()}</div>
+                  <div className="efb-poh-section-title" style={{ color: "#e8c84a" }}>{section.group.toUpperCase()}</div>
                   {section.note && <div className="efb-poh-group-note">{section.note}</div>}
                   <table className="efb-poh-table">
                     <thead>
@@ -3147,7 +3151,7 @@ const commParseGround = (text) => {
                       {section.rows.map((row, ri) => (
                         <tr key={ri}>
                           {row.map((cell, ci) => (
-                            <td key={ci} className={ci === 0 ? "efb-poh-td-key" : ""} style={ci > 0 ? { color: "#e8c84a" } : {}}>
+                            <td key={ci} className={ci === 0 ? "efb-poh-td-key" : ""}>
                               {perfEditing
                                 ? <input value={cell} onChange={e => updatePerfCell(si, ri, ci, e.target.value)} className="efb-poh-input full"/>
                                 : cell}
@@ -3163,7 +3167,7 @@ const commParseGround = (text) => {
               {/* ── CLIMB PERFORMANCE ── */}
               {pohTab === "climb" && climbData.map((section, si) => (
                 <div key={si} className="efb-poh-group">
-                  <div className="efb-poh-group-label" style={{ color: "#3dbe6c" }}>{section.group.toUpperCase()}</div>
+                  <div className="efb-poh-section-title" style={{ color: "#3dbe6c" }}>{section.group.toUpperCase()}</div>
                   {section.note && <div className="efb-poh-group-note">{section.note}</div>}
                   <table className="efb-poh-table">
                     <thead>
@@ -3173,7 +3177,7 @@ const commParseGround = (text) => {
                       {section.rows.map((row, ri) => (
                         <tr key={ri}>
                           {row.map((cell, ci) => (
-                            <td key={ci} className={ci === 0 ? "efb-poh-td-key" : ""} style={ci > 0 ? { color: "#3dbe6c" } : {}}>
+                            <td key={ci} className={ci === 0 ? "efb-poh-td-key" : ""}>
                               {climbEditing
                                 ? <input value={cell} onChange={e => updateClimbCell(si, ri, ci, e.target.value)} className="efb-poh-input full"/>
                                 : cell}
@@ -3189,7 +3193,7 @@ const commParseGround = (text) => {
               {/* ── CRUISE PERFORMANCE ── */}
               {pohTab === "cruise" && cruiseData.map((section, si) => (
                 <div key={si} className="efb-poh-group">
-                  <div className="efb-poh-group-label" style={{ color: "#a78bfa" }}>{section.group.toUpperCase()}</div>
+                  <div className="efb-poh-section-title" style={{ color: "#a78bfa" }}>{section.group.toUpperCase()}</div>
                   {section.note && <div className="efb-poh-group-note">{section.note}</div>}
                   <table className="efb-poh-table">
                     <thead>
@@ -3199,7 +3203,7 @@ const commParseGround = (text) => {
                       {section.rows.map((row, ri) => (
                         <tr key={ri}>
                           {row.map((cell, ci) => (
-                            <td key={ci} className={ci === 0 ? "efb-poh-td-key" : ""} style={ci > 0 ? { color: "#a78bfa" } : {}}>
+                            <td key={ci} className={ci === 0 ? "efb-poh-td-key" : ""}>
                               {cruiseEditing
                                 ? <input value={cell} onChange={e => updateCruiseCell(si, ri, ci, e.target.value)} className="efb-poh-input full"/>
                                 : cell}
