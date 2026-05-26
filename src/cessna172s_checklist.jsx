@@ -2397,20 +2397,49 @@ const commParseGround = (text) => {
     return (
       <div key={pg.id} style={{ animation: "efb-fade-in 0.15s ease", padding: "12px 12px 88px" }}>
         {/* Sticky page header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, paddingBottom: 10, borderBottom: "1px solid var(--line)", position: "sticky", top: 0, zIndex: 10, background: "var(--bg-0)" }}>
+        <div className="efb-page-header" style={{ position: "sticky", top: 0, zIndex: 10, background: "var(--bg-0)" }}>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: isEmg ? accentColor : "var(--accent)", lineHeight: 1 }}>
-              {pg.id === "approach" ? "APPROACH & LANDING" : pg.id === "engine_fail" ? "ENGINE FAILURES" : pg.id === "spin" ? "SPIN RECOVERY" : pg.id === "fires" ? "FIRES" : pg.id === "icing" ? "ICING" : pg.id === "electrical" ? "ELEC FAILURE" : pg.label || pg.id.toUpperCase()}
-            </div>
-            <div style={{ fontFamily: "var(--f-mono)", fontSize: 9, color: "var(--t-tertiary)", marginTop: 3, letterSpacing: "0.1em", textTransform: "uppercase" }}>
-              {isEmg ? "MEMORY ITEMS FIRST — C172S" : "CESSNA 172S SKYHAWK"}
+            <h1 className="efb-page-title" style={isEmg ? { color: accentColor } : {}}>
+              {pg.id === "approach"     ? "APPROACH & LANDING"
+               : pg.id === "engine_fail" ? "ENGINE FAILURES"
+               : pg.id === "spin"        ? "SPIN RECOVERY"
+               : pg.id === "fires"       ? "FIRES"
+               : pg.id === "icing"       ? "ICING"
+               : pg.id === "electrical"  ? "ELEC FAILURE"
+               : pg.label || pg.id.toUpperCase()}
+            </h1>
+            <div className="efb-page-subtitle">
+              {isEmg
+                ? "CESSNA 172S · MEMORY ITEMS FIRST"
+                : `CESSNA 172S SKYHAWK · ${
+                    pg.id === "preflight" ? "EXTERNAL & COCKPIT WALK-AROUND"
+                  : pg.id === "startup"   ? "ENGINE START SEQUENCE"
+                  : pg.id === "taxi"      ? "TAXI & RUN-UP"
+                  : pg.id === "takeoff"   ? "TAKEOFF & CLIMB"
+                  : pg.id === "cruise"    ? "CRUISE CHECKLIST"
+                  : pg.id === "approach"  ? "APPROACH & LANDING"
+                  : pg.id === "shutdown"  ? "SHUTDOWN & SECURING"
+                  : "CHECKLIST"
+                }`
+              }
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <div className={`efb-chip${isComplete ? " done" : " progress"}`}>
-              {isComplete ? "✓ " : ""}<span className="efb-chip-num">{pageCount.done}/{pageCount.total}</span>
+          <div className="efb-page-meta">
+            <div className={`efb-chip${
+              isComplete           ? " done"
+              : pageCount.done > 0 ? " progress"
+              : ""
+            }`}>
+              {isComplete
+                ? <><span>✓ COMPLETE</span><span className="efb-chip-num"> · {pageCount.done}/{pageCount.total}</span></>
+                : pageCount.done > 0
+                  ? <><span>IN PROGRESS</span><span className="efb-chip-num"> · {pageCount.done}/{pageCount.total}</span></>
+                  : <span className="efb-chip-num">{pageCount.total} ITEMS</span>
+              }
             </div>
-            <button className="efb-btn sm ghost" onClick={() => resetPage(pg.id)}><Icon name="reset" size={12}/></button>
+            <button className="efb-btn sm ghost" onClick={() => resetPage(pg.id)}>
+              <Icon name="reset" size={12}/>
+            </button>
           </div>
         </div>
 
@@ -2419,13 +2448,38 @@ const commParseGround = (text) => {
           const custom = getSectionCustom(pg.id, section.title);
           const isEditing = editingSection === sectionKey;
 
+          // Per-section progress — must use same key formula as the check rows below
+          const secMerged = getMergedItems(pg.id, section.title, section.items);
+          const secTotal  = secMerged.filter(i => !(custom.removed.has(i.originalLabel || i.l) && !i.custom)).length;
+          const secDone   = secMerged.reduce((acc, item, idx) => {
+            if (custom.removed.has(item.originalLabel || item.l) && !item.custom) return acc;
+            const k = item.custom
+              ? `${pg.id}::${section.title}::CUSTOM::${idx}::${item.l}`
+              : `${pg.id}::${section.title}::${idx}::${item.originalLabel || item.l}`;
+            return acc + (checked[k] ? 1 : 0);
+          }, 0);
+          const secPct    = secTotal > 0 ? Math.round(secDone / secTotal * 100) : 0;
+          const secIsDone = secTotal > 0 && secDone === secTotal;
+
           return (
-            <div key={si} className={`efb-cl-section${isEmg ? " emg" : ""}`} style={isEmg ? { "--emg-color": accentColor } : {}}>
+            <div key={si} className={`efb-cl-section${isEmg ? " emg" : ""}${secIsDone ? " done" : ""}`} style={isEmg ? { "--emg-color": accentColor } : {}}>
               {section.title && (
                 <div className="efb-cl-head">
                   <div className="efb-cl-title">
                     <span className="efb-cl-name">{section.title}</span>
+                    <span className="efb-cl-count">{secDone}/{secTotal}</span>
                   </div>
+                  {secTotal > 0 && (
+                    <div className="efb-cl-progress">
+                      <div className="efb-cl-bar">
+                        <div
+                          className={`efb-cl-bar-fill${secIsDone ? " ok" : ""}`}
+                          style={{ width: `${secPct}%` }}
+                        />
+                      </div>
+                      <span className="efb-cl-pct">{secPct}%</span>
+                    </div>
+                  )}
                   <div className="efb-cl-actions">
                     {!isEditing && (ttsActive && ttsActive.sectionKey === sectionKey ? (
                       <div style={{ display: "flex", gap: 4 }}>
