@@ -5,6 +5,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState, useEffect, useRef, useCallback } from "react";
 import { CommPage } from "./comm_page.jsx";
+import { Icon } from "./icons.jsx";
 
 export const PAGES = [
   {
@@ -891,7 +892,7 @@ function ScratchpadCanvas({ storageKey }) {
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "#0d1a12", borderBottom: "1px solid #1e3528", flexShrink: 0, flexWrap: "wrap" }}>
         <div style={{ display: "flex", background: "#0a0c10", border: "1px solid #1e3528", borderRadius: 4, overflow: "hidden" }}>
           {[["pen","✏ PEN"],["eraser","◻ ERASE"]].map(([t, label]) => (
-            <button key={t} onClick={() => setTool(t)} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: 1, padding: "4px 12px", cursor: "pointer", border: "none", background: tool === t ? "rgba(61,190,108,0.15)" : "transparent", color: tool === t ? "#3dbe6c" : "#4a5068", borderRight: t === "pen" ? "1px solid #1e3528" : "none" }}>{label}</button>
+            <button key={t} onClick={() => setTool(t)} style={{ fontFamily: "var(--f-ui)", fontSize: 10, fontWeight: 700, letterSpacing: 1, padding: "4px 12px", cursor: "pointer", border: "none", background: tool === t ? "rgba(61,190,108,0.15)" : "transparent", color: tool === t ? "#3dbe6c" : "#4a5068", borderRight: t === "pen" ? "1px solid #1e3528" : "none" }}>{label}</button>
           ))}
         </div>
         <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
@@ -907,7 +908,7 @@ function ScratchpadCanvas({ storageKey }) {
           ))}
         </div>
         <div style={{ flex: 1 }} />
-        <button onClick={clearCanvas} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "4px 12px", borderRadius: 3, cursor: "pointer", background: "transparent", color: "#6a3030", border: "1px solid #3a2020" }}>↺ CLEAR CANVAS</button>
+        <button onClick={clearCanvas} style={{ fontFamily: "var(--f-ui)", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "4px 12px", borderRadius: 3, cursor: "pointer", background: "transparent", color: "#6a3030", border: "1px solid #3a2020" }}>↺ CLEAR CANVAS</button>
       </div>
       <div style={{ flex: 1, position: "relative", touchAction: "none", background: "#050e09" }}>
         <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }} preserveAspectRatio="none">
@@ -989,7 +990,7 @@ function DrawingNotepad({ title, footer, onClose, storageKey, initialImage, onSa
   return (
     <div style={{ border: "1px solid #1e3528", borderRadius: 4, overflow: "hidden", margin: "4px 0" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 8px", background: "#0a1410", borderBottom: "1px solid #1e3528", flexWrap: "wrap" }}>
-        <span style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 9, color: "#4a9fe8", letterSpacing: 1, marginRight: 4 }}>{title}</span>
+        <span style={{ fontFamily: "var(--f-mono)", fontSize: 9, color: "#4a9fe8", letterSpacing: 1, marginRight: 4 }}>{title}</span>
         <div style={{ display: "flex", gap: 3 }}>
           {PEN_SIZES.map(s => (
             <button key={s} onClick={() => setPenSize(s)} style={{ width: 20, height: 20, borderRadius: 3, border: `1px solid ${penSize === s ? "#3dbe6c" : "#1e3528"}`, background: penSize === s ? "rgba(61,190,108,0.1)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}>
@@ -1003,8 +1004,8 @@ function DrawingNotepad({ title, footer, onClose, storageKey, initialImage, onSa
           ))}
         </div>
         <div style={{ width: 1, height: 16, background: "#1e3528" }} />
-        <button onClick={clearCanvas} style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: 0.5, background: "transparent", border: "1px solid #1e3528", color: "#7a8090", padding: "2px 7px", borderRadius: 3, cursor: "pointer" }}>CLR</button>
-        <button onClick={onClose} style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: 0.5, background: "transparent", border: "1px solid #1e3528", color: "#7a8090", padding: "2px 7px", borderRadius: 3, cursor: "pointer" }}>✕</button>
+        <button onClick={clearCanvas} style={{ fontFamily: "var(--f-ui)", fontSize: 10, fontWeight: 700, letterSpacing: 0.5, background: "transparent", border: "1px solid #1e3528", color: "#7a8090", padding: "2px 7px", borderRadius: 3, cursor: "pointer" }}>CLR</button>
+        <button onClick={onClose} style={{ fontFamily: "var(--f-ui)", fontSize: 10, fontWeight: 700, letterSpacing: 0.5, background: "transparent", border: "1px solid #1e3528", color: "#7a8090", padding: "2px 7px", borderRadius: 3, cursor: "pointer" }}>✕</button>
       </div>
       <div style={{ position: "relative", touchAction: "none", background: "#050e09" }}>
         <svg style={{ position: "absolute", inset: 0, width: "100%", height: 160, pointerEvents: "none" }} preserveAspectRatio="none">
@@ -1018,7 +1019,7 @@ function DrawingNotepad({ title, footer, onClose, storageKey, initialImage, onSa
       </div>
       {footer && (
         <div style={{ padding: "3px 10px", background: "#0d1a12", borderTop: "1px solid #1e3528" }}>
-          <span style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 8.5, color: "#1e3528", letterSpacing: 0.8 }}>{footer}</span>
+          <span style={{ fontFamily: "var(--f-mono)", fontSize: 8.5, color: "#1e3528", letterSpacing: 0.8 }}>{footer}</span>
         </div>
       )}
     </div>
@@ -1064,6 +1065,9 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   const [activeDrawer, setActiveDrawer] = useState(new Set());   // Set of open keys — multiple allowed
   const [perfSubTab, setPerfSubTab] = useState("perf");     // unused but kept for compat
   const [lightMode, setLightMode] = useState(false);
+  useEffect(() => {
+    document.documentElement.dataset.mode = lightMode ? "day" : "night";
+  }, [lightMode]);
   const [ttsActive, setTtsActive] = useState(null);
   const [ttsPaused, setTtsPaused] = useState(false);
   const ttsQueueRef = useRef([]);
@@ -2149,50 +2153,6 @@ const commParseGround = (text) => {
   };
   const commReplay = (seconds = 10) => { commWorkerRef.current?.postMessage({ type: "GET_REPLAY", seconds }); setCommReplayActive(true); setTimeout(() => setCommReplayActive(false), seconds * 1000); };
 
-  // ── Theme tokens ──────────────────────────────────────────────────────────
-  const T = lightMode ? {
-    appBg:"#e2e4ec", headerBg:"linear-gradient(135deg,#b8b0c8 0%,#c8ccd8 60%,#b8b0c8 100%)",
-    headerBorder:"#1a6ab0", leftSideBg:"#c8cbd4", leftSideBorder:"#8a94a8",
-    leftTabActive:"rgba(26,106,176,0.18)", leftTabDim:"#3a4868", leftTabCount:"#1a3a6a", leftTabText:"#0a2858", centerBg:"#eef0f6", centerBorder:"#8a94a8",
-    itemLabel:"#050a15", itemAction:"#0c2340", itemBorder:"rgba(10,20,40,0.25)",
-    itemCheckedOp:0.4, checkboxBorder:"#1a4a8a", checkboxDone:"rgba(20,120,60,0.25)",
-    checkColor:"#0b532b", actionColor:"#1a4a8a",
-    sectionBg:"linear-gradient(90deg, rgba(26,106,176,0.18) 0%, rgba(220,226,238,0) 80%)",
-    sectionBorder:"#1a6ab0", sectionTitle:"#0a2858", noteColor:"#405010",
-    cautionColor:"#8a1005", noteBg:"rgba(100,120,15,0.12)", cautionBg:"rgba(180,30,10,0.1)",
-    panelTabBg:"#b8b0c8", editBg:"#cbd0e2", editBorder:"#7a8498",
-    editHintColor:"#202848", inputBg:"#ffffff", scratchBg:"#eef0f6",
-    
-    emgSidebarBg:  "#cbd0e2",
-    emgSidebarBdr: "#8a94a8",
-    emgLabelColor: "#0a1428",
-    emgItemBdr:    "#a0a8b8",
-    moreOverlayBg: "#f4f5fa",
-    moreHeaderBg:  "linear-gradient(135deg,#c0c6d8,#d8dce8)",
-    moreSidebarBg: "#d8dce8",
-    moreSidebarBdr:"#8a94a8",
-    textMuted:     "#202838",
-  } : {
-    appBg:"#0d0f12", headerBg:"linear-gradient(135deg,#0a0c10 0%,#141820 60%,#0a0c10 100%)",
-    headerBorder:"#e8c84a", leftSideBg:"#141820", leftSideBorder:"#2a3040",
-    leftTabActive:"rgba(232,200,74,0.07)", leftTabText:"#e8c84a", leftTabDim:"#7a8090",
-    leftTabCount:"#444", centerBg:"#0d0f12", centerBorder:"#2a3040",
-    itemLabel:"#e8e4d8", itemAction:"#e8c84a", itemBorder:"rgba(42,48,64,0.45)",
-    itemCheckedOp:0.35, checkboxBorder:"#3a4050", checkboxDone:"rgba(61,190,108,0.15)",
-    checkColor:"#3dbe6c", actionColor:"#e8c84a",
-    sectionBg:"linear-gradient(90deg, rgba(232,200,74,0.06) 0%, rgba(13,15,18,0) 80%)",
-    sectionBorder:"#e8c84a", sectionTitle:"#e8e4d8", noteColor:"#b8a840",
-    cautionColor:"#d06050", noteBg:"rgba(184,168,64,0.06)", cautionBg:"rgba(208,96,80,0.06)",
-    panelTabBg:"#141820", editBg:"#0d1018", editBorder:"#2a3040",
-    editHintColor:"#4a5068", inputBg:"#141820", scratchBg:"#0a0c10", emgSidebarBg:  "#100c0c",
-    emgSidebarBdr: "#281818",
-    emgLabelColor: "#5a3030",
-    emgItemBdr:    "#281818",
-    moreOverlayBg: "rgba(8,10,14,0.96)",
-    moreHeaderBg:  "linear-gradient(135deg,#0a0c10,#141820)",
-    moreSidebarBg: "#0a0c10",
-    moreSidebarBdr:"#2a1e3a",
-  };
 
   useEffect(() => {
     const tick = () => {
@@ -2430,26 +2390,27 @@ const commParseGround = (text) => {
     if (!pg) return null;
     const isEmg = EMG_PAGES.some(p => p.id === pg.id);
     const emgMeta = isEmg ? EMG_PAGES.find(p => p.id === pg.id) : null;
-    const accentColor = emgMeta ? emgMeta.color : "#4a9fe8";
+    const accentColor = emgMeta ? emgMeta.color : "var(--accent)";
     const pageCount = countPage(pg.id);
     const isComplete = pageCount.total > 0 && pageCount.done === pageCount.total;
 
     return (
-      <div key={pg.id} style={{ animation: "fadeIn 0.15s ease" }}>
-        <div style={{ background: lightMode ? "#dde2ee" : "#1a1f2a", borderBottom: `2px solid ${isEmg ? accentColor : "#4a9fe8"}`, padding: "8px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 10 }}>
+      <div key={pg.id} style={{ animation: "efb-fade-in 0.15s ease", padding: "12px 12px 88px" }}>
+        {/* Sticky page header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, paddingBottom: 10, borderBottom: "1px solid var(--line)", position: "sticky", top: 0, zIndex: 10, background: "var(--bg-0)" }}>
           <div>
-            <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 15, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: isEmg ? accentColor : "#4a9fe8" }}>
+            <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: isEmg ? accentColor : "var(--accent)", lineHeight: 1 }}>
               {pg.id === "approach" ? "APPROACH & LANDING" : pg.id === "engine_fail" ? "ENGINE FAILURES" : pg.id === "spin" ? "SPIN RECOVERY" : pg.id === "fires" ? "FIRES" : pg.id === "icing" ? "ICING" : pg.id === "electrical" ? "ELEC FAILURE" : pg.label || pg.id.toUpperCase()}
             </div>
-            <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 8, color: lightMode ? "#607090" : "#7a8090", marginTop: 1 }}>
+            <div style={{ fontFamily: "var(--f-mono)", fontSize: 9, color: "var(--t-tertiary)", marginTop: 3, letterSpacing: "0.1em", textTransform: "uppercase" }}>
               {isEmg ? "MEMORY ITEMS FIRST — C172S" : "CESSNA 172S SKYHAWK"}
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-            <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 3, background: isComplete ? "rgba(61,190,108,0.15)" : "rgba(232,90,74,0.12)", border: `1px solid ${isComplete ? "#3dbe6c" : "#e85a4a"}`, color: isComplete ? "#3dbe6c" : "#e85a4a" }}>
-              {isComplete ? `✓ COMPLETED ${pageCount.done}/${pageCount.total}` : `INCOMPLETE ${pageCount.done}/${pageCount.total}`}
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div className={`efb-chip${isComplete ? " done" : " progress"}`}>
+              {isComplete ? "✓ " : ""}<span className="efb-chip-num">{pageCount.done}/{pageCount.total}</span>
             </div>
-            <button onClick={() => resetPage(pg.id)} style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "3px 8px", borderRadius: 3, cursor: "pointer", background: "transparent", color: lightMode ? "#607090" : "#7a8090", border: `1px solid ${lightMode ? "#a0a8c0" : "#2a3040"}` }}>↺</button>
+            <button className="efb-btn sm ghost" onClick={() => resetPage(pg.id)}><Icon name="reset" size={12}/></button>
           </div>
         </div>
 
@@ -2459,35 +2420,39 @@ const commParseGround = (text) => {
           const isEditing = editingSection === sectionKey;
 
           return (
-            <div key={si}>
+            <div key={si} className={`efb-cl-section${isEmg ? " emg" : ""}`} style={isEmg ? { "--emg-color": accentColor } : {}}>
               {section.title && (
-                <div style={{ padding: "10px 14px 9px", background: T.sectionBg, borderBottom: `2px solid ${isEmg ? accentColor : "#4a9fe8"}`, borderTop: `1px solid ${lightMode ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.04)"}`, borderLeft: `4px solid ${isEmg ? accentColor : "#4a9fe8"}`, marginTop: 2, display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", color: isEmg ? accentColor : "#4a9fe8", lineHeight: 1.15 }}>{section.title}</div>
+                <div className="efb-cl-head">
+                  <div className="efb-cl-title">
+                    <span className="efb-cl-name">{section.title}</span>
                   </div>
-                  {!isEditing && (ttsActive && ttsActive.sectionKey === sectionKey ? (
-                    <div style={{ display: "flex", gap: 4 }}>
-                      <button onClick={pauseResumeTTS} style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: 1, padding: "2px 8px", borderRadius: 3, cursor: "pointer", background: "rgba(232,200,74,0.15)", border: "1px solid #e8c84a", color: "#e8c84a" }}>{ttsPaused ? "▶ RESUME" : "⏸ PAUSE"}</button>
-                      <button onClick={stopTTS} style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: 1, padding: "2px 8px", borderRadius: 3, cursor: "pointer", background: "rgba(232,90,74,0.12)", border: "1px solid #e85a4a", color: "#e85a4a" }}>■ STOP</button>
-                    </div>
-                  ) : (
-                    <button onClick={(e) => { e.stopPropagation(); const mi = getMergedItems(pg.id, section.title, section.items).filter(i => !custom.removed.has(i.originalLabel || i.l) || i.custom); startTTS(sectionKey, mi); }} style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: 1, padding: "3px 9px", borderRadius: 3, cursor: "pointer", background: "rgba(61,190,108,0.1)", border: "1px solid #3dbe6c", color: "#3dbe6c" }}>▶ READ</button>
-                  ))}
-                  <button onClick={(e) => { e.stopPropagation(); setEditingSection(isEditing ? null : sectionKey); setNewItemLabel(""); setNewItemAction(""); }} style={{ background: isEditing ? "rgba(232,200,74,0.18)" : "rgba(255,255,255,0.05)", border: `1px solid ${isEditing ? "#e8c84a" : "rgba(74,159,232,0.3)"}`, borderRadius: 3, padding: "3px 8px", cursor: "pointer", fontFamily: "'Rajdhani', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: 1, color: isEditing ? "#e8c84a" : "#4a6888", display: "flex", alignItems: "center", gap: 3, transition: "all 0.15s" }}>
-                    <span style={{ fontSize: 11 }}>{isEditing ? "✕" : "✎"}</span>{isEditing ? "DONE" : "EDIT"}
-                  </button>
+                  <div className="efb-cl-actions">
+                    {!isEditing && (ttsActive && ttsActive.sectionKey === sectionKey ? (
+                      <div style={{ display: "flex", gap: 4 }}>
+                        <button className="efb-btn sm caution" onClick={pauseResumeTTS}>{ttsPaused ? "▶ RESUME" : "⏸ PAUSE"}</button>
+                        <button className="efb-btn sm warn" onClick={stopTTS}>■ STOP</button>
+                      </div>
+                    ) : (
+                      <button className="efb-btn sm ok" onClick={(e) => { e.stopPropagation(); const mi = getMergedItems(pg.id, section.title, section.items).filter(i => !custom.removed.has(i.originalLabel || i.l) || i.custom); startTTS(sectionKey, mi); }}>
+                        <Icon name="play" size={10}/> READ
+                      </button>
+                    ))}
+                    <button className={`efb-btn sm${isEditing ? " caution" : ""}`} onClick={(e) => { e.stopPropagation(); setEditingSection(isEditing ? null : sectionKey); setNewItemLabel(""); setNewItemAction(""); }}>
+                      {isEditing ? "✕ DONE" : "✎ EDIT"}
+                    </button>
+                  </div>
                 </div>
               )}
 
               {isEditing && (
-                <div style={{ background: "#0d1018", border: "1px solid #2a3040", borderTop: "none", margin: "0 0 2px" }}>
-                  <div style={{ padding: "6px 10px 4px", borderBottom: "1px solid #1a2030", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+                <div style={{ background: "var(--bg-inset)", border: "1px solid var(--line)", borderTop: "none", margin: "0 0 2px" }}>
+                  <div style={{ padding: "6px 10px 4px", borderBottom: "1px solid var(--line-faint)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 8, color: "#e8c84a", letterSpacing: 1.5 }}>✎ EDIT MODE</span>
-                      <span style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 8, color: "#4a5068", letterSpacing: 1 }}>TAP LABEL TO RENAME · × TO HIDE · DRAG TO REORDER</span>
+                      <span style={{ fontFamily: "var(--f-mono)", fontSize: 8, color: "var(--caution)", letterSpacing: 1.5 }}>✎ EDIT MODE</span>
+                      <span style={{ fontFamily: "var(--f-mono)", fontSize: 8, color: "var(--t-quiet)", letterSpacing: 1 }}>TAP LABEL TO RENAME · × TO HIDE · DRAG TO REORDER</span>
                     </div>
                     {(custom.removed.size > 0 || custom.added.length > 0 || Object.keys(custom.renames || {}).length > 0) && (
-                      <button onClick={() => { setCustomItems(prev => { const next = { ...prev }; delete next[sectionKey]; saveCustomItems(next); return next; }); }} style={{ background: "transparent", border: "1px solid #3a2020", borderRadius: 3, padding: "2px 8px", cursor: "pointer", fontFamily: "'Share Tech Mono', monospace", fontSize: 8, color: "#c85050", letterSpacing: 1, flexShrink: 0 }}>↺ RESET DEFAULT</button>
+                      <button className="efb-btn sm warn" onClick={() => { setCustomItems(prev => { const next = { ...prev }; delete next[sectionKey]; saveCustomItems(next); return next; }); }}>↺ RESET DEFAULT</button>
                     )}
                   </div>
                   {(() => {
@@ -2504,9 +2469,9 @@ const commParseGround = (text) => {
                           onDragLeave={e => { e.currentTarget.style.borderTop = ""; }}
                           onDrop={e => { e.preventDefault(); e.currentTarget.style.borderTop = ""; if (dragRef.current.sectionKey === sectionKey) reorderSection(pg.id, section.title, dragRef.current.fromIdx, idx, merged.length); }}
                           onDragEnd={() => { dragRef.current = { fromIdx: null, sectionKey: null }; }}
-                          style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderBottom: "1px solid rgba(42,48,64,0.4)", background: isInlineEditing ? "rgba(74,159,232,0.06)" : item.custom ? "rgba(61,190,108,0.04)" : isRemoved ? "rgba(232,90,74,0.05)" : "transparent", opacity: isRemoved ? 0.55 : 1, transition: "opacity 0.15s, border-top 0.1s, background 0.15s", cursor: "grab" }}
+                          style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderBottom: "1px solid var(--line-faint)", background: isInlineEditing ? "rgba(77,163,255,0.06)" : item.custom ? "rgba(74,222,128,0.04)" : isRemoved ? "rgba(255,107,107,0.05)" : "transparent", opacity: isRemoved ? 0.55 : 1, transition: "opacity 0.15s, border-top 0.1s, background 0.15s", cursor: "grab" }}
                         >
-                          <span style={{ color: "#3a4050", fontSize: 10, cursor: "grab", flexShrink: 0 }}>⠿</span>
+                          <span style={{ color: "var(--t-quiet)", fontSize: 10, cursor: "grab", flexShrink: 0 }}>⠿</span>
                           <button onClick={() => {
                             if (item.custom) { removeAddedItem(pg.id, section.title, item.addedIdx); return; }
                             const key = getSectionKey(pg.id, section.title);
@@ -2517,34 +2482,34 @@ const commParseGround = (text) => {
                               const next = { ...prev, [key]: { ...existing, removed } };
                               saveCustomItems(next); return next;
                             });
-                          }} style={{ flexShrink: 0, width: 20, height: 20, borderRadius: 3, border: `1px solid ${isRemoved ? "#e85a4a" : "#2a3040"}`, background: isRemoved ? "rgba(232,90,74,0.1)" : "transparent", cursor: "pointer", color: isRemoved ? "#e85a4a" : "#4a5068", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          }} style={{ flexShrink: 0, width: 20, height: 20, borderRadius: 3, border: `1px solid ${isRemoved ? "var(--warn)" : "var(--line)"}`, background: isRemoved ? "var(--warn-bg)" : "transparent", cursor: "pointer", color: isRemoved ? "var(--warn)" : "var(--t-tertiary)", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
                             {item.custom ? "×" : isRemoved ? "+" : "×"}
                           </button>
                           {isInlineEditing ? (
                             <div style={{ flex: 1, display: "flex", gap: 4 }}>
-                              <input value={inlineEdit.l} onChange={e => setInlineEdit(p => ({ ...p, l: e.target.value }))} style={{ flex: 2, background: "#141820", border: "1px solid #4a9fe8", borderRadius: 3, padding: "3px 6px", fontFamily: "'Rajdhani',sans-serif", fontSize: 13, color: "#e8e4d8", outline: "none" }} />
-                              <input value={inlineEdit.a} onChange={e => setInlineEdit(p => ({ ...p, a: e.target.value.toUpperCase() }))} style={{ flex: 1, background: "#141820", border: "1px solid #4a9fe8", borderRadius: 3, padding: "3px 6px", fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: "#e8c84a", outline: "none" }} />
-                              <button onClick={() => applyInlineRename(pg.id, section.title, item, inlineEdit.l, inlineEdit.a, item.addedIdx)} style={{ background: "rgba(61,190,108,0.15)", border: "1px solid #3dbe6c", borderRadius: 3, padding: "3px 8px", cursor: "pointer", color: "#3dbe6c", fontSize: 11 }}>✓</button>
-                              <button onClick={() => setInlineEdit(null)} style={{ background: "transparent", border: "1px solid #3a4050", borderRadius: 3, padding: "3px 6px", cursor: "pointer", color: "#7a8090", fontSize: 11 }}>✕</button>
+                              <input value={inlineEdit.l} onChange={e => setInlineEdit(p => ({ ...p, l: e.target.value }))} style={{ flex: 2, background: "var(--bg-inset)", border: "1px solid var(--accent)", borderRadius: 3, padding: "3px 6px", fontFamily: "var(--f-ui)", fontSize: 13, color: "var(--t-primary)", outline: "none" }} />
+                              <input value={inlineEdit.a} onChange={e => setInlineEdit(p => ({ ...p, a: e.target.value.toUpperCase() }))} style={{ flex: 1, background: "var(--bg-inset)", border: "1px solid var(--accent)", borderRadius: 3, padding: "3px 6px", fontFamily: "var(--f-mono)", fontSize: 10, color: "var(--caution)", outline: "none" }} />
+                              <button className="efb-btn sm ok" onClick={() => applyInlineRename(pg.id, section.title, item, inlineEdit.l, inlineEdit.a, item.addedIdx)}>✓</button>
+                              <button className="efb-btn sm ghost" onClick={() => setInlineEdit(null)}>✕</button>
                             </div>
                           ) : (
                             <>
-                              <span onClick={() => !isRemoved && setInlineEdit({ key: itemEditKey, l: item.l, a: item.a || "" })} style={{ flex: 1, fontFamily: "'Rajdhani', sans-serif", fontSize: 13, color: item.custom ? "#3dbe6c" : isRemoved ? "#3a4050" : "#e8e4d8", cursor: isRemoved ? "default" : "text", textDecoration: isRemoved ? "line-through" : "none", borderBottom: isRemoved ? "none" : "1px dashed rgba(232,200,74,0.2)", paddingBottom: 1 }}>{item.l}</span>
-                              <span onClick={() => !isRemoved && setInlineEdit({ key: itemEditKey, l: item.l, a: item.a || "" })} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: item.custom ? "#3dbe6c" : isRemoved ? "#3a4050" : "#e8c84a", cursor: isRemoved ? "default" : "text", borderBottom: isRemoved ? "none" : "1px dashed rgba(232,200,74,0.2)", paddingBottom: 1 }}>{item.a}</span>
-                              {item.custom && <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, color: "#3dbe6c", opacity: 0.45 }}>★</span>}
-                              {!item.custom && (custom.renames || {})[item.originalLabel || item.l] && <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, color: "#4a9fe8", opacity: 0.6 }}>✎</span>}
+                              <span onClick={() => !isRemoved && setInlineEdit({ key: itemEditKey, l: item.l, a: item.a || "" })} style={{ flex: 1, fontFamily: "var(--f-ui)", fontSize: 13, color: item.custom ? "var(--ok)" : isRemoved ? "var(--t-quiet)" : "var(--t-primary)", cursor: isRemoved ? "default" : "text", textDecoration: isRemoved ? "line-through" : "none", borderBottom: isRemoved ? "none" : "1px dashed var(--caution-line)", paddingBottom: 1 }}>{item.l}</span>
+                              <span onClick={() => !isRemoved && setInlineEdit({ key: itemEditKey, l: item.l, a: item.a || "" })} style={{ fontFamily: "var(--f-mono)", fontSize: 10, color: item.custom ? "var(--ok)" : isRemoved ? "var(--t-quiet)" : "var(--caution)", cursor: isRemoved ? "default" : "text", borderBottom: isRemoved ? "none" : "1px dashed var(--caution-line)", paddingBottom: 1 }}>{item.a}</span>
+                              {item.custom && <span style={{ fontFamily: "var(--f-mono)", fontSize: 7, color: "var(--ok)", opacity: 0.45 }}>★</span>}
+                              {!item.custom && (custom.renames || {})[item.originalLabel || item.l] && <span style={{ fontFamily: "var(--f-mono)", fontSize: 7, color: "var(--accent)", opacity: 0.6 }}>✎</span>}
                             </>
                           )}
                         </div>
                       );
                     });
                   })()}
-                  <div style={{ padding: "8px 10px", background: "#0a0d14", borderTop: "1px solid #1a2030" }}>
-                    <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#4a9fe8", letterSpacing: 1.5, marginBottom: 6 }}>＋ ADD ITEM</div>
+                  <div style={{ padding: "8px 10px", background: "var(--bg-inset)", borderTop: "1px solid var(--line-faint)" }}>
+                    <div style={{ fontFamily: "var(--f-mono)", fontSize: 8, color: "var(--accent)", letterSpacing: 1.5, marginBottom: 6 }}>＋ ADD ITEM</div>
                     <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                      <input value={newItemLabel} onChange={e => setNewItemLabel(e.target.value)} onKeyDown={e => { if (e.key === "Enter") addCustomItem(pg.id, section.title); }} placeholder="Item label..." style={{ flex: 2, background: "#141820", border: "1px solid #2a3040", borderRadius: 3, color: "#e8e4d8", padding: "5px 8px", fontSize: 12, fontFamily: "'Rajdhani',sans-serif", fontWeight: 500, outline: "none" }} />
-                      <input value={newItemAction} onChange={e => setNewItemAction(e.target.value)} onKeyDown={e => { if (e.key === "Enter") addCustomItem(pg.id, section.title); }} placeholder="Action..." style={{ flex: 1, background: "#141820", border: "1px solid #2a3040", borderRadius: 3, color: "#e8c84a", padding: "5px 8px", fontSize: 11, fontFamily: "'Share Tech Mono',monospace", outline: "none" }} />
-                      <button onClick={() => addCustomItem(pg.id, section.title)} style={{ background: newItemLabel.trim() ? "rgba(61,190,108,0.2)" : "rgba(42,48,64,0.4)", border: `1px solid ${newItemLabel.trim() ? "#3dbe6c" : "#2a3040"}`, borderRadius: 3, padding: "5px 10px", cursor: newItemLabel.trim() ? "pointer" : "default", fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, color: newItemLabel.trim() ? "#3dbe6c" : "#3a4050", letterSpacing: 1, transition: "all 0.15s", whiteSpace: "nowrap" }}>ADD ＋</button>
+                      <input value={newItemLabel} onChange={e => setNewItemLabel(e.target.value)} onKeyDown={e => { if (e.key === "Enter") addCustomItem(pg.id, section.title); }} placeholder="Item label..." style={{ flex: 2, background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 3, color: "var(--t-primary)", padding: "5px 8px", fontSize: 12, fontFamily: "var(--f-ui)", fontWeight: 500, outline: "none" }} />
+                      <input value={newItemAction} onChange={e => setNewItemAction(e.target.value)} onKeyDown={e => { if (e.key === "Enter") addCustomItem(pg.id, section.title); }} placeholder="Action..." style={{ flex: 1, background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 3, color: "var(--caution)", padding: "5px 8px", fontSize: 11, fontFamily: "var(--f-mono)", outline: "none" }} />
+                      <button className={`efb-btn sm${newItemLabel.trim() ? " ok" : ""}`} onClick={() => addCustomItem(pg.id, section.title)}>ADD ＋</button>
                     </div>
                   </div>
                 </div>
@@ -2556,8 +2521,8 @@ const commParseGround = (text) => {
                 return (
                   <>
                     {nonCheckable.map((item, idx) => {
-                      if (item.type === "note") return <div key={"nc-" + idx} style={{ padding: "7px 16px 7px 16px", borderBottom: `1px solid ${T.itemBorder}`, borderLeft: "3px solid rgba(232,200,74,0.45)", background: T.noteBg }}><span style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 13, color: T.noteColor, fontStyle: "italic" }}>★ {item.l}</span></div>;
-                      if (item.type === "caution") return <div key={"nc-" + idx} style={{ padding: "7px 16px 7px 16px", borderBottom: `1px solid ${T.itemBorder}`, borderLeft: "3px solid rgba(232,90,74,0.6)", background: T.cautionBg }}><span style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 13, color: T.cautionColor, fontStyle: "italic" }}>⚠ {item.l}</span></div>;
+                      if (item.type === "note") return <div key={"nc-" + idx} className="efb-cl-note">★ {item.l}</div>;
+                      if (item.type === "caution") return <div key={"nc-" + idx} className="efb-cl-warning">⚠ {item.l}</div>;
                       return null;
                     })}
                     {merged.map((item, idx) => {
@@ -2566,18 +2531,18 @@ const commParseGround = (text) => {
                       const isDone = !!checked[key];
                       return (
                         <div key={key}>
-                          <div className="check-item" onClick={() => toggleCheck(key)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "0 14px", minHeight: 42, borderBottom: `1px solid ${T.itemBorder}`, cursor: "pointer", opacity: isDone ? T.itemCheckedOp : 1, background: isDone ? T.checkboxDone : "transparent", transition: "all 0.12s", userSelect: "none" }}>
-                            <div style={{ flexShrink: 0, width: 20, height: 20, borderRadius: 4, border: `2px solid ${isDone ? T.checkColor : T.checkboxBorder}`, background: isDone ? T.checkboxDone : "transparent", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.12s" }}>
-                              {isDone && <svg viewBox="0 0 12 12" width={13} height={13} fill="none"><path d="M2 6l3 3 5-5" stroke={T.checkColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                          <div className={`efb-check-row${isDone ? " checked" : ""}`} onClick={() => toggleCheck(key)}>
+                            <div className="efb-check-box">
+                              <Icon name="check" size={11} stroke={2.5}/>
                             </div>
-                            <span style={{ flex: 1, fontFamily: "'Rajdhani', sans-serif", fontSize: 15, fontWeight: 600, color: T.itemLabel, textDecoration: isDone ? "line-through" : "none", lineHeight: 1.3 }}>{item.l}</span>
-                            <span style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 12, color: T.actionColor, letterSpacing: 0.5, textAlign: "right", flexShrink: 0, maxWidth: 160 }}>{item.a}</span>
+                            <span className="efb-check-label">{item.l}</span>
+                            <span className="efb-check-value">{item.a}</span>
                           </div>
                           {item.notepad && openNotepads.has(key) && (
                             <DrawingNotepad title={item.notepadLabel || "NOTEPAD"} footer={item.notepadFooter} storageKey={`notepad-${key}`} initialImage={notepadImages[`notepad-${key}`]} onSave={(dataUrl) => setNotepadImages(prev => ({ ...prev, [`notepad-${key}`]: dataUrl }))} onClose={() => setOpenNotepads(prev => { const next = new Set(prev); next.delete(key); return next; })} />
                           )}
                           {item.notepad && !openNotepads.has(key) && (
-                            <button onClick={e => { e.stopPropagation(); setOpenNotepads(prev => { const next = new Set(prev); next.add(key); return next; }); }} style={{ display: "flex", alignItems: "center", gap: 5, margin: "0 10px 4px 36px", padding: "3px 10px", background: "rgba(74,159,232,0.07)", border: "1px solid rgba(74,159,232,0.25)", borderRadius: 4, cursor: "pointer", fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#4a9fe8", letterSpacing: 1.5 }}>✎ {item.notepadLabel || "OPEN NOTEPAD"}</button>
+                            <button onClick={e => { e.stopPropagation(); setOpenNotepads(prev => { const next = new Set(prev); next.add(key); return next; }); }} style={{ display: "flex", alignItems: "center", gap: 5, margin: "0 10px 4px 36px", padding: "3px 10px", background: "var(--accent-bg)", border: "1px solid var(--accent-line)", borderRadius: 4, cursor: "pointer", fontFamily: "var(--f-mono)", fontSize: 8, color: "var(--accent)", letterSpacing: 1.5 }}>✎ {item.notepadLabel || "OPEN NOTEPAD"}</button>
                           )}
                         </div>
                       );
@@ -2593,281 +2558,116 @@ const commParseGround = (text) => {
   };
 
   return (
-    <div style={{ fontFamily: "'Rajdhani','Oswald',sans-serif", background: T.appBg, color: "#e8e4d8", height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Oswald:wght@400;600;700&family=Rajdhani:wght@400;500;600;700&display=swap');
-        *{box-sizing:border-box;margin:0;padding:0;}
-        ::-webkit-scrollbar{width:3px;}
-        ::-webkit-scrollbar-thumb{background:#2a3040;border-radius:2px;}
-        .check-item:hover{background:rgba(74,159,232,0.07)!important;}
-        .tab-btn:hover{background:rgba(255,255,255,0.05)!important;}
-        @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
-      `}</style>
+    <div className="efb-app">
 
-      {/* HEADER */}
-      <div style={{ background: T.headerBg, borderBottom: `2px solid ${T.headerBorder}`, flexShrink: 0 }}>
-        <div style={{ padding: "8px 12px 6px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative" }}>
-          <div style={{ flexShrink: 0, minWidth: 80 }}>
-            {onBackToHangar && (
-              <button onClick={onBackToHangar} style={{ display: "flex", alignItems: "center", gap: 5, background: lightMode ? "rgba(26,58,120,0.08)" : "rgba(232,200,74,0.07)", border: `1px solid ${lightMode ? "#1a3a78" : "#3a3010"}`, borderRadius: 5, padding: "4px 10px", cursor: "pointer", transition: "all 0.15s" }}>
-                <svg viewBox="0 0 16 16" width={12} height={12} fill="none"><path d="M10 3L5 8l5 5" stroke={lightMode ? "#1a3a78" : "#e8c84a"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, letterSpacing: 1.5, color: lightMode ? "#1a3a78" : "#e8c84a", textTransform: "uppercase" }}>HANGAR</span>
-              </button>
-            )}
-          </div>
-          <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", display: "flex", alignItems: "baseline", gap: 8, pointerEvents: "none", whiteSpace: "nowrap" }}>
-            <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: 4, color: lightMode ? "#0a2858" : "#e8c84a", textTransform: "uppercase", lineHeight: 1 }}>{aircraft ? aircraft.tail : "N12345"}</div>
-            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: lightMode ? "#607090" : "#7a8090" }}>—</div>
-            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, letterSpacing: 2, color: lightMode ? "#0a2858" : "#e8c84a", textTransform: "uppercase" }}>{aircraft ? aircraft.type : "Cessna 172S Skyhawk"}</div>
-          </div>
-          <button onClick={() => setLightMode(m => !m)} style={{ display: "flex", alignItems: "center", gap: 6, background: lightMode ? "rgba(26,106,176,0.12)" : "rgba(232,200,74,0.08)", border: `1px solid ${lightMode ? "#1a6ab0" : "#4a5068"}`, borderRadius: 20, padding: "4px 10px 4px 6px", cursor: "pointer", transition: "all 0.2s" }}>
-            <div style={{ width: 34, height: 18, borderRadius: 9, background: lightMode ? "#1a6ab0" : "#2a3040", position: "relative", transition: "background 0.2s", flexShrink: 0 }}>
-              <div style={{ position: "absolute", top: 2, left: lightMode ? 18 : 2, width: 14, height: 14, borderRadius: "50%", background: lightMode ? "#fff" : "#e8c84a", transition: "left 0.2s, background 0.2s", boxShadow: lightMode ? "0 1px 3px rgba(0,0,0,0.3)" : "0 0 6px rgba(232,200,74,0.6)" }} />
-            </div>
-            <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, letterSpacing: 1.5, color: lightMode ? "#1a6ab0" : "#7a8090", textTransform: "uppercase" }}>{lightMode ? "DAY" : "NIGHT"}</span>
-          </button>
-        </div>
-
-        <div style={{ padding: "5px 12px 7px", display: "flex", alignItems: "center", borderTop: "1px solid rgba(42,48,64,0.6)", position: "relative" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ textAlign: "left" }}>
-              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, color: "#7a8090", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 2 }}>FLIGHT TIMER</div>
-              <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 24, fontWeight: 700, letterSpacing: 2, lineHeight: 1, color: timerRunning ? "#3dbe6c" : timerSeconds > 0 ? "#e8c84a" : "#4a5068", textShadow: timerRunning ? "0 0 10px rgba(61,190,108,0.4)" : "none", transition: "color 0.2s", minWidth: 86 }}>{formatTimer(timerSeconds)}</div>
-            </div>
-            <div style={{ display: "flex", flexDirection: "row", gap: 5, marginTop: 14 }}>
-              <button onClick={() => setTimerRunning(r => !r)} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "4px 10px", borderRadius: 3, cursor: "pointer", background: timerRunning ? "rgba(232,90,74,0.2)" : "rgba(61,190,108,0.2)", color: timerRunning ? "#e85a4a" : "#3dbe6c", border: `1px solid ${timerRunning ? "#e85a4a" : "#3dbe6c"}` }}>{timerRunning ? "⏸ STOP" : timerSeconds > 0 ? "▶ CONT" : "▶ START"}</button>
-              <button onClick={() => { setTimerRunning(false); setTimerSeconds(0); }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "4px 10px", borderRadius: 3, cursor: "pointer", background: "transparent", color: "#7a8090", border: "1px solid #2a3040" }}>↺ RESET</button>
-            </div>
-          </div>
-          <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, color: lightMode ? "#3a4a60" : "#7a8090", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 2 }}>LOCAL</div>
-              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 18, color: lightMode ? "#0a1428" : "#e8e4d8", letterSpacing: 1, lineHeight: 1 }}>{localTime}</div>
-            </div>
-            <div style={{ width: 1, height: 28, background: "#2a3040" }} />
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, color: lightMode ? "#3a4a60" : "#7a8090", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 2 }}>ZULU</div>
-              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 18, color: lightMode ? "#1a3a80" : "#4a9fe8", letterSpacing: 1, lineHeight: 1 }}>{zuluTime}</div>
-            </div>
-          </div>
-          <button onClick={() => setScratchpadOpen(true)} style={{ marginLeft: "auto", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, background: lightMode ? "rgba(26,58,120,0.1)" : "rgba(232,200,74,0.07)", border: `1px solid ${lightMode ? "#1a3a78" : "#3a3010"}`, borderRadius: 5, padding: "6px 12px", cursor: "pointer", transition: "all 0.15s" }}>
-            <svg viewBox="0 0 24 24" width={20} height={20} fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke={lightMode ? "#1a3a78" : "#e8c84a"} strokeWidth="1.4" fill={lightMode ? "rgba(26,58,120,0.08)" : "rgba(232,200,74,0.08)"}/><line x1="6" y1="8" x2="18" y2="8" stroke={lightMode ? "#1a3a78" : "#e8c84a"} strokeWidth="1.2" strokeLinecap="round" opacity="0.6"/><line x1="6" y1="12" x2="18" y2="12" stroke={lightMode ? "#1a3a78" : "#e8c84a"} strokeWidth="1.2" strokeLinecap="round" opacity="0.6"/><line x1="6" y1="16" x2="13" y2="16" stroke={lightMode ? "#1a3a78" : "#e8c84a"} strokeWidth="1.2" strokeLinecap="round" opacity="0.6"/></svg>
-            <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 7, color: lightMode ? "#1a3a78" : "#e8c84a", letterSpacing: 1, textTransform: "uppercase" }}>SCRATCHPAD</span>
-          </button>
-        </div>
-      </div>
-{/* EXPANDED HEADS-UP ROLLING RADIO COMM STACK — HIGH-CONTRAST LIGHT MODE */}
-      {currentPage !== "comm" && (
-        <div 
-          onClick={() => setCurrentPage("comm")} // Quick-jump to full logs if clicked
-          style={{
-            flexShrink: 0,
-            background: commWatchdogState === "unanswered" 
-              ? "rgba(232,90,74,0.25)" 
-              : commWatchdogState === "alert" 
-                ? "rgba(232,200,74,0.18)" 
-                : lightMode ? "#cbd0e2" : "#141820",
-            borderBottom: `3px solid ${
-              commWatchdogState === "unanswered" 
-                ? "#e85a4a" 
-                : commWatchdogState === "alert" 
-                  ? "#e8c84a" 
-                  : commListening ? (lightMode ? "#1a6ab0" : "#4ae8c8") : "#2a3040"
-            }`,
-            padding: "12px 16px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 10,
-            cursor: "pointer",
-            animation: commWatchdogState === "unanswered" ? "commFlash 0.5s ease infinite alternate" : "none",
-            transition: "all 0.2s ease"
-          }}
-        >
-          {/* TOP ROW: ACTIVE / LIVE TRANSMISSION STREAM + NATIVE AUDIO TOGGLES */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
-            <div style={{
-              width: 12,
-              height: 12,
-              borderRadius: "50%",
-              background: commWatchdogState === "unanswered" 
-                ? "#e85a4a" 
-                : commWatchdogState === "alert" 
-                ? "#e8c84a" 
-                : commListening ? (lightMode ? "#0b532b" : "#3dbe6c") : "#4a5068",
-              boxShadow: commListening ? "0 0 10px currentColor" : "none",
-              flexShrink: 0
-            }} />
-
-            <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ 
-                fontFamily: "'Share Tech Mono', monospace", 
-                fontSize: 13, 
-                fontWeight: 700, 
-                color: commWatchdogState !== "clear" 
-                  ? "#e8c84a" 
-                  : lightMode ? "#0a2858" : "#4ae8c8", // High-visibility deep navy vs tactical teal
-                letterSpacing: 1.5,
-                flexShrink: 0
-              }}>
-                {commWatchdogState !== "clear" ? "⚠ ATC GUARD ALERT:" : "📡 LIVE RADIO:"}
-              </span>
-              
-              <span style={{
-                fontFamily: "'Share Tech Mono', monospace",
-                fontSize: 18, 
-                fontWeight: 700, 
-                color: commTranscript 
-                  ? (lightMode ? "#b08000" : "#e8c84a") 
-                  : (commListening || commTxLog.length > 0 ? (lightMode ? "#050a15" : "#ffffff") : (lightMode ? "#4a5a78" : "#4a5068")),
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-                flex: 1
-              }}>
-                {commTranscript 
-                  ? commTranscript 
-                  : commTxLog.length > 0 
-                    ? commTxLog[0].text 
-                    : commListening ? "Monitoring frequency... Awaiting traffic." : "Radio guard standby. Tap LISTEN to activate mic stream."
-                }
-              </span>
-            </div>
-
-            {/* INTERACTION ACTION CONTAINER ROW */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-              <button
-                onClick={() => {
-                  if (commListening) {
-                    commStopListening();
-                  } else {
-                    commStopListening();
-                    setTimeout(() => commStartListening(), 50);
-                  }
-                }}
-                style={{
-                  fontFamily: "'Oswald', sans-serif",
-                  fontSize: 12,
-                  fontWeight: 700,
-                  letterSpacing: 1.5,
-                  padding: "5px 14px",
-                  borderRadius: 4,
-                  cursor: "pointer",
-                  // Darken completely in light mode to avoid pale transparency washouts
-                  background: commListening 
-                    ? (lightMode ? "rgba(160,16,5,0.15)" : "rgba(232,90,74,0.15)") 
-                    : (lightMode ? "rgba(26,106,176,0.12)" : "rgba(74,232,200,0.12)"),
-                  color: commListening 
-                    ? (lightMode ? "#a01005" : "#e85a4a") 
-                    : (lightMode ? "#1a6ab0" : "#4ae8c8"),
-                  border: `1.5px solid ${
-                    commListening 
-                      ? (lightMode ? "#a01005" : "#e85a4a") 
-                      : (lightMode ? "#1a6ab0" : "#4ae8c8")
-                  }`,
-                  boxShadow: commListening && commMicStatus === "active" ? "0 0 8px rgba(61,190,108,0.3)" : "none",
-                  transition: "all 0.15s"
-                }}
-              >
-                {commListening ? "⏹ STOP MIC" : "⏵ LISTEN"}
-              </button>
-
-              {commWatchdogState !== "clear" && (
-                <button 
-                  onClick={commAckCall}
-                  style={{
-                    fontFamily: "'Oswald', sans-serif",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    letterSpacing: 1,
-                    padding: "5px 14px",
-                    borderRadius: 4,
-                    cursor: "pointer",
-                    background: commWatchdogState === "unanswered" ? "#e85a4a" : "#e8c84a",
-                    color: "#000",
-                    border: "none",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.4)"
-                  }}
-                >
-                  ACK CALL [{commAckCountdown}s]
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* BOTTOM SECTION: ROLLING TIMELINE TRACK */}
-          {commTxLog.length > 1 && (
-            <div style={{ 
-              display: "flex", 
-              flexDirection: "column", 
-              gap: 6,
-              borderTop: `1.5px solid ${lightMode ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.05)"}`,
-              paddingTop: 8
-            }}>
-              {commTxLog.slice(1, 3).map((log) => (
-                <div 
-                  key={log.id} 
-                  style={{ 
-                    display: "flex", 
-                    alignItems: "center", 
-                    gap: 12,
-                    fontSize: 14, 
-                    fontFamily: "'Share Tech Mono', monospace",
-                    lineHeight: 1.4
-                  }}
-                >
-                  <span style={{ 
-                    color: lightMode ? "#202838" : "#4a5068", // Solid charcoal timestamp text for Day mode
-                    fontWeight: 700,
-                    flexShrink: 0 
-                  }}>
-                    [{log.ts.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" })}Z]
-                  </span>
-                  <span style={{ 
-                    color: lightMode ? "rgba(5,10,21,0.8)" : "rgba(232,228,216,0.65)", 
-                    overflow: "hidden", 
-                    textOverflow: "ellipsis", 
-                    whiteSpace: "nowrap",
-                    flex: 1
-                  }}>
-                    {log.text}
-                  </span>
-                </div>
-              ))}
-            </div>
+      {/* ── TOPBAR ── */}
+      <header className="efb-topbar">
+        <div className="efb-topbar-left">
+          {onBackToHangar && (
+            <button className="efb-btn ghost" onClick={onBackToHangar}>
+              <Icon name="back" size={14}/> HANGAR
+            </button>
           )}
         </div>
-      )}
-
-      {/* ── BODY STACK VIEW SEGMENTATION ── */}
-      {/* BODY */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-        <div style={{ width: 90, flexShrink: 0, background: T.leftSideBg, borderRight: `1px solid ${T.leftSideBorder}`, display: "flex", flexDirection: "column", overflowY: "auto", overflowX: "hidden" }}>
-          {PAGES.map(pg => {
-            const isActive = currentPage === pg.id;
-            const count = countPage(pg.id);
-            const isDone = count.total > 0 && count.done === count.total;
-            return (
-              <button key={pg.id} className="tab-btn" onClick={() => setCurrentPage(pg.id)} style={{ width: "100%", minHeight: 76, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5, background: isActive ? T.leftTabActive : "transparent", outline: "none", borderTop: "none", borderRight: "none", borderBottom: `1px solid ${T.leftSideBorder}`, borderLeft: `3px solid ${isActive ? T.leftTabText : "transparent"}`, cursor: "pointer", padding: "10px 4px", transition: "all 0.12s" }}>
-                <div style={{ fontSize: 26, color: isActive ? T.leftTabText : T.leftTabDim, lineHeight: 1 }}>{typeof pg.icon === "string" ? pg.icon : <span style={{ color: isActive ? T.leftTabText : T.leftTabDim }}>{pg.icon}</span>}</div>
-                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, fontWeight: 700, letterSpacing: 0.5, color: isActive ? T.leftTabText : T.leftTabDim, textAlign: "center", whiteSpace: "pre-line", lineHeight: 1.2, textTransform: "uppercase" }}>{pg.label}</div>
-                {count.total > 0 && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: isDone ? "#3dbe6c" : T.leftTabCount }}>{count.done}/{count.total}</div>}
-              </button>
-            );
-          })}
-          <div style={{ marginTop: "auto" }}>
-            <button className="tab-btn" onClick={() => setMoreOpen(true)} style={{ width: "100%", minHeight: 60, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, background: "transparent", outline: "none", borderTop: `1px solid ${T.leftSideBorder}`, borderRight: "none", borderBottom: "none", borderLeft: "3px solid transparent", cursor: "pointer", padding: "8px 4px", transition: "all 0.12s" }}>
-              <svg viewBox="0 0 20 20" width={22} height={22} fill="none">
-                <line x1="3" y1="5" x2="17" y2="5" stroke="#8a5aaa" strokeWidth="2" strokeLinecap="round"/>
-                <line x1="3" y1="10" x2="17" y2="10" stroke="#8a5aaa" strokeWidth="2" strokeLinecap="round"/>
-                <line x1="3" y1="15" x2="17" y2="15" stroke="#8a5aaa" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, fontWeight: 700, letterSpacing: 0.5, color: "#8a5aaa", textAlign: "center", lineHeight: 1.2, textTransform: "uppercase" }}>MORE</div>
+        <div className="efb-topbar-center">
+          <div className="efb-tail">
+            <span className="efb-tail-no">{aircraft ? aircraft.tail : "N12345"}</span>
+            <span className="efb-tail-type">{aircraft ? aircraft.type : "C172S SKYHAWK"}</span>
+          </div>
+          <div className="efb-clocks">
+            <div className="efb-clock">
+              <span className="efb-clock-label">LOCAL</span>
+              <span className="efb-clock-value">{localTime}</span>
+            </div>
+            <div className="efb-clock zulu">
+              <span className="efb-clock-label">ZULU</span>
+              <span className="efb-clock-value">{zuluTime}</span>
+            </div>
+          </div>
+          <div className="efb-flight-timer">
+            <span className="efb-flight-timer-label">FLT</span>
+            <span className={`efb-flight-timer-value${timerRunning ? " running" : ""}`}>{formatTimer(timerSeconds)}</span>
+            <button className="efb-btn sm ghost icon-only" onClick={() => setTimerRunning(r => !r)}>
+              <Icon name={timerRunning ? "stop" : "play"} size={12}/>
+            </button>
+            <button className="efb-btn sm ghost icon-only" onClick={() => { setTimerRunning(false); setTimerSeconds(0); }}>
+              <Icon name="reset" size={11}/>
             </button>
           </div>
         </div>
+        <div className="efb-topbar-right">
+          <button className="efb-btn ghost icon-only" onClick={() => setScratchpadOpen(true)}>
+            <Icon name="note" size={16}/>
+          </button>
+          <label className={`efb-toggle${lightMode ? " on" : ""}`} onClick={() => setLightMode(m => !m)}>
+            <span className="efb-toggle-track"><span className="efb-toggle-thumb"/></span>
+            <span className="efb-toggle-label">{lightMode ? "DAY" : "NIGHT"}</span>
+          </label>
+        </div>
+      </header>
+      {/* ── RADIO PANEL ── */}
+      {currentPage !== "comm" && (
+        <div
+          className="efb-radio-panel"
+          data-watchdog={commWatchdogState}
+          onClick={() => setCurrentPage("comm")}
+          style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 14px", cursor: "pointer"
+          }}
+        >
+          <span className={`efb-status-dot${commWatchdogState === "unanswered" ? " warn" : commWatchdogState === "alert" ? " accent" : commListening ? " ok" : ""}`}/>
+          <span style={{ fontFamily:"var(--f-mono)", fontSize:11, fontWeight:700, letterSpacing:"0.12em", color:"var(--t-secondary)", flexShrink:0 }}>
+            {commWatchdogState !== "clear" ? "⚠ ATC GUARD:" : "📡 RADIO:"}
+          </span>
+          <span style={{ fontFamily:"var(--f-mono)", fontSize:13, fontWeight:600, color: commTranscript ? "var(--accent)" : commTxLog.length > 0 ? "var(--t-primary)" : "var(--t-tertiary)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flex:1 }}>
+            {commTranscript
+              ? commTranscript
+              : commTxLog.length > 0
+                ? commTxLog[0].text
+                : commListening ? "Monitoring frequency…" : "Radio guard standby. Tap to open."
+            }
+          </span>
+          <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }} onClick={e => e.stopPropagation()}>
+            <button
+              className={`efb-btn sm${commListening ? " warn" : " ok"}`}
+              onClick={() => { if (commListening) { commStopListening(); } else { commStopListening(); setTimeout(() => commStartListening(), 50); } }}
+            >
+              <Icon name={commListening ? "mic-off" : "mic"} size={13}/>
+              {commListening ? " STOP" : " LISTEN"}
+            </button>
+            {commWatchdogState !== "clear" && (
+              <button className="efb-btn sm warn" onClick={commAckCall}>
+                ACK [{commAckCountdown}s]
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: T.centerBg, position: "relative" }}>
-          <div style={{ flex: 1, overflow: currentPage === "comm" ? "hidden" : "auto", overflowX: "hidden", scrollbarWidth: "thin", display: "flex", flexDirection: "column" }}>
+      {/* ── LEFT RAIL ── */}
+      <nav className="efb-rail-l">
+        {PAGES.map(pg => {
+          const iconMap = { preflight:"preflight", startup:"startup", taxi:"taxi", takeoff:"takeoff", cruise:"cruise", approach:"landing", shutdown:"power" };
+          const isActive = currentPage === pg.id;
+          const count = countPage(pg.id);
+          const isDone = count.total > 0 && count.done === count.total;
+          return (
+            <button key={pg.id} className={`efb-rail-item${isActive ? " active" : ""}${isDone ? " complete" : ""}`} onClick={() => setCurrentPage(pg.id)}>
+              <span className="efb-rail-ico"><Icon name={iconMap[pg.id] || "plane"} size={22}/></span>
+              <span className="efb-rail-lbl">{pg.label}</span>
+              {count.total > 0 && <span className="efb-rail-cnt">{isDone ? "✓" : `${count.done}/${count.total}`}</span>}
+            </button>
+          );
+        })}
+        <div className="efb-rail-spacer"/>
+        <button className="efb-rail-item" onClick={() => setMoreOpen(true)}>
+          <span className="efb-rail-ico"><Icon name="menu" size={20}/></span>
+          <span className="efb-rail-lbl">MORE</span>
+        </button>
+      </nav>
+
+      {/* ── MAIN CONTENT ── */}
+      <main className="efb-main">
+        <div style={{ flex: 1, overflow: currentPage === "comm" ? "hidden" : "auto", overflowX: "hidden", scrollbarWidth: "thin", display: "flex", flexDirection: "column" }}>
             {currentPage === "comm"
               ? <CommPage
                   lightMode={lightMode}
@@ -2914,9 +2714,9 @@ const commParseGround = (text) => {
                 />
               : renderChecklist(activePg)
             }
-          </div>
+        </div>
 
-          {currentPage !== "comm" && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 40, pointerEvents: "none", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 4px 4px 4px" }}>
+        {currentPage !== "comm" && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 40, pointerEvents: "none", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 4px 4px 4px" }}>
             <div style={{ pointerEvents: "auto", display: "flex", flexDirection: "column", gap: "0px" }}>
               {[
                 { key: "vspeeds", label: "V-SPEEDS · C172S",           color: "#3a9ad4", headerBg: "rgba(58,154,212,0.12)",  contentBg: "rgba(5,17,24,0.96)"  },
@@ -2930,31 +2730,31 @@ const commParseGround = (text) => {
                 return (
                   <div key={acc.key} style={{ display: "flex", flexDirection: "column", borderRadius: "6px", overflow: "hidden", marginTop: isFirst ? "0px" : "-6px", boxShadow: `0 -4px 10px ${acc.color}${isOpen ? "40" : "20"}, 0 4px 12px rgba(0,0,0,0.8)`, borderTop: `1px solid ${isOpen ? acc.color : `${acc.color}55`}`, borderLeft: `1px solid ${isOpen ? acc.color : `${acc.color}55`}`, borderRight: `1px solid ${isOpen ? acc.color : `${acc.color}55`}`, borderBottom: isOpen ? `1px solid ${acc.color}` : "none", backgroundColor: isOpen ? acc.contentBg : "rgba(13,17,22,0.65)", backdropFilter: "blur(4px)", position: "relative", zIndex: isOpen ? 50 : 40 + index, transition: "all 0.2s ease" }}>
                     <button onClick={toggle} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "6px 14px", cursor: "pointer", background: `linear-gradient(90deg, ${acc.headerBg} 0%, rgba(13,15,18,0.2) 60%, transparent 100%)`, backgroundColor: "transparent", border: "none", outline: "none", textAlign: "left", flexShrink: 0, userSelect: "none" }}>
-                      <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: acc.color, fontWeight: 700, display: "inline-block", transform: isOpen ? "rotate(180deg)" : "rotate(90deg)", transition: "transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)" }}>▲</span>
-                      <span style={{ fontFamily: "'Oswald',sans-serif", fontSize: 13, color: acc.color, fontWeight: 700, letterSpacing: 2, flex: 1 }}>{acc.label}</span>
-                      {acc.key === "vspeeds" && vspeedEditing && <button onClick={e => { e.stopPropagation(); resetVspeeds(); }} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer", marginRight: 4 }}>↺ RESET</button>}
-                      {acc.key === "vspeeds" && <button onClick={e => { e.stopPropagation(); setVspeedEditing(v => !v); }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "3px 10px", borderRadius: 3, cursor: "pointer", background: vspeedEditing ? `${acc.color}25` : "transparent", color: vspeedEditing ? "#e8c84a" : acc.color, border: `1px solid ${vspeedEditing ? "#e8c84a" : acc.color}`, marginRight: 6 }}>{vspeedEditing ? "✓ DONE" : "✎ EDIT"}</button>}
-                      {acc.key === "perf" && perfEditing && <button onClick={e => { e.stopPropagation(); resetPerfData(); }} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer", marginRight: 4 }}>↺ RESET</button>}
-                      {acc.key === "perf" && <button onClick={e => { e.stopPropagation(); setPerfEditing(v => !v); }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "3px 10px", borderRadius: 3, cursor: "pointer", background: perfEditing ? `${acc.color}25` : "transparent", color: perfEditing ? "#e8c84a" : acc.color, border: `1px solid ${perfEditing ? "#e8c84a" : acc.color}`, marginRight: 6 }}>{perfEditing ? "✓ DONE" : "✎ EDIT"}</button>}
-                      {acc.key === "climb" && climbEditing && <button onClick={e => { e.stopPropagation(); resetClimbData(); }} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer", marginRight: 4 }}>↺ RESET</button>}
-                      {acc.key === "climb" && <button onClick={e => { e.stopPropagation(); setClimbEditing(v => !v); }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "3px 10px", borderRadius: 3, cursor: "pointer", background: climbEditing ? `${acc.color}25` : "transparent", color: climbEditing ? "#e8c84a" : acc.color, border: `1px solid ${climbEditing ? "#e8c84a" : acc.color}`, marginRight: 6 }}>{climbEditing ? "✓ DONE" : "✎ EDIT"}</button>}
-                      {acc.key === "cruise" && cruiseEditing && <button onClick={e => { e.stopPropagation(); resetCruiseData(); }} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer", marginRight: 4 }}>↺ RESET</button>}
-                      {acc.key === "cruise" && <button onClick={e => { e.stopPropagation(); setCruiseEditing(v => !v); }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "3px 10px", borderRadius: 3, cursor: "pointer", background: cruiseEditing ? `${acc.color}25` : "transparent", color: cruiseEditing ? "#e8c84a" : acc.color, border: `1px solid ${cruiseEditing ? "#e8c84a" : acc.color}`, marginRight: 6 }}>{cruiseEditing ? "✓ DONE" : "✎ EDIT"}</button>}
+                      <span style={{ fontFamily: "var(--f-mono)", fontSize: 10, color: acc.color, fontWeight: 700, display: "inline-block", transform: isOpen ? "rotate(180deg)" : "rotate(90deg)", transition: "transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)" }}>▲</span>
+                      <span style={{ fontFamily: "var(--f-ui)", fontSize: 13, color: acc.color, fontWeight: 700, letterSpacing: 2, flex: 1 }}>{acc.label}</span>
+                      {acc.key === "vspeeds" && vspeedEditing && <button onClick={e => { e.stopPropagation(); resetVspeeds(); }} style={{ fontFamily: "var(--f-mono)", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer", marginRight: 4 }}>↺ RESET</button>}
+                      {acc.key === "vspeeds" && <button onClick={e => { e.stopPropagation(); setVspeedEditing(v => !v); }} style={{ fontFamily: "var(--f-ui)", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "3px 10px", borderRadius: 3, cursor: "pointer", background: vspeedEditing ? `${acc.color}25` : "transparent", color: vspeedEditing ? "#e8c84a" : acc.color, border: `1px solid ${vspeedEditing ? "#e8c84a" : acc.color}`, marginRight: 6 }}>{vspeedEditing ? "✓ DONE" : "✎ EDIT"}</button>}
+                      {acc.key === "perf" && perfEditing && <button onClick={e => { e.stopPropagation(); resetPerfData(); }} style={{ fontFamily: "var(--f-mono)", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer", marginRight: 4 }}>↺ RESET</button>}
+                      {acc.key === "perf" && <button onClick={e => { e.stopPropagation(); setPerfEditing(v => !v); }} style={{ fontFamily: "var(--f-ui)", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "3px 10px", borderRadius: 3, cursor: "pointer", background: perfEditing ? `${acc.color}25` : "transparent", color: perfEditing ? "#e8c84a" : acc.color, border: `1px solid ${perfEditing ? "#e8c84a" : acc.color}`, marginRight: 6 }}>{perfEditing ? "✓ DONE" : "✎ EDIT"}</button>}
+                      {acc.key === "climb" && climbEditing && <button onClick={e => { e.stopPropagation(); resetClimbData(); }} style={{ fontFamily: "var(--f-mono)", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer", marginRight: 4 }}>↺ RESET</button>}
+                      {acc.key === "climb" && <button onClick={e => { e.stopPropagation(); setClimbEditing(v => !v); }} style={{ fontFamily: "var(--f-ui)", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "3px 10px", borderRadius: 3, cursor: "pointer", background: climbEditing ? `${acc.color}25` : "transparent", color: climbEditing ? "#e8c84a" : acc.color, border: `1px solid ${climbEditing ? "#e8c84a" : acc.color}`, marginRight: 6 }}>{climbEditing ? "✓ DONE" : "✎ EDIT"}</button>}
+                      {acc.key === "cruise" && cruiseEditing && <button onClick={e => { e.stopPropagation(); resetCruiseData(); }} style={{ fontFamily: "var(--f-mono)", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer", marginRight: 4 }}>↺ RESET</button>}
+                      {acc.key === "cruise" && <button onClick={e => { e.stopPropagation(); setCruiseEditing(v => !v); }} style={{ fontFamily: "var(--f-ui)", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "3px 10px", borderRadius: 3, cursor: "pointer", background: cruiseEditing ? `${acc.color}25` : "transparent", color: cruiseEditing ? "#e8c84a" : acc.color, border: `1px solid ${cruiseEditing ? "#e8c84a" : acc.color}`, marginRight: 6 }}>{cruiseEditing ? "✓ DONE" : "✎ EDIT"}</button>}
                     </button>
                     <div style={{ maxHeight: isOpen ? "380px" : "0px", overflow: "hidden", transition: "max-height 0.3s cubic-bezier(0.25, 1, 0.5, 1)" }}>
                       <div style={{ maxHeight: "380px", overflowY: "auto", scrollbarWidth: "thin", padding: "8px 0 16px 0", borderTop: `1px solid ${acc.color}35` }}>
                         {acc.key === "vspeeds" && vspeeds.map((group, gi) => (
                           <div key={gi} style={{ padding: "10px 14px 4px" }}>
-                            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: acc.color, letterSpacing: 3, marginBottom: 6, opacity: 0.8 }}>{group.group.toUpperCase()}</div>
+                            <div style={{ fontFamily: "var(--f-mono)", fontSize: 9, color: acc.color, letterSpacing: 3, marginBottom: 6, opacity: 0.8 }}>{group.group.toUpperCase()}</div>
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, paddingBottom: 8 }}>
                               {group.items.map((item, ii) => (
                                 <div key={ii} style={{ background: "rgba(10,22,30,0.6)", border: `1px solid ${acc.color}25`, borderRadius: 8, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 2 }}>
                                   <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-                                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 12, color: acc.color, fontWeight: 700 }}>{vspeedEditing ? <input value={item.code} onChange={e => updateVspeed(gi, ii, "code", e.target.value)} style={{ width: 40, background: "#141820", border: `1px solid ${acc.color}`, borderRadius: 2, padding: "1px 4px", fontFamily: "'Share Tech Mono',monospace", fontSize: 10, color: acc.color, outline: "none" }} /> : item.code}</span>
-                                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#5a6578" }}>{item.unit}</span>
+                                    <span style={{ fontFamily: "var(--f-mono)", fontSize: 12, color: acc.color, fontWeight: 700 }}>{vspeedEditing ? <input value={item.code} onChange={e => updateVspeed(gi, ii, "code", e.target.value)} style={{ width: 40, background: "#141820", border: `1px solid ${acc.color}`, borderRadius: 2, padding: "1px 4px", fontFamily: "var(--f-mono)", fontSize: 10, color: acc.color, outline: "none" }} /> : item.code}</span>
+                                    <span style={{ fontFamily: "var(--f-mono)", fontSize: 9, color: "#5a6578" }}>{item.unit}</span>
                                   </div>
-                                  <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 32, fontWeight: 700, color: "#e8c84a", lineHeight: 1.1 }}>{vspeedEditing ? <input value={item.value} onChange={e => updateVspeed(gi, ii, "value", e.target.value)} style={{ width: 64, background: "#141820", border: "1px solid #e8c84a", borderRadius: 2, padding: "2px 4px", fontFamily: "'Oswald',sans-serif", fontSize: 22, color: "#e8c84a", outline: "none" }} /> : item.value}</div>
-                                  <div style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, color: "#a0a8b5", lineHeight: 1.2 }}>{vspeedEditing ? <input value={item.desc} onChange={e => updateVspeed(gi, ii, "desc", e.target.value)} style={{ width: "100%", background: "#141820", border: "1px solid #2a3040", borderRadius: 2, padding: "1px 4px", fontFamily: "'Rajdhani',sans-serif", fontSize: 10, color: "#e8e4d8", outline: "none" }} /> : item.desc}</div>
+                                  <div style={{ fontFamily: "var(--f-ui)", fontSize: 32, fontWeight: 700, color: "#e8c84a", lineHeight: 1.1 }}>{vspeedEditing ? <input value={item.value} onChange={e => updateVspeed(gi, ii, "value", e.target.value)} style={{ width: 64, background: "#141820", border: "1px solid #e8c84a", borderRadius: 2, padding: "2px 4px", fontFamily: "var(--f-ui)", fontSize: 22, color: "#e8c84a", outline: "none" }} /> : item.value}</div>
+                                  <div style={{ fontFamily: "var(--f-ui)", fontSize: 11, color: "#a0a8b5", lineHeight: 1.2 }}>{vspeedEditing ? <input value={item.desc} onChange={e => updateVspeed(gi, ii, "desc", e.target.value)} style={{ width: "100%", background: "#141820", border: "1px solid #2a3040", borderRadius: 2, padding: "1px 4px", fontFamily: "var(--f-ui)", fontSize: 10, color: "#e8e4d8", outline: "none" }} /> : item.desc}</div>
                                 </div>
                               ))}
                             </div>
@@ -2962,15 +2762,15 @@ const commParseGround = (text) => {
                         ))}
                         {acc.key === "perf" && perfData.map((section, si) => (
                           <div key={si} style={{ padding: "10px 14px 4px" }}>
-                            <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 12, fontWeight: 700, color: "#e8c84a", letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
-                            {section.note && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "rgba(232,200,74,0.6)", marginBottom: 6 }}>{section.note}</div>}
+                            <div style={{ fontFamily: "var(--f-ui)", fontSize: 12, fontWeight: 700, color: "#e8c84a", letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
+                            {section.note && <div style={{ fontFamily: "var(--f-mono)", fontSize: 8, color: "rgba(232,200,74,0.6)", marginBottom: 6 }}>{section.note}</div>}
                             <div style={{ border: "1px solid rgba(232,200,74,0.25)", borderRadius: 6, overflow: "hidden", marginBottom: 8 }}>
                               <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: "rgba(232,200,74,0.12)" }}>
-                                {section.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#e8c84a", letterSpacing: 1, padding: "6px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(232,200,74,0.15)" : "none", textTransform: "uppercase" }}>{col}</div>)}
+                                {section.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "var(--f-mono)", fontSize: 9, color: "#e8c84a", letterSpacing: 1, padding: "6px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(232,200,74,0.15)" : "none", textTransform: "uppercase" }}>{col}</div>)}
                               </div>
                               {section.rows.map((row, ri) => (
                                 <div key={ri} style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: ri % 2 === 0 ? "rgba(232,200,74,0.04)" : "transparent", borderTop: "1px solid rgba(232,200,74,0.1)" }}>
-                                  {row.map((cell, ci) => <div key={ci} style={{ fontFamily: ci === 0 ? "'Rajdhani',sans-serif" : "'Share Tech Mono',monospace", fontSize: ci === 0 ? 13 : 12, fontWeight: ci === 0 ? 600 : 400, color: ci === 0 ? "#e8e4d8" : "#e8c84a", padding: "6px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(232,200,74,0.08)" : "none" }}>{perfEditing ? <input value={cell} onChange={e => updatePerfCell(si, ri, ci, e.target.value)} style={{ width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #2a3040", fontFamily: "inherit", fontSize: "inherit", color: "inherit", outline: "none", padding: 0 }} /> : cell}</div>)}
+                                  {row.map((cell, ci) => <div key={ci} style={{ fontFamily: ci === 0 ? "var(--f-ui)" : "var(--f-mono)", fontSize: ci === 0 ? 13 : 12, fontWeight: ci === 0 ? 600 : 400, color: ci === 0 ? "#e8e4d8" : "#e8c84a", padding: "6px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(232,200,74,0.08)" : "none" }}>{perfEditing ? <input value={cell} onChange={e => updatePerfCell(si, ri, ci, e.target.value)} style={{ width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #2a3040", fontFamily: "inherit", fontSize: "inherit", color: "inherit", outline: "none", padding: 0 }} /> : cell}</div>)}
                                 </div>
                               ))}
                             </div>
@@ -2978,15 +2778,15 @@ const commParseGround = (text) => {
                         ))}
                         {acc.key === "climb" && climbData.map((section, si) => (
                           <div key={si} style={{ padding: "10px 14px 4px" }}>
-                            <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 12, fontWeight: 700, color: "#3dbe6c", letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
-                            {section.note && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "rgba(61,190,108,0.6)", marginBottom: 6 }}>{section.note}</div>}
+                            <div style={{ fontFamily: "var(--f-ui)", fontSize: 12, fontWeight: 700, color: "#3dbe6c", letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
+                            {section.note && <div style={{ fontFamily: "var(--f-mono)", fontSize: 8, color: "rgba(61,190,108,0.6)", marginBottom: 6 }}>{section.note}</div>}
                             <div style={{ border: "1px solid rgba(61,190,108,0.25)", borderRadius: 6, overflow: "hidden", marginBottom: 8 }}>
                               <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: "rgba(61,190,108,0.12)" }}>
-                                {section.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#3dbe6c", letterSpacing: 1, padding: "6px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(61,190,108,0.15)" : "none", textTransform: "uppercase" }}>{col}</div>)}
+                                {section.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "var(--f-mono)", fontSize: 9, color: "#3dbe6c", letterSpacing: 1, padding: "6px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(61,190,108,0.15)" : "none", textTransform: "uppercase" }}>{col}</div>)}
                               </div>
                               {section.rows.map((row, ri) => (
                                 <div key={ri} style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: ri % 2 === 0 ? "rgba(61,190,108,0.04)" : "transparent", borderTop: "1px solid rgba(61,190,108,0.1)" }}>
-                                  {row.map((cell, ci) => <div key={ci} style={{ fontFamily: ci === 0 ? "'Rajdhani',sans-serif" : "'Share Tech Mono',monospace", fontSize: ci === 0 ? 13 : 12, fontWeight: ci === 0 ? 600 : 400, color: ci === 0 ? "#e8e4d8" : "#3dbe6c", padding: "6px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(61,190,108,0.08)" : "none" }}>{climbEditing ? <input value={cell} onChange={e => updateClimbCell(si, ri, ci, e.target.value)} style={{ width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #2a3040", fontFamily: "inherit", fontSize: "inherit", color: "inherit", outline: "none", padding: 0 }} /> : cell}</div>)}
+                                  {row.map((cell, ci) => <div key={ci} style={{ fontFamily: ci === 0 ? "var(--f-ui)" : "var(--f-mono)", fontSize: ci === 0 ? 13 : 12, fontWeight: ci === 0 ? 600 : 400, color: ci === 0 ? "#e8e4d8" : "#3dbe6c", padding: "6px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(61,190,108,0.08)" : "none" }}>{climbEditing ? <input value={cell} onChange={e => updateClimbCell(si, ri, ci, e.target.value)} style={{ width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #2a3040", fontFamily: "inherit", fontSize: "inherit", color: "inherit", outline: "none", padding: 0 }} /> : cell}</div>)}
                                 </div>
                               ))}
                             </div>
@@ -2994,15 +2794,15 @@ const commParseGround = (text) => {
                         ))}
                         {acc.key === "cruise" && cruiseData.map((section, si) => (
                           <div key={si} style={{ padding: "10px 14px 4px" }}>
-                            <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 12, fontWeight: 700, color: acc.color, letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
-                            {section.note && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "rgba(58,154,212,0.6)", marginBottom: 6 }}>{section.note}</div>}
+                            <div style={{ fontFamily: "var(--f-ui)", fontSize: 12, fontWeight: 700, color: acc.color, letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
+                            {section.note && <div style={{ fontFamily: "var(--f-mono)", fontSize: 8, color: "rgba(58,154,212,0.6)", marginBottom: 6 }}>{section.note}</div>}
                             <div style={{ border: `1px solid ${acc.color}35`, borderRadius: 6, overflow: "hidden", marginBottom: 8 }}>
                               <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: "rgba(58,154,212,0.12)" }}>
-                                {section.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: acc.color, letterSpacing: 1, padding: "6px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(58,154,212,0.15)" : "none", textTransform: "uppercase" }}>{col}</div>)}
+                                {section.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "var(--f-mono)", fontSize: 9, color: acc.color, letterSpacing: 1, padding: "6px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(58,154,212,0.15)" : "none", textTransform: "uppercase" }}>{col}</div>)}
                               </div>
                               {section.rows.map((row, ri) => (
                                 <div key={ri} style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: ri % 2 === 0 ? "rgba(58,154,212,0.04)" : "transparent", borderTop: "1px solid rgba(58,154,212,0.1)" }}>
-                                  {row.map((cell, ci) => <div key={ci} style={{ fontFamily: ci === 0 ? "'Rajdhani',sans-serif" : "'Share Tech Mono',monospace", fontSize: ci === 0 ? 13 : 12, fontWeight: ci === 0 ? 600 : 400, color: ci === 0 ? "#e8e4d8" : acc.color, padding: "6px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(58,154,212,0.08)" : "none" }}>{cruiseEditing ? <input value={cell} onChange={e => updateCruiseCell(si, ri, ci, e.target.value)} style={{ width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #2a3040", fontFamily: "inherit", fontSize: "inherit", color: "inherit", outline: "none", padding: 0 }} /> : cell}</div>)}
+                                  {row.map((cell, ci) => <div key={ci} style={{ fontFamily: ci === 0 ? "var(--f-ui)" : "var(--f-mono)", fontSize: ci === 0 ? 13 : 12, fontWeight: ci === 0 ? 600 : 400, color: ci === 0 ? "#e8e4d8" : acc.color, padding: "6px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(58,154,212,0.08)" : "none" }}>{cruiseEditing ? <input value={cell} onChange={e => updateCruiseCell(si, ri, ci, e.target.value)} style={{ width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #2a3040", fontFamily: "inherit", fontSize: "inherit", color: "inherit", outline: "none", padding: 0 }} /> : cell}</div>)}
                                 </div>
                               ))}
                             </div>
@@ -3014,194 +2814,143 @@ const commParseGround = (text) => {
                 );
               })}
             </div>
-          </div>}
-        </div>
+        </div>}
+      </main>
 
-        {/* Right sidebar — emergency pages */}
-        <div style={{ width: 90, flexShrink: 0, background: T.emgSidebarBg, borderLeft: `1px solid ${T.emgSidebarBdr}`, display: "flex", flexDirection: "column", overflowY: "auto", overflowX: "hidden", transition: "all 0.2s ease" }}>
-          <div style={{ width: "100%", padding: "6px 0 5px", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: `1px solid ${T.emgSidebarBdr}`, flexShrink: 0 }}>
-            <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, fontWeight: 700, letterSpacing: 2, color: T.emgLabelColor, textTransform: "uppercase" }}>EMG</span>
-          </div>
-          {EMG_PAGES.map(pg => {
-            const isActive = currentPage === pg.id;
-            const count = countPage(pg.id);
-            const isDone = count.total > 0 && count.done === count.total;
-            return (
-              <button 
-                key={pg.id} 
-                className="tab-btn" 
-                onClick={() => setCurrentPage(pg.id)} 
-                style={{ 
-                  width: "100%", 
-                  minHeight: 76, 
-                  display: "flex", 
-                  flexDirection: "column", 
-                  alignItems: "center", 
-                  justifyContent: "center", 
-                  gap: 5, 
-                  background: isActive ? `${pg.color}18` : "transparent", 
-                  outline: "none", 
-                  borderTop: "none", 
-                  borderLeft: "none", 
-                  borderBottom: `1px solid ${T.emgItemBdr}`, 
-                  borderRight: `3px solid ${isActive ? pg.color : "transparent"}`, 
-                  cursor: "pointer", 
-                  padding: "10px 4px", 
-                  transition: "all 0.12s" 
-                }}
-              >
-                <div style={{ color: isActive ? pg.color : pg.dimColor, transition: "color 0.12s" }}>{pg.icon(28)}</div>
-                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, fontWeight: 700, letterSpacing: 0.5, color: isActive ? pg.color : pg.dimColor, textAlign: "center", whiteSpace: "pre-line", lineHeight: 1.2, textTransform: "uppercase" }}>{pg.label}</div>
-                {count.total > 0 && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: isDone ? "#3dbe6c" : pg.dimColor }}>{count.done}/{count.total}</div>}
-              </button>
-            );
-          })}
-          <div style={{ marginTop: "auto" }}>
-            <button
-              className="tab-btn"
-              onClick={() => setCurrentPage("comm")}
-              style={{
-                width: "100%", minHeight: 76, display: "flex", flexDirection: "column",
-                alignItems: "center", justifyContent: "center", gap: 5,
-                background: currentPage === "comm" ? "rgba(74,232,200,0.1)" : "transparent",
-                outline: "none", borderTop: "1px solid #1a2a28", borderLeft: "none",
-                borderBottom: "none",
-                borderRight: `3px solid ${currentPage === "comm" ? "#4ae8c8" : "transparent"}`,
-                cursor: "pointer", padding: "10px 4px", transition: "all 0.12s",
-              }}
-            >
-              {/* Microphone icon */}
-              <svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-                <rect x="9" y="2" width="6" height="11" rx="3"
-                  fill={currentPage==="comm" ? "#4ae8c8" : "#5a8a80"}
-                  stroke={currentPage==="comm" ? "#4ae8c8" : "#5a8a80"}
-                  strokeWidth="0.5"/>
-                <path d="M5 11a7 7 0 0 0 14 0" stroke={currentPage==="comm" ? "#4ae8c8" : "#5a8a80"} strokeWidth="2" strokeLinecap="round"/>
-                <line x1="12" y1="18" x2="12" y2="22" stroke={currentPage==="comm" ? "#4ae8c8" : "#5a8a80"} strokeWidth="2" strokeLinecap="round"/>
-                <line x1="9" y1="22" x2="15" y2="22" stroke={currentPage==="comm" ? "#4ae8c8" : "#5a8a80"} strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, fontWeight:700, letterSpacing:0.5, color: currentPage==="comm" ? "#4ae8c8" : "#5a8a80", textAlign:"center", lineHeight:1.2, textTransform:"uppercase" }}>
-                SMART{"\n"}COMS
-              </div>
+      {/* ── RIGHT RAIL ── */}
+      <aside className="efb-rail-r">
+        <div className="efb-rail-section-label">EMG</div>
+        {EMG_PAGES.map(pg => {
+          const iconMap = { fires:"fire", engine_fail:"engine", spin:"spin", icing:"snow", electrical:"bolt" };
+          const isActive = currentPage === pg.id;
+          const count = countPage(pg.id);
+          const isDone = count.total > 0 && count.done === count.total;
+          return (
+            <button key={pg.id} className={`efb-rail-item efb-rail-emg${isActive ? " active" : ""}${isDone ? " complete" : ""}`} style={{"--emg-color": pg.color}} onClick={() => setCurrentPage(pg.id)}>
+              <span className="efb-rail-ico"><Icon name={iconMap[pg.id] || "alert"} size={20}/></span>
+              <span className="efb-rail-lbl">{pg.label}</span>
+              {count.total > 0 && <span className="efb-rail-cnt">{isDone ? "✓" : `${count.done}/${count.total}`}</span>}
             </button>
-          </div>
-        </div>
-      </div>
+          );
+        })}
+        <div className="efb-rail-spacer"/>
+        <button className={`efb-rail-item${currentPage === "comm" ? " active" : ""}`} onClick={() => setCurrentPage("comm")}>
+          <span className="efb-rail-ico"><Icon name="mic" size={20}/></span>
+          <span className="efb-rail-lbl">{"SMART\nCOMS"}</span>
+        </button>
+      </aside>
 
-      {/* Status bar */}
-      <div style={{ flexShrink: 0, background: lightMode ? "#c8ccd8" : "#141820", borderTop: `1px solid ${T.leftSideBorder}`, padding: "4px 12px", display: "flex", alignItems: "center", gap: 16 }}>
-        <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: lightMode ? "#607090" : "#4a5068", letterSpacing: 1.5 }}>
-          {masterCount.done}/{masterCount.total} ITEMS
-        </div>
-        <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: lightMode ? "#607090" : "#4a5068", letterSpacing: 1.5 }}>
-          {aircraft?.pohRef || "POH REV 2022-05"}
-        </div>
-      </div>
+      {/* ── STATUS BAR ── */}
+      <footer className="efb-statusbar">
+        <span className="efb-status-item">
+          <span className={`efb-status-dot${commListening ? " ok" : commWatchdogState !== "clear" ? " warn" : ""}`}/>
+          {" COM"}
+        </span>
+        <span className="efb-divider-v"/>
+        <span className="efb-status-item">{masterCount.done}/{masterCount.total} ITEMS</span>
+        <span className="efb-status-spacer"/>
+        <span className="efb-status-item">{aircraft?.pohRef || "POH REV 2022-05"}</span>
+      </footer>
 
-      {/* More refs overlay */}
+      {/* ── QR OVERLAY ── */}
       {moreOpen && (
-        <div style={{ position: "absolute", inset: 0, zIndex: 200, background: T.moreOverlayBg, display: "flex", flexDirection: "column", animation: "fadeIn 0.15s ease", transition: "background 0.2s ease" }}>
-          <div style={{ background: T.moreHeaderBg, borderBottom: "2px solid #c87ae8", padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <svg viewBox="0 0 20 20" width={16} height={16} fill="none">
-                <line x1="2" y1="5" x2="18" y2="5" stroke="#c87ae8" strokeWidth="1.8" strokeLinecap="round"/>
-                <line x1="2" y1="10" x2="18" y2="10" stroke="#c87ae8" strokeWidth="1.8" strokeLinecap="round"/>
-                <line x1="2" y1="15" x2="18" y2="15" stroke="#c87ae8" strokeWidth="1.8" strokeLinecap="round"/>
-              </svg>
-              <span style={{ fontFamily: "'Oswald',sans-serif", fontSize: 15, fontWeight: 700, letterSpacing: 3, color: "#c87ae8" }}>QUICK REFERENCE</span>
+        <div className="efb-qr-backdrop" onClick={() => setMoreOpen(false)}>
+          <div className="efb-qr-panel" onClick={e => e.stopPropagation()}>
+            <div className="efb-qr-head">
+              <Icon name="menu" size={16}/>
+              <span>QUICK REFERENCE</span>
+              <button className="efb-btn warn" onClick={() => setMoreOpen(false)}>✕ CLOSE</button>
             </div>
-            <button onClick={() => setMoreOpen(false)} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: 1, padding: "4px 14px", borderRadius: 4, cursor:"pointer", background: "rgba(232,90,74,0.1)", color: "#e85a4a", border: "1px solid #e85a4a" }}>✕ CLOSE</button>
-          </div>
-          
-          <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-            <div style={{ width: 160, flexShrink: 0, background: T.moreSidebarBg, borderRight: `1px solid ${T.moreSidebarBdr}`, overflowY: "auto", transition: "background 0.2s ease" }}>
-              {MORE_REFS.map(ref => (
-                <button key={ref.id} onClick={() => setActiveMoreRef(ref.id)} style={{ width: "100%", textAlign: "left", padding: "10px 12px", cursor: "pointer", background: activeMoreRef === ref.id ? `${ref.color}12` : "transparent", border: "none", borderLeft: `3px solid ${activeMoreRef === ref.id ? ref.color : "transparent"}`, borderBottom: `1px solid ${T.moreSidebarBdr}`, transition: "all 0.12s" }}>
-                  <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, fontWeight: 700, letterSpacing: 0.5, color: activeMoreRef === ref.id ? ref.color : T.textMuted || T.emgLabelColor, textTransform: "uppercase", lineHeight: 1.3 }}>{ref.title}</div>
-                </button>
-              ))}
-            </div>
-            
-            <div style={{ flex: 1, overflowY: "auto", padding: "16px 18px", scrollbarWidth: "thin" }}>
-              {(() => {
-                const ref = MORE_REFS.find(r => r.id === activeMoreRef);
-                if (!ref) return null;
-                return (
-                  <div>
-                    <div style={{ marginBottom: 14 }}>
-                      <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: 2, color: ref.color, textTransform: "uppercase" }}>{ref.title}</div>
-                      {ref.note && <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, color: "#6a5878", letterSpacing: 1, marginTop: 4 }}>{ref.note}</div>}
-                    </div>
-                    <div style={{ border: `1px solid ${ref.color}30`, borderRadius: 5, overflow: "hidden" }}>
-                      <div style={{ display: "grid", gridTemplateColumns: `repeat(${ref.cols.length}, 1fr)`, background: `${ref.color}18` }}>
-                        {ref.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 9, fontWeight: 700, color: ref.color, letterSpacing: 1.5, textTransform: "uppercase", padding: "8px 12px", borderRight: ci < ref.cols.length - 1 ? `1px solid ${ref.color}20` : "none" }}>{col}</div>)}
-                      </div>
-                      {ref.rows.map((row, ri) => (
-                        <div key={ri} style={{ display: "grid", gridTemplateColumns: `repeat(${ref.cols.length}, 1fr)`, background: ri % 2 === 0 ? (lightMode ? "rgba(0,0,0,0.03)" : "rgba(255,255,255,0.02)") : "transparent", borderTop: `1px solid ${lightMode ? "rgba(0,0,0,0.08)" : `${ref.color}12`}` }}>
-                          {row.map((cell, ci) => {
-                            let cellColor = lightMode ? "#050a15" : ref.color;
-                            if (!lightMode && ci === 0) cellColor = "#e8e4d8";
-                            const lowerCell = cell.toLowerCase();
-                            if (lightMode) {
-                              if (lowerCell.includes("green")) cellColor = "#0b532b";
-                              if (lowerCell.includes("red")) cellColor = "#a01005";
-                            }
-                            return (
-                              <div key={ci} style={{ 
-                                fontFamily: ci === 0 ? "'Rajdhani',sans-serif" : "'Share Tech Mono',monospace", 
-                                fontSize: ci === 0 ? 14 : 12, 
-                                fontWeight: ci === 0 ? 700 : 500, 
-                                color: cellColor, 
-                                padding: "9px 12px", 
-                                lineHeight: 1.3, 
-                                borderRight: ci < ref.cols.length - 1 ? `1px solid ${lightMode ? "rgba(0,0,0,0.12)" : `${ref.color}12`}` : "none" 
-                              }}>
-                                {cell}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Scratchpad overlay */}
-      {scratchpadOpen && (
-        <div style={{ position: "absolute", inset: 0, zIndex: 200, background: "rgba(8,10,14,0.96)", display: "flex", flexDirection: "column", animation: "fadeIn 0.15s ease" }}>
-          <div style={{ background: "linear-gradient(135deg,#0a0c10,#141820)", borderBottom: "2px solid #e8c84a", padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-            <span style={{ fontFamily: "'Oswald',sans-serif", fontSize: 15, fontWeight: 700, letterSpacing: 3, color: "#e8c84a", textTransform: "uppercase" }}>PILOT SCRATCHPAD</span>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ display: "flex", background: "#0d0f12", border: "1px solid #2a3040", borderRadius: 4, overflow: "hidden" }}>
-                {["draw","type"].map(mode => (
-                  <button key={mode} onClick={() => setScratchpadMode(mode)} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "5px 14px", cursor: "pointer", border: "none", background: scratchpadMode === mode ? "rgba(232,200,74,0.15)" : "transparent", color: scratchpadMode === mode ? "#e8c84a" : "#4a5068", borderRight: mode === "draw" ? "1px solid #2a3040" : "none", textTransform: "uppercase", transition: "all 0.15s" }}>{mode === "draw" ? "✏ DRAW" : "⌨ TYPE"}</button>
+            <div className="efb-qr-body">
+              <div className="efb-qr-sidebar">
+                {MORE_REFS.map(ref => (
+                  <button
+                    key={ref.id}
+                    className={`efb-qr-nav-item${activeMoreRef === ref.id ? " active" : ""}`}
+                    style={activeMoreRef === ref.id ? {"--accent": ref.color} : {}}
+                    onClick={() => setActiveMoreRef(ref.id)}
+                  >
+                    {ref.title}
+                  </button>
                 ))}
               </div>
-              <button onClick={() => setScratchpadOpen(false)} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: 1, padding: "5px 14px", borderRadius: 4, cursor: "pointer", background: "rgba(232,90,74,0.1)", color: "#e85a4a", border: "1px solid #e85a4a" }}>✕ CLOSE</button>
+              <div className="efb-qr-content">
+                {(() => {
+                  const ref = MORE_REFS.find(r => r.id === activeMoreRef);
+                  if (!ref) return null;
+                  return (
+                    <>
+                      <div className="efb-qr-content-head">
+                        <span className="efb-qr-content-title" style={{color: ref.color}}>{ref.title}</span>
+                        {ref.note && <span className="efb-qr-content-sub">{ref.note}</span>}
+                      </div>
+                      <table className="efb-qr-table">
+                        <thead>
+                          <tr>{ref.cols.map((col, ci) => <th key={ci}>{col}</th>)}</tr>
+                        </thead>
+                        <tbody>
+                          {ref.rows.map((row, ri) => (
+                            <tr key={ri}>
+                              {row.map((cell, ci) => (
+                                <td key={ci} className={ci === 0 ? "efb-qr-cell-key" : ""}>{cell}</td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </>
+                  );
+                })()}
+              </div>
             </div>
-          </div>
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", padding: "10px 14px 14px" }}>
-            {scratchpadMode === "draw" ? (
-              <div style={{ flex: 1, position: "relative", background: "#050e09", border: "1px solid #1e3528", borderRadius: 6, overflow: "hidden", cursor: "crosshair" }}>
-                <ScratchpadCanvas storageKey="scratchpad-main-canvas" />
-              </div>
-            ) : (
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
-                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: 8, color: "#4a5068", letterSpacing: 1.5 }}>✎ FREE TEXT · AUTO-SAVED · {scratchpadText.length} CHARS</div>
-                <textarea value={scratchpadText} onChange={e => { setScratchpadText(e.target.value); try { localStorage.setItem("scratchpad-text", e.target.value); } catch {} }} placeholder="ATIS · CLEARANCES · FREQUENCIES · WEATHER · NOTAMS · PIREPS..." style={{ flex: 1, resize: "none", outline: "none", background: "#0a0e0a", border: "1px solid #1e3528", borderRadius: 6, color: "#e8e4d8", fontFamily: "'Share Tech Mono',monospace", fontSize: 14, lineHeight: 1.7, padding: "14px 16px", caretColor: "#e8c84a" }} />
-                <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                  <button onClick={() => { setScratchpadText(""); try { localStorage.removeItem("scratchpad-text"); } catch {}; }} style={{ fontFamily: "'Rajdhani',sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "4px 12px", borderRadius: 3, cursor: "pointer", background: "transparent", color: "#6a3030", border: "1px solid #3a2020" }}>↺ CLEAR TEXT</button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}
+
+      {/* ── SCRATCHPAD OVERLAY ── */}
+      {scratchpadOpen && (
+        <div className="efb-sp-backdrop" onClick={() => setScratchpadOpen(false)}>
+          <div className="efb-sp-panel" onClick={e => e.stopPropagation()}>
+            <div className="efb-sp-head">
+              <div>
+                <div className="efb-sp-eyebrow">APEX AVIATION</div>
+                <div className="efb-sp-head-title">PILOT SCRATCHPAD</div>
+              </div>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <div className="efb-sp-mode-tabs">
+                  {["draw","type"].map(mode => (
+                    <button key={mode} className={`efb-sp-tab${scratchpadMode === mode ? " active" : ""}`} onClick={() => setScratchpadMode(mode)}>
+                      {mode === "draw" ? "✏ DRAW" : "⌨ TYPE"}
+                    </button>
+                  ))}
+                </div>
+                <button className="efb-btn warn" onClick={() => setScratchpadOpen(false)}>✕ CLOSE</button>
+              </div>
+            </div>
+            <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", padding:"10px 14px 14px" }}>
+              {scratchpadMode === "draw" ? (
+                <div style={{ flex:1, position:"relative", background:"var(--bg-inset)", border:"1px solid var(--line)", borderRadius:6, overflow:"hidden", cursor:"crosshair" }}>
+                  <ScratchpadCanvas storageKey="scratchpad-main-canvas"/>
+                </div>
+              ) : (
+                <div style={{ flex:1, display:"flex", flexDirection:"column", gap:8 }}>
+                  <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:"var(--t-tertiary)", letterSpacing:"0.12em" }}>✎ FREE TEXT · AUTO-SAVED · {scratchpadText.length} CHARS</div>
+                  <textarea
+                    value={scratchpadText}
+                    onChange={e => { setScratchpadText(e.target.value); try { localStorage.setItem("scratchpad-text", e.target.value); } catch {} }}
+                    placeholder="ATIS · CLEARANCES · FREQUENCIES · WEATHER · NOTAMS · PIREPS..."
+                    style={{ flex:1, resize:"none", outline:"none", background:"var(--bg-inset)", border:"1px solid var(--line)", borderRadius:6, color:"var(--t-primary)", fontFamily:"var(--f-mono)", fontSize:14, lineHeight:1.7, padding:"14px 16px", caretColor:"var(--accent)" }}
+                  />
+                  <div style={{ display:"flex", justifyContent:"flex-end" }}>
+                    <button className="efb-btn sm ghost" onClick={() => { setScratchpadText(""); try { localStorage.removeItem("scratchpad-text"); } catch {}; }}>↺ CLEAR TEXT</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
