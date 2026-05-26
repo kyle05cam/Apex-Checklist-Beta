@@ -2248,8 +2248,8 @@ ul, li { list-style: none; padding: 0; margin: 0; }
    Smart Coms — form input fields
    ============================================================ */
 .efb-comm-input::placeholder {
-  font-family: var(--f-ui);
-  font-style: italic;
+  font-family: var(--f-ui) !important;
+  font-style: italic !important;
   font-weight: 400;
   color: var(--t-tertiary);
 }

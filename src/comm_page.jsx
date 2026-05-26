@@ -145,10 +145,10 @@ function MiniScribbleField({ T, label, value, onChange, color, placeholder }) {
         className="efb-comm-input"
         style={{
           flex:1, boxSizing:"border-box",
-          background:T.inputBg, border:`1px solid ${T.inputBdr(color)}`,
+          background:"var(--bg-inset)", border:"1px solid var(--line)",
           borderRadius:4, padding:"9px 10px", outline:"none",
           fontFamily:"var(--f-mono)", fontSize:14, fontWeight:700,
-          color: value ? color : T.textDim, caretColor:color,
+          color: value ? color : "var(--t-tertiary)", caretColor:color,
         }}
       />
       {/* Copy to clipboard */}
@@ -194,30 +194,28 @@ function AtisCard({ T, data, onSetAtisData, armState, rawText, onArm, onClearRaw
   const isArmed = armState === "armed";
   const isDone  = armState === "done";
   return (
-    <div style={{ background:T.cardBg, border:`2px solid ${isArmed ? A.teal : isDone ? `${A.teal}60` : `${A.teal}28`}`, borderRadius:5, overflow:"hidden", transition:"all 0.2s" }}>
+    <div style={{ background:T.cardBg, border:`1px solid ${isArmed ? A.teal : "var(--line)"}`, borderRadius:8, overflow:"hidden", transition:"all 0.2s" }}>
       {/* ── Header ── */}
-      <div style={{ background: isArmed ? `${A.teal}20` : `${A.teal}12`, borderBottom:`2px solid ${A.teal}`, padding:"10px 12px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
+      <div style={{ background:"var(--bg-2)", borderBottom:`2px solid ${A.teal}`, padding:"10px 14px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
         <div style={{ flex:1 }}>
-          <div style={{ fontFamily:"var(--f-ui)", fontSize:14, fontWeight:700, letterSpacing:3, color:A.teal }}>ATIS</div>
-          <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:T.textDim, letterSpacing:1 }}>
+          <div style={{ fontFamily:"var(--f-ui)", fontSize:14, fontWeight:700, letterSpacing:2, color:A.teal }}>ATIS</div>
+          <div style={{ fontFamily:"var(--f-ui)", fontSize:11, color:"var(--t-secondary)", marginTop:2 }}>
             {isArmed ? "● Recording…" : isDone ? "Captured · AI parsed" : "Tap ARM to capture"}
           </div>
         </div>
-        {/* ARM / STOP button — primary action, left of CLR */}
         <button onClick={onArm} style={{
-          fontFamily:"var(--f-ui)", fontSize:13, fontWeight:700, letterSpacing:2,
-          padding:"10px 20px", borderRadius:5, cursor:"pointer", minWidth:90,
-          background: isArmed ? A.teal : `${A.teal}18`,
+          fontFamily:"var(--f-ui)", fontSize:12, fontWeight:700, letterSpacing:1.5,
+          padding:"8px 18px", borderRadius:6, cursor:"pointer",
+          background: isArmed ? A.teal : "transparent",
           color: isArmed ? "#000" : A.teal,
-          border:`2px solid ${A.teal}`,
-          boxShadow: isArmed ? `0 0 14px ${A.teal}70` : "none",
+          border:`1.5px solid ${A.teal}`,
+          boxShadow: isArmed ? `0 0 12px ${A.teal}60` : "none",
           animation: isArmed ? "commGlow 1.2s ease infinite" : "none",
           transition:"all 0.15s",
         }}>
           {isArmed ? "⏹ STOP" : "● ARM"}
         </button>
-        {/* CLR button — far right — clears everything */}
-        <button onClick={onClearRaw} style={{ fontFamily:"var(--f-mono)", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
+        <button onClick={onClearRaw} style={{ fontFamily:"var(--f-mono)", fontSize:10, padding:"7px 12px", borderRadius:5, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
       </div>
       {/* ── Raw captured text — high-visibility pilot-readable block ── */}
       {rawText ? (
@@ -254,28 +252,28 @@ function TaxiCard({ T, data, onSetTaxiData, armState, rawText, onArm, onClearRaw
   const isArmed = armState === "armed";
   const isDone  = armState === "done";
   return (
-    <div style={{ background:T.cardBg, border:`2px solid ${isArmed ? A.blue : isDone ? `${A.blue}60` : `${A.blue}28`}`, borderRadius:5, overflow:"hidden", transition:"all 0.2s" }}>
+    <div style={{ background:T.cardBg, border:`1px solid ${isArmed ? A.blue : "var(--line)"}`, borderRadius:8, overflow:"hidden", transition:"all 0.2s" }}>
       {/* ── Header ── */}
-      <div style={{ background: isArmed ? `${A.blue}20` : `${A.blue}12`, borderBottom:`2px solid ${A.blue}`, padding:"10px 12px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
+      <div style={{ background:"var(--bg-2)", borderBottom:`2px solid ${A.blue}`, padding:"10px 14px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
         <div style={{ flex:1 }}>
-          <div style={{ fontFamily:"var(--f-ui)", fontSize:14, fontWeight:700, letterSpacing:3, color:A.blue }}>TAXI INSTRUCTIONS</div>
-          <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:T.textDim, letterSpacing:1 }}>
+          <div style={{ fontFamily:"var(--f-ui)", fontSize:14, fontWeight:700, letterSpacing:2, color:A.blue }}>TAXI INSTRUCTIONS</div>
+          <div style={{ fontFamily:"var(--f-ui)", fontSize:11, color:"var(--t-secondary)", marginTop:2 }}>
             {isArmed ? "● Recording…" : isDone ? "Captured · AI parsed" : "Tap ARM to capture"}
           </div>
         </div>
         <button onClick={onArm} style={{
-          fontFamily:"var(--f-ui)", fontSize:13, fontWeight:700, letterSpacing:2,
-          padding:"10px 20px", borderRadius:5, cursor:"pointer", minWidth:90,
-          background: isArmed ? A.blue : `${A.blue}18`,
+          fontFamily:"var(--f-ui)", fontSize:12, fontWeight:700, letterSpacing:1.5,
+          padding:"8px 18px", borderRadius:6, cursor:"pointer",
+          background: isArmed ? A.blue : "transparent",
           color: isArmed ? "#000" : A.blue,
-          border:`2px solid ${A.blue}`,
-          boxShadow: isArmed ? `0 0 14px ${A.blue}70` : "none",
+          border:`1.5px solid ${A.blue}`,
+          boxShadow: isArmed ? `0 0 12px ${A.blue}60` : "none",
           animation: isArmed ? "commGlow 1.2s ease infinite" : "none",
           transition:"all 0.15s",
         }}>
           {isArmed ? "⏹ STOP" : "● ARM"}
         </button>
-        <button onClick={onClearRaw} style={{ fontFamily:"var(--f-mono)", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
+        <button onClick={onClearRaw} style={{ fontFamily:"var(--f-mono)", fontSize:10, padding:"7px 12px", borderRadius:5, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
       </div>
 
       {/* ── Raw captured text ── */}
@@ -306,9 +304,9 @@ function TaxiCard({ T, data, onSetTaxiData, armState, rawText, onArm, onClearRaw
         <MiniScribbleField T={T} label="TAXI VIA" color={A.teal} placeholder="e.g. Y > Y1 > B > H"
           value={data.route||""} onChange={v => onSetTaxiData({ ...data, route:v })} />
 
-        {/* Hold Short — safety-critical, red, larger */}
-        <div style={{ background:`${A.red}08`, border:`1px solid ${A.red}30`, borderLeft:`4px solid ${A.red}`, borderRadius:4, padding:"8px 10px" }}>
-          <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:A.red, letterSpacing:2, marginBottom:5, fontWeight:700 }}>
+        {/* Hold Short — safety-critical */}
+        <div style={{ borderLeft:`3px solid ${A.red}`, borderRadius:4, paddingLeft:10, paddingTop:6, paddingBottom:6 }}>
+          <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:A.red, letterSpacing:1.5, marginBottom:5, fontWeight:700 }}>
             ⚠ HOLD SHORT
           </div>
           <input
@@ -319,10 +317,10 @@ function TaxiCard({ T, data, onSetTaxiData, armState, rawText, onArm, onClearRaw
             className="efb-comm-input"
             style={{
               width:"100%", boxSizing:"border-box",
-              background:T.inputBg, border:`1px solid ${A.red}40`,
-              borderRadius:3, padding:"9px 10px", outline:"none",
-              fontFamily:"var(--f-mono)", fontSize:16, fontWeight:700,
-              color: data.holdShort ? A.red : T.textDim, caretColor:A.red,
+              background:"var(--bg-inset)", border:"1px solid var(--line)",
+              borderRadius:4, padding:"9px 10px", outline:"none",
+              fontFamily:"var(--f-mono)", fontSize:14, fontWeight:700,
+              color: data.holdShort ? A.red : "var(--t-tertiary)", caretColor:A.red,
             }}
           />
         </div>
@@ -348,28 +346,28 @@ function GndCard({ T, data, onSetGndData, armState, rawText, onArm, onClearRaw }
   const isArmed = armState === "armed";
   const isDone  = armState === "done";
   return (
-    <div style={{ background:T.cardBg, border:`2px solid ${isArmed ? A.green : isDone ? `${A.green}60` : `${A.green}28`}`, borderRadius:5, overflow:"hidden", transition:"all 0.2s" }}>
+    <div style={{ background:T.cardBg, border:`1px solid ${isArmed ? A.green : "var(--line)"}`, borderRadius:8, overflow:"hidden", transition:"all 0.2s" }}>
       {/* ── Header ── */}
-      <div style={{ background: isArmed ? `${A.green}18` : `${A.green}10`, borderBottom:`2px solid ${A.green}`, padding:"10px 12px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
+      <div style={{ background:"var(--bg-2)", borderBottom:`2px solid ${A.green}`, padding:"10px 14px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
         <div style={{ flex:1 }}>
-          <div style={{ fontFamily:"var(--f-ui)", fontSize:14, fontWeight:700, letterSpacing:3, color:A.green }}>GROUND CLEARANCE</div>
-          <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:T.textDim, letterSpacing:1 }}>
+          <div style={{ fontFamily:"var(--f-ui)", fontSize:14, fontWeight:700, letterSpacing:2, color:A.green }}>GROUND CLEARANCE</div>
+          <div style={{ fontFamily:"var(--f-ui)", fontSize:11, color:"var(--t-secondary)", marginTop:2 }}>
             {isArmed ? "● Recording…" : isDone ? "Captured · AI parsed" : "Tap ARM to capture"}
           </div>
         </div>
         <button onClick={onArm} style={{
-          fontFamily:"var(--f-ui)", fontSize:13, fontWeight:700, letterSpacing:2,
-          padding:"10px 20px", borderRadius:5, cursor:"pointer", minWidth:90,
-          background: isArmed ? A.green : `${A.green}18`,
+          fontFamily:"var(--f-ui)", fontSize:12, fontWeight:700, letterSpacing:1.5,
+          padding:"8px 18px", borderRadius:6, cursor:"pointer",
+          background: isArmed ? A.green : "transparent",
           color: isArmed ? "#000" : A.green,
-          border:`2px solid ${A.green}`,
-          boxShadow: isArmed ? `0 0 14px ${A.green}70` : "none",
+          border:`1.5px solid ${A.green}`,
+          boxShadow: isArmed ? `0 0 12px ${A.green}60` : "none",
           animation: isArmed ? "commGlow 1.2s ease infinite" : "none",
           transition:"all 0.15s",
         }}>
           {isArmed ? "⏹ STOP" : "● ARM"}
         </button>
-        <button onClick={onClearRaw} style={{ fontFamily:"var(--f-mono)", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
+        <button onClick={onClearRaw} style={{ fontFamily:"var(--f-mono)", fontSize:10, padding:"7px 12px", borderRadius:5, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
       </div>
       {/* ── Raw captured text ── */}
       {rawText ? (
@@ -1151,27 +1149,27 @@ export function CommPage({
               <GndCard  T={T} data={gndData}  onSetGndData={onSetGndData}
                 armState={gndArmState} rawText={gndRawText}
                 onArm={onArmGnd} onClearRaw={onClearGndRaw} />
-              <div style={{ background:T.cardBg, border:`1px solid ${A.amber}28`, borderRadius:5, overflow:"hidden", transition:"background 0.2s" }}>
-                <div style={{ background: ifrArmState==="armed" ? `${A.amber}20` : `${A.amber}10`, borderBottom:`2px solid ${A.amber}`, padding:"10px 12px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
+              <div style={{ background:T.cardBg, border:`1px solid ${ifrArmState==="armed" ? A.amber : "var(--line)"}`, borderRadius:8, overflow:"hidden", transition:"all 0.2s" }}>
+                <div style={{ background:"var(--bg-2)", borderBottom:`2px solid ${A.amber}`, padding:"10px 14px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
                   <div style={{ flex:1 }}>
-                    <div style={{ fontFamily:"var(--f-ui)", fontSize:14, fontWeight:700, letterSpacing:3, color:A.amber }}>IFR CLEARANCE</div>
-                    <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:T.textDim, letterSpacing:1 }}>
+                    <div style={{ fontFamily:"var(--f-ui)", fontSize:14, fontWeight:700, letterSpacing:2, color:A.amber }}>IFR CLEARANCE</div>
+                    <div style={{ fontFamily:"var(--f-ui)", fontSize:11, color:"var(--t-secondary)", marginTop:2 }}>
                       {ifrArmState==="armed" ? "● Recording…" : ifrArmState==="done" ? "Captured · AI parsed" : "CRAFT format · Tap ARM"}
                     </div>
                   </div>
                   <button onClick={onArmIfr} style={{
-                    fontFamily:"var(--f-ui)", fontSize:13, fontWeight:700, letterSpacing:2,
-                    padding:"10px 20px", borderRadius:5, cursor:"pointer", minWidth:90,
-                    background: ifrArmState==="armed" ? A.amber : `${A.amber}18`,
+                    fontFamily:"var(--f-ui)", fontSize:12, fontWeight:700, letterSpacing:1.5,
+                    padding:"8px 18px", borderRadius:6, cursor:"pointer",
+                    background: ifrArmState==="armed" ? A.amber : "transparent",
                     color: ifrArmState==="armed" ? "#000" : A.amber,
-                    border:`2px solid ${A.amber}`,
-                    boxShadow: ifrArmState==="armed" ? `0 0 14px ${A.amber}70` : "none",
+                    border:`1.5px solid ${A.amber}`,
+                    boxShadow: ifrArmState==="armed" ? `0 0 12px ${A.amber}60` : "none",
                     animation: ifrArmState==="armed" ? "commGlow 1.2s ease infinite" : "none",
                     transition:"all 0.15s",
                   }}>
                     {ifrArmState==="armed" ? "⏹ STOP" : "● ARM"}
                   </button>
-                  <button onClick={onClearIfrRaw} style={{ fontFamily:"var(--f-mono)", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
+                  <button onClick={onClearIfrRaw} style={{ fontFamily:"var(--f-mono)", fontSize:10, padding:"7px 12px", borderRadius:5, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
                 </div>
                 {ifrRawText ? (
                   <div style={{ padding:"10px 14px", borderBottom:`1px solid ${T.border}`, background: ifrArmState==="done" ? `${A.amber}10` : `${A.amber}06`, borderLeft: ifrArmState==="done" ? `4px solid ${A.amber}` : `4px solid ${A.amber}60` }}>
