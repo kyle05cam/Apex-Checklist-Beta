@@ -850,31 +850,51 @@ export function CommPage({
 
       {/* ═══ SECTION A — HEADER ══════════════════════════════════════════════ */}
       <div style={{
-        flexShrink:0, padding:"8px 14px",
+        flexShrink:0, padding:"10px 14px",
         background:T.headerBg,
         borderBottom:`2px solid ${T.headerBorder}`,
-        display:"flex", alignItems:"center", gap:10,
+        display:"flex", alignItems:"center", gap:12,
         transition:"background 0.2s ease",
       }}>
-        <svg width={18} height={18} viewBox="0 0 20 20" fill="none">
-          <circle cx="10" cy="10" r="2.5" fill={A.teal}/>
-          <path d="M10 10 Q6 5 3 2"   stroke={A.teal} strokeWidth="1.5" strokeLinecap="round" opacity={listening?"1":"0.28"}/>
-          <path d="M10 10 Q14 5 17 2"  stroke={A.teal} strokeWidth="1.5" strokeLinecap="round" opacity={listening?"1":"0.28"}/>
-          <path d="M10 10 Q7 7 5 4"   stroke={A.teal} strokeWidth="1.2" strokeLinecap="round" strokeDasharray="1 2" opacity={listening?"0.7":"0.12"}/>
-          <path d="M10 10 Q13 7 15 4"  stroke={A.teal} strokeWidth="1.2" strokeLinecap="round" strokeDasharray="1 2" opacity={listening?"0.7":"0.12"}/>
-          <line x1="10" y1="12.5" x2="10" y2="18" stroke={A.teal} strokeWidth="1.8" strokeLinecap="round"/>
-        </svg>
+        {/* Circle icon — teal tinted background with signal SVG */}
+        <div style={{
+          width:44, height:44, borderRadius:"50%", flexShrink:0,
+          background:`${A.teal}1a`, border:`1.5px solid ${A.teal}45`,
+          display:"flex", alignItems:"center", justifyContent:"center",
+        }}>
+          <svg width={22} height={22} viewBox="0 0 20 20" fill="none">
+            <circle cx="10" cy="10" r="2.5" fill={A.teal}/>
+            <path d="M10 10 Q6 5 3 2"  stroke={A.teal} strokeWidth="1.5" strokeLinecap="round" opacity={listening?"1":"0.4"}/>
+            <path d="M10 10 Q14 5 17 2" stroke={A.teal} strokeWidth="1.5" strokeLinecap="round" opacity={listening?"1":"0.4"}/>
+            <path d="M10 10 Q7 7 5 4"  stroke={A.teal} strokeWidth="1.2" strokeLinecap="round" strokeDasharray="1 2" opacity={listening?"0.75":"0.18"}/>
+            <path d="M10 10 Q13 7 15 4" stroke={A.teal} strokeWidth="1.2" strokeLinecap="round" strokeDasharray="1 2" opacity={listening?"0.75":"0.18"}/>
+            <line x1="10" y1="12.5" x2="10" y2="18" stroke={A.teal} strokeWidth="1.8" strokeLinecap="round"/>
+          </svg>
+        </div>
 
         <div style={{ flex:1 }}>
-          <div style={{ fontFamily:"var(--f-ui)", fontSize:14, fontWeight:700, letterSpacing:3, color:A.teal }}>
-            SMART COMMUNICATION AI
+          <div style={{ fontFamily:"var(--f-ui)", fontSize:17, fontWeight:700, letterSpacing:0.3, color:"var(--t-primary)" }}>
+            Smart Communication AI
           </div>
-          <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:T.textDim, letterSpacing:1.5, marginTop:1 }}>
-            CALLSIGN: {tail} · {listening ? "MONITORING" : "STANDBY"}
+          <div style={{ fontFamily:"var(--f-ui)", fontSize:11, color:"var(--t-secondary)", marginTop:2 }}>
+            Callsign: {tail} · {listening ? "Monitoring" : "Standby"}
           </div>
         </div>
 
-        {/* Listen toggle */}
+        {/* Demo Capture — ghost button */}
+        <button style={{
+          fontFamily:"var(--f-ui)", fontSize:11, fontWeight:600, letterSpacing:0.3,
+          padding:"6px 13px", borderRadius:5, cursor:"pointer",
+          background:"transparent",
+          color:"var(--t-secondary)",
+          border:"1px solid var(--line)",
+          transition:"all 0.15s",
+          flexShrink:0,
+        }}>
+          Demo Capture
+        </button>
+
+        {/* Listen toggle — solid filled */}
         <button
           onClick={() => {
             if (listening) {
@@ -885,11 +905,12 @@ export function CommPage({
             }
           }}
           style={{
-            fontFamily:"var(--f-ui)", fontSize:11, fontWeight:700, letterSpacing:2,
-            padding:"5px 14px", borderRadius:4, cursor:"pointer",
-            background: listening ? `${A.red}18` : `${A.teal}12`,
-            color:  listening ? A.red : A.teal,
-            border:`1.5px solid ${listening ? A.red : A.teal}`,
+            fontFamily:"var(--f-ui)", fontSize:12, fontWeight:700, letterSpacing:1.5,
+            padding:"7px 18px", borderRadius:5, cursor:"pointer", flexShrink:0,
+            background: listening ? A.red : A.blue,
+            color: "#fff",
+            border: "none",
+            boxShadow: listening ? `0 2px 10px ${A.red}50` : `0 2px 8px ${A.blue}40`,
             animation: listening && micStatus==="active" ? "commGlow 1.8s ease infinite" : "none",
             transition:"all 0.15s",
           }}
@@ -1062,20 +1083,32 @@ export function CommPage({
         transition:"background 0.2s ease",
       }}>
         {[
-          { key:"active",  label:"ACTIVE FEED",  color:A.teal   },
-          { key:"archive", label:"ARCHIVE LOG",   color:A.blue   },
-          { key:"nearest", label:"NEAREST FREQS", color:A.green  },
+          { key:"active",  label:"ACTIVE FEED",  color:A.teal,  count: txLog.length   },
+          { key:"archive", label:"ARCHIVE LOG",   color:A.blue,  count: txLog.length   },
+          { key:"nearest", label:"NEAREST FREQS", color:A.green, count: null           },
         ].map(tab => (
           <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
-            flex:1, padding:"7px 4px", cursor:"pointer", border:"none",
+            flex:1, padding:"8px 4px", cursor:"pointer", border:"none",
             borderRight:`1px solid ${T.border}`,
-            background: activeTab===tab.key ? `${tab.color}14` : "transparent",
-            borderTop:`2px solid ${activeTab===tab.key ? tab.color : "transparent"}`,
+            borderBottom:`2px solid ${activeTab===tab.key ? tab.color : "transparent"}`,
+            background: activeTab===tab.key ? `${tab.color}10` : "transparent",
+            display:"flex", alignItems:"center", justifyContent:"center", gap:5,
             transition:"all 0.12s",
           }}>
             <span style={{ fontFamily:"var(--f-mono)", fontSize:9, fontWeight:700, letterSpacing:1.5, color:activeTab===tab.key?tab.color:T.textDim, textTransform:"uppercase" }}>
               {tab.label}
             </span>
+            {tab.count !== null && tab.count > 0 && (
+              <span style={{
+                fontFamily:"var(--f-mono)", fontSize:8, fontWeight:700,
+                background: activeTab===tab.key ? tab.color : `${tab.color}28`,
+                color: activeTab===tab.key ? "#fff" : tab.color,
+                borderRadius:10, padding:"0px 5px", minWidth:14, textAlign:"center",
+                lineHeight:"16px", display:"inline-block",
+              }}>
+                {tab.count}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -1121,11 +1154,17 @@ export function CommPage({
                   </div>
                 );
               })() : (
-                <div style={{ textAlign:"center", padding:"30px 20px" }}>
-                  <div style={{ fontSize:32, marginBottom:8, opacity:0.28 }}>📡</div>
-                  <div style={{ fontFamily:"var(--f-ui)", fontSize:13, letterSpacing:3, color:T.textDim }}>AWAITING TRANSMISSION</div>
-                  <div style={{ fontFamily:"var(--f-mono)", fontSize:9, marginTop:5, color:T.textDim, opacity:0.5 }}>
-                    {listening ? `MONITORING · ${tail}` : "TAP LISTEN TO BEGIN"}
+                <div style={{ textAlign:"center", padding:"32px 20px 20px" }}>
+                  <svg width={40} height={40} viewBox="0 0 24 24" fill="none"
+                    stroke={T.textDim} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+                    style={{ opacity:0.32, display:"block", margin:"0 auto 10px" }}>
+                    <path d="M12 20v-6M8 8a4 4 0 0 1 8 0M5 5a8 8 0 0 1 14 0M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/>
+                  </svg>
+                  <div style={{ fontFamily:"var(--f-ui)", fontSize:14, fontWeight:600, letterSpacing:0.5, color:T.textDim }}>
+                    Awaiting Transmission
+                  </div>
+                  <div style={{ fontFamily:"var(--f-ui)", fontSize:12, marginTop:5, color:T.textDim, opacity:0.55 }}>
+                    {listening ? `Monitoring · ${tail}` : "Forms below auto-fill from captured ATC audio."}
                   </div>
                 </div>
               )}
