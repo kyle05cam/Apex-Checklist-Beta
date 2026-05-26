@@ -33,8 +33,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { getNearestAirports, FREQ_META } from "./nearest_freqs_data.js";
 
-// ─── ACCENT COLORS — always fixed (avionics brand palette) ───────────────────
-// Background, text, and border tokens come from the computed theme (T) below.
+// ─── ACCENT COLORS — fixed avionics palette ──────────────────────────────────
 const A = {
   blue:   "#3a9ad4",
   red:    "#e85a4a",
@@ -44,66 +43,33 @@ const A = {
   purple: "#c87ae8",
 };
 
-// ─── THEME TOKENS — computed from lightMode prop ──────────────────────────────
-function buildTheme(light) {
-  return light ? {
-    // Page structure
-    pageBg:       "#f4f5fa",
-    headerBg:     "linear-gradient(135deg,#cbd0e2,#d8dce8)",
-    headerBorder: "#1a6ab0", // Swapped to deep blue anchor line for contrast
-    vuBg:         "#e2e4ee",
-    tabBarBg:     "#d8dce8",
-    tabBorder:    "#8a94a8",
-    statusBg:     "#cbd0e2",
-    replayBg:     "#dde0ec",
-    replayBgHot:  "rgba(26,106,176,0.22)",
-    overlayBg:    "#f4f5fa",
-    overlayHdr:   "linear-gradient(90deg,rgba(26,106,176,0.15),transparent)",
-    cardBg:       "#ffffff",
-    cardBgAlt:    "#dde0ec",
-    inputBg:      "#ffffff",
-    inputBdr:      (c) => c === A.amber ? "#b08000" : `${c}80`, // Force amber text borders to be darker brown/gold
-    // High-Contrast Typography
-    textMain:     "#050a15", // Jet black core text
-    textMuted:    "#202b40", // Dark charcoal secondary text
-    textDim:      "#3a4860", // Visible dark blue-gray details
-    // Borders
-    border:       "#8a94a8",
-    borderLight:  "#cbd0e2",
-    // Scrollbar
-    scrollBg:     "#a0a8b8",
-    // Dim dot
-    dimDot:       "#5a6680",
-  } : {
-    // Page structure
-    pageBg:       "#0d0f12",
-    headerBg:     "linear-gradient(135deg,#0a0c10,#141820)",
-    headerBorder: A.teal,
-    vuBg:         "rgba(10,14,20,0.85)",
-    tabBarBg:     "#0a0c10",
-    tabBorder:    "#2a3040",
-    statusBg:     "#070910",
-    replayBg:     "linear-gradient(90deg,rgba(58,154,212,0.09) 0%,rgba(10,14,20,0.35) 55%,rgba(58,154,212,0.09) 100%)",
-    replayBgHot:  "rgba(58,154,212,0.2)",
-    overlayBg:    "rgba(7,9,14,0.97)",
-    overlayHdr:   "linear-gradient(90deg,rgba(232,200,74,0.14),rgba(10,14,20,0))",
-    cardBg:       "rgba(10,14,20,0.9)",
-    cardBgAlt:    "rgba(10,14,20,0.9)",
-    inputBg:      "rgba(5,8,12,0.9)",
-    inputBdr:     (c) => `${c}30`,
-    // Text
-    textMain:     "#e8e4d8",
-    textMuted:    "#7a8090",
-    textDim:      "#4a5068",
-    // Borders
-    border:       "#2a3040",
-    borderLight:  "#1a2030",
-    // Scrollbar
-    scrollBg:     "#2a3040",
-    // Dim dot
-    dimDot:       "#4a5068",
-  };
-}
+// ─── THEME TOKENS — CSS variables, theme-agnostic ────────────────────────────
+// All color switching is handled by [data-mode="day"] selectors in styles.css.
+// This object is a static map; no lightMode param needed.
+const T = {
+  pageBg:       "var(--bg-0)",
+  headerBg:     "var(--bg-1)",
+  headerBorder: "var(--accent-line)",
+  vuBg:         "var(--bg-inset)",
+  tabBarBg:     "var(--bg-1)",
+  tabBorder:    "var(--line)",
+  statusBg:     "var(--bg-1)",
+  replayBg:     "var(--bg-2)",
+  replayBgHot:  "color-mix(in oklab, var(--accent) 15%, var(--bg-2))",
+  overlayBg:    "var(--bg-overlay)",
+  overlayHdr:   "var(--bg-panel)",
+  cardBg:       "var(--bg-panel)",
+  cardBgAlt:    "var(--bg-panel)",
+  inputBg:      "var(--bg-inset)",
+  inputBdr:     (c) => `${c}50`,
+  textMain:     "var(--t-primary)",
+  textMuted:    "var(--t-secondary)",
+  textDim:      "var(--t-tertiary)",
+  border:       "var(--line)",
+  borderLight:  "var(--line-faint)",
+  scrollBg:     "var(--t-tertiary)",
+  dimDot:       "var(--t-tertiary)",
+};
 
 // ─── CRAFT FIELD DEFINITIONS ─────────────────────────────────────────────────
 const CRAFT_FIELDS = [
@@ -140,7 +106,7 @@ function TokenText({ entry }) {
       <span key={i} style={{
         background:s.bg, color:s.color, borderRadius:3,
         padding:"0 5px", margin:"0 2px",
-        fontFamily:"'Share Tech Mono',monospace", fontSize:12, fontWeight:700,
+        fontFamily:"var(--f-mono)", fontSize:12, fontWeight:700,
         border:`1px solid ${s.color}40`,
       }}>
         {tok.text.toUpperCase()}
@@ -185,7 +151,7 @@ function MiniScribbleField({ T, label, value, onChange, color, placeholder }) {
     <div style={{ marginBottom: 2 }}>
       {/* Row: label + text input + scribble toggle */}
       <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom: canvasOpen ? 4 : 0 }}>
-        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:color, letterSpacing:1.5, flexShrink:0, width:70 }}>
+        <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:color, letterSpacing:1.5, flexShrink:0, width:70 }}>
           {label}
         </div>
         <input
@@ -197,7 +163,7 @@ function MiniScribbleField({ T, label, value, onChange, color, placeholder }) {
             flex:1, boxSizing:"border-box",
             background:T.inputBg, border:`1px solid ${T.inputBdr(color)}`,
             borderRadius:3, padding:"5px 8px", outline:"none",
-            fontFamily:"'Share Tech Mono',monospace", fontSize:14, fontWeight:700,
+            fontFamily:"var(--f-mono)", fontSize:14, fontWeight:700,
             color:value ? color : T.textDim, caretColor:color,
           }}
         />
@@ -233,7 +199,7 @@ function MiniScribbleField({ T, label, value, onChange, color, placeholder }) {
             onClick={clearCanvas}
             style={{
               position:"absolute", top:3, right:3,
-              fontFamily:"'Share Tech Mono',monospace", fontSize:7, padding:"1px 5px",
+              fontFamily:"var(--f-mono)", fontSize:7, padding:"1px 5px",
               borderRadius:2, cursor:"pointer", background:"transparent",
               color:T.textDim, border:`1px solid ${T.border}`,
             }}
@@ -261,14 +227,14 @@ function AtisCard({ T, data, onSetAtisData, armState, rawText, onArm, onClearRaw
       {/* ── Header ── */}
       <div style={{ background: isArmed ? `${A.teal}20` : `${A.teal}12`, borderBottom:`2px solid ${A.teal}`, padding:"10px 12px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
         <div style={{ flex:1 }}>
-          <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:14, fontWeight:700, letterSpacing:3, color:A.teal }}>ATIS</div>
-          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:1 }}>
+          <div style={{ fontFamily:"var(--f-ui)", fontSize:14, fontWeight:700, letterSpacing:3, color:A.teal }}>ATIS</div>
+          <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:T.textDim, letterSpacing:1 }}>
             {isArmed ? "● RECORDING…" : isDone ? "CAPTURED · AI PARSED" : "TAP ARM TO CAPTURE"}
           </div>
         </div>
         {/* ARM / STOP button — primary action, left of CLR */}
         <button onClick={onArm} style={{
-          fontFamily:"'Oswald',sans-serif", fontSize:13, fontWeight:700, letterSpacing:2,
+          fontFamily:"var(--f-ui)", fontSize:13, fontWeight:700, letterSpacing:2,
           padding:"10px 20px", borderRadius:5, cursor:"pointer", minWidth:90,
           background: isArmed ? A.teal : `${A.teal}18`,
           color: isArmed ? "#000" : A.teal,
@@ -280,21 +246,21 @@ function AtisCard({ T, data, onSetAtisData, armState, rawText, onArm, onClearRaw
           {isArmed ? "⏹ STOP" : "● ARM"}
         </button>
         {/* CLR button — far right — clears everything */}
-        <button onClick={onClearRaw} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
+        <button onClick={onClearRaw} style={{ fontFamily:"var(--f-mono)", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
       </div>
       {/* ── Raw captured text — high-visibility pilot-readable block ── */}
       {rawText ? (
         <div style={{ padding:"10px 14px", borderBottom:`1px solid ${T.border}`, background: isDone ? `${A.teal}10` : `${A.teal}06`, borderLeft: isDone ? `4px solid ${A.teal}` : `4px solid ${A.amber}` }}>
-          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color: isArmed ? A.amber : A.teal, letterSpacing:2, fontWeight:700, marginBottom:6 }}>
+          <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color: isArmed ? A.amber : A.teal, letterSpacing:2, fontWeight:700, marginBottom:6 }}>
             {isArmed ? "▶ LIVE BUFFER" : "✓ CAPTURED TEXT"}
           </div>
-          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:16, fontWeight:700, color: isArmed ? A.amber : T.textMain, lineHeight:1.6, letterSpacing:0.4 }}>
+          <div style={{ fontFamily:"var(--f-mono)", fontSize:16, fontWeight:700, color: isArmed ? A.amber : T.textMain, lineHeight:1.6, letterSpacing:0.4 }}>
             {rawText}
           </div>
         </div>
       ) : isArmed ? (
         <div style={{ padding:"10px 14px", borderBottom:`1px solid ${T.border}`, background:`${A.teal}05`, borderLeft:`4px solid ${A.teal}40` }}>
-          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:A.teal, letterSpacing:1, fontStyle:"italic", animation:"commPulse 1.5s ease infinite" }}>
+          <div style={{ fontFamily:"var(--f-mono)", fontSize:11, color:A.teal, letterSpacing:1, fontStyle:"italic", animation:"commPulse 1.5s ease infinite" }}>
             — listening · minimum 8s recording window active —
           </div>
         </div>
@@ -321,13 +287,13 @@ function TaxiCard({ T, data, onSetTaxiData, armState, rawText, onArm, onClearRaw
       {/* ── Header ── */}
       <div style={{ background: isArmed ? `${A.blue}20` : `${A.blue}12`, borderBottom:`2px solid ${A.blue}`, padding:"10px 12px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
         <div style={{ flex:1 }}>
-          <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:14, fontWeight:700, letterSpacing:3, color:A.blue }}>TAXI INSTRUCTIONS</div>
-          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:1 }}>
+          <div style={{ fontFamily:"var(--f-ui)", fontSize:14, fontWeight:700, letterSpacing:3, color:A.blue }}>TAXI INSTRUCTIONS</div>
+          <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:T.textDim, letterSpacing:1 }}>
             {isArmed ? "● RECORDING…" : isDone ? "CAPTURED · AI PARSED" : "TAP ARM TO CAPTURE"}
           </div>
         </div>
         <button onClick={onArm} style={{
-          fontFamily:"'Oswald',sans-serif", fontSize:13, fontWeight:700, letterSpacing:2,
+          fontFamily:"var(--f-ui)", fontSize:13, fontWeight:700, letterSpacing:2,
           padding:"10px 20px", borderRadius:5, cursor:"pointer", minWidth:90,
           background: isArmed ? A.blue : `${A.blue}18`,
           color: isArmed ? "#000" : A.blue,
@@ -338,22 +304,22 @@ function TaxiCard({ T, data, onSetTaxiData, armState, rawText, onArm, onClearRaw
         }}>
           {isArmed ? "⏹ STOP" : "● ARM"}
         </button>
-        <button onClick={onClearRaw} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
+        <button onClick={onClearRaw} style={{ fontFamily:"var(--f-mono)", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
       </div>
 
       {/* ── Raw captured text ── */}
       {rawText ? (
         <div style={{ padding:"10px 14px", borderBottom:`1px solid ${T.border}`, background: isDone ? `${A.blue}10` : `${A.blue}06`, borderLeft: isDone ? `4px solid ${A.blue}` : `4px solid ${A.amber}` }}>
-          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color: isArmed ? A.amber : A.blue, letterSpacing:2, fontWeight:700, marginBottom:6 }}>
+          <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color: isArmed ? A.amber : A.blue, letterSpacing:2, fontWeight:700, marginBottom:6 }}>
             {isArmed ? "▶ LIVE BUFFER" : "✓ CAPTURED TEXT"}
           </div>
-          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:16, fontWeight:700, color: isArmed ? A.amber : T.textMain, lineHeight:1.6, letterSpacing:0.4 }}>
+          <div style={{ fontFamily:"var(--f-mono)", fontSize:16, fontWeight:700, color: isArmed ? A.amber : T.textMain, lineHeight:1.6, letterSpacing:0.4 }}>
             {rawText}
           </div>
         </div>
       ) : isArmed ? (
         <div style={{ padding:"10px 14px", borderBottom:`1px solid ${T.border}`, background:`${A.blue}05`, borderLeft:`4px solid ${A.blue}40` }}>
-          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:A.blue, letterSpacing:1, fontStyle:"italic", animation:"commPulse 1.5s ease infinite" }}>
+          <div style={{ fontFamily:"var(--f-mono)", fontSize:11, color:A.blue, letterSpacing:1, fontStyle:"italic", animation:"commPulse 1.5s ease infinite" }}>
             — listening · minimum 8s recording window active —
           </div>
         </div>
@@ -371,7 +337,7 @@ function TaxiCard({ T, data, onSetTaxiData, armState, rawText, onArm, onClearRaw
 
         {/* Hold Short — safety-critical, red, larger */}
         <div style={{ background:`${A.red}08`, border:`1px solid ${A.red}30`, borderLeft:`4px solid ${A.red}`, borderRadius:4, padding:"8px 10px" }}>
-          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:A.red, letterSpacing:2, marginBottom:5, fontWeight:700 }}>
+          <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:A.red, letterSpacing:2, marginBottom:5, fontWeight:700 }}>
             ⚠ HOLD SHORT
           </div>
           <input
@@ -383,7 +349,7 @@ function TaxiCard({ T, data, onSetTaxiData, armState, rawText, onArm, onClearRaw
               width:"100%", boxSizing:"border-box",
               background:T.inputBg, border:`1px solid ${A.red}40`,
               borderRadius:3, padding:"6px 10px", outline:"none",
-              fontFamily:"'Share Tech Mono',monospace", fontSize:16, fontWeight:700,
+              fontFamily:"var(--f-mono)", fontSize:16, fontWeight:700,
               color: data.holdShort ? A.red : T.textDim, caretColor:A.red,
             }}
           />
@@ -414,13 +380,13 @@ function GndCard({ T, data, onSetGndData, armState, rawText, onArm, onClearRaw }
       {/* ── Header ── */}
       <div style={{ background: isArmed ? `${A.green}18` : `${A.green}10`, borderBottom:`2px solid ${A.green}`, padding:"10px 12px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
         <div style={{ flex:1 }}>
-          <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:14, fontWeight:700, letterSpacing:3, color:A.green }}>GROUND CLEARANCE</div>
-          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:1 }}>
+          <div style={{ fontFamily:"var(--f-ui)", fontSize:14, fontWeight:700, letterSpacing:3, color:A.green }}>GROUND CLEARANCE</div>
+          <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:T.textDim, letterSpacing:1 }}>
             {isArmed ? "● RECORDING…" : isDone ? "CAPTURED · AI PARSED" : "TAP ARM TO CAPTURE"}
           </div>
         </div>
         <button onClick={onArm} style={{
-          fontFamily:"'Oswald',sans-serif", fontSize:13, fontWeight:700, letterSpacing:2,
+          fontFamily:"var(--f-ui)", fontSize:13, fontWeight:700, letterSpacing:2,
           padding:"10px 20px", borderRadius:5, cursor:"pointer", minWidth:90,
           background: isArmed ? A.green : `${A.green}18`,
           color: isArmed ? "#000" : A.green,
@@ -431,21 +397,21 @@ function GndCard({ T, data, onSetGndData, armState, rawText, onArm, onClearRaw }
         }}>
           {isArmed ? "⏹ STOP" : "● ARM"}
         </button>
-        <button onClick={onClearRaw} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
+        <button onClick={onClearRaw} style={{ fontFamily:"var(--f-mono)", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
       </div>
       {/* ── Raw captured text ── */}
       {rawText ? (
         <div style={{ padding:"10px 14px", borderBottom:`1px solid ${T.border}`, background: isDone ? `${A.green}10` : `${A.green}06`, borderLeft: isDone ? `4px solid ${A.green}` : `4px solid ${A.amber}` }}>
-          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color: isArmed ? A.amber : A.green, letterSpacing:2, fontWeight:700, marginBottom:6 }}>
+          <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color: isArmed ? A.amber : A.green, letterSpacing:2, fontWeight:700, marginBottom:6 }}>
             {isArmed ? "▶ LIVE BUFFER" : "✓ CAPTURED TEXT"}
           </div>
-          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:16, fontWeight:700, color: isArmed ? A.amber : T.textMain, lineHeight:1.6, letterSpacing:0.4 }}>
+          <div style={{ fontFamily:"var(--f-mono)", fontSize:16, fontWeight:700, color: isArmed ? A.amber : T.textMain, lineHeight:1.6, letterSpacing:0.4 }}>
             {rawText}
           </div>
         </div>
       ) : isArmed ? (
         <div style={{ padding:"10px 14px", borderBottom:`1px solid ${T.border}`, background:`${A.green}05`, borderLeft:`4px solid ${A.green}40` }}>
-          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:A.green, letterSpacing:1, fontStyle:"italic", animation:"commPulse 1.5s ease infinite" }}>
+          <div style={{ fontFamily:"var(--f-mono)", fontSize:11, color:A.green, letterSpacing:1, fontStyle:"italic", animation:"commPulse 1.5s ease infinite" }}>
             — listening · minimum 8s recording window active —
           </div>
         </div>
@@ -460,9 +426,9 @@ function GndCard({ T, data, onSetGndData, armState, rawText, onArm, onClearRaw }
         ))}
         {data.squawk && (
           <div style={{ background:`${A.red}12`, border:`1px solid ${A.red}40`, borderRadius:4, padding:"7px 12px", display:"flex", alignItems:"center", gap:14, marginTop:2 }}>
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:A.red, letterSpacing:2 }}>SQUAWK</div>
-            <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:28, fontWeight:700, color:A.amber, letterSpacing:4 }}>{data.squawk}</div>
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim }}>SET XPDR</div>
+            <div style={{ fontFamily:"var(--f-mono)", fontSize:9, color:A.red, letterSpacing:2 }}>SQUAWK</div>
+            <div style={{ fontFamily:"var(--f-ui)", fontSize:28, fontWeight:700, color:A.amber, letterSpacing:4 }}>{data.squawk}</div>
+            <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:T.textDim }}>SET XPDR</div>
           </div>
         )}
       </div>
@@ -477,15 +443,15 @@ function CraftCard({ T, data, tail, onClear, forceIfrMode, onToggleForce, onSetI
       {/* Header */}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <div>
-          <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:15, fontWeight:700, letterSpacing:3, color:A.amber }}>
+          <div style={{ fontFamily:"var(--f-ui)", fontSize:15, fontWeight:700, letterSpacing:3, color:A.amber }}>
             IFR CLEARANCE
           </div>
-          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:1, marginTop:1 }}>
+          <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:T.textDim, letterSpacing:1, marginTop:1 }}>
             CRAFT FORMAT · {tail}
           </div>
         </div>
         <button onClick={onClear} style={{
-          fontFamily:"'Share Tech Mono',monospace", fontSize:8, padding:"4px 10px", borderRadius:3, cursor:"pointer",
+          fontFamily:"var(--f-mono)", fontSize:8, padding:"4px 10px", borderRadius:3, cursor:"pointer",
           background:"transparent", color:A.red, border:`1px solid ${A.red}60`,
         }}>↺ CLEAR</button>
       </div>
@@ -497,12 +463,12 @@ function CraftCard({ T, data, tail, onClear, forceIfrMode, onToggleForce, onSetI
           borderLeft:`4px solid ${f.color}`, borderRadius:4, padding:"7px 12px",
         }}>
           <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
-            <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:20, fontWeight:700, color:f.color, lineHeight:1, width:22, textAlign:"center" }}>
+            <div style={{ fontFamily:"var(--f-ui)", fontSize:20, fontWeight:700, color:f.color, lineHeight:1, width:22, textAlign:"center" }}>
               {f.key}
             </div>
             <div>
-              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:f.color, letterSpacing:2 }}>{f.label}</div>
-              <div style={{ fontFamily:"'Rajdhani',sans-serif", fontSize:9, color:T.textDim }}>{f.hint}</div>
+              <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:f.color, letterSpacing:2 }}>{f.label}</div>
+              <div style={{ fontFamily:"var(--f-ui)", fontSize:9, color:T.textDim }}>{f.hint}</div>
             </div>
           </div>
           <MiniScribbleField
@@ -520,11 +486,11 @@ function CraftCard({ T, data, tail, onClear, forceIfrMode, onToggleForce, onSetI
           borderRadius:5, padding:"8px 14px",
           display:"flex", alignItems:"center", gap:14,
         }}>
-          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:A.blue, letterSpacing:2 }}>SQUAWK</div>
-          <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:30, fontWeight:700, color:A.amber, letterSpacing:4 }}>
+          <div style={{ fontFamily:"var(--f-mono)", fontSize:9, color:A.blue, letterSpacing:2 }}>SQUAWK</div>
+          <div style={{ fontFamily:"var(--f-ui)", fontSize:30, fontWeight:700, color:A.amber, letterSpacing:4 }}>
             {data.T.replace(/[^0-9]/g,"")||data.T}
           </div>
-          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim }}>SET XPDR</div>
+          <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:T.textDim }}>SET XPDR</div>
         </div>
       )}
 
@@ -534,7 +500,7 @@ function CraftCard({ T, data, tail, onClear, forceIfrMode, onToggleForce, onSetI
         background: forceIfrMode ? `${A.teal}18` : T.cardBg,
         color: forceIfrMode ? A.teal : T.textDim,
         border:`1.5px solid ${forceIfrMode ? A.teal : T.border}`,
-        fontFamily:"'Oswald',sans-serif", fontSize:11, fontWeight:700, letterSpacing:2,
+        fontFamily:"var(--f-ui)", fontSize:11, fontWeight:700, letterSpacing:2,
         transition:"all 0.15s",
       }}>
         {forceIfrMode ? "⏹ FORCE IFR CAPTURE — ON · TAP TO DEACTIVATE" : "⏵ FORCE IFR CAPTURE"}
@@ -625,23 +591,23 @@ function NearestFreqsTab({ T, A }) {
         <div style={{ flex:1 }}>
           {gpsState==="active" && position ? (
             <div>
-              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:A.green, letterSpacing:1.5 }}>
+              <div style={{ fontFamily:"var(--f-mono)", fontSize:9, color:A.green, letterSpacing:1.5 }}>
                 GPS ACTIVE · {Math.abs(position.lat).toFixed(4)}°{position.lat>=0?"N":"S"} / {Math.abs(position.lon).toFixed(4)}°{position.lon>=0?"E":"W"}
               </div>
-              <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:T.textDim, marginTop:1 }}>
+              <div style={{ fontFamily:"var(--f-mono)", fontSize:7, color:T.textDim, marginTop:1 }}>
                 ACC ±{Math.round(position.accuracy)}M
                 {position.speed!=null ? ` · GS ${Math.round((position.speed||0)*1.944)}KT` : ""}
                 {lastUpdate ? ` · ${lastUpdate.toLocaleTimeString("en-US",{hour12:false,hour:"2-digit",minute:"2-digit",second:"2-digit"})}` : ""}
               </div>
             </div>
           ) : gpsState==="loading" ? (
-            <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:A.amber, letterSpacing:1.5 }}>ACQUIRING GPS…</span>
+            <span style={{ fontFamily:"var(--f-mono)", fontSize:9, color:A.amber, letterSpacing:1.5 }}>ACQUIRING GPS…</span>
           ) : gpsState==="denied" ? (
-            <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:A.red, letterSpacing:1.5 }}>GPS DENIED — enable in iPad Settings → Privacy → Location</span>
+            <span style={{ fontFamily:"var(--f-mono)", fontSize:9, color:A.red, letterSpacing:1.5 }}>GPS DENIED — enable in iPad Settings → Privacy → Location</span>
           ) : gpsState==="error" ? (
-            <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:A.red, letterSpacing:1.5 }}>GPS ERROR — tap retry</span>
+            <span style={{ fontFamily:"var(--f-mono)", fontSize:9, color:A.red, letterSpacing:1.5 }}>GPS ERROR — tap retry</span>
           ) : (
-            <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:T.textDim, letterSpacing:1.5 }}>LOCATING…</span>
+            <span style={{ fontFamily:"var(--f-mono)", fontSize:9, color:T.textDim, letterSpacing:1.5 }}>LOCATING…</span>
           )}
         </div>
         {/* Radius selector — only when active */}
@@ -649,7 +615,7 @@ function NearestFreqsTab({ T, A }) {
           <div style={{ display:"flex", gap:3 }}>
             {[20,30,50].map(r => (
               <button key={r} onClick={() => setRadius(r)} style={{
-                fontFamily:"'Share Tech Mono',monospace", fontSize:8, padding:"3px 7px",
+                fontFamily:"var(--f-mono)", fontSize:8, padding:"3px 7px",
                 borderRadius:3, cursor:"pointer",
                 background: radius===r ? `${A.green}20` : "transparent",
                 color: radius===r ? A.green : T.textDim,
@@ -661,7 +627,7 @@ function NearestFreqsTab({ T, A }) {
         {/* Manual retry button for error/denied states */}
         {(gpsState==="error"||gpsState==="idle") && (
           <button onClick={startGps} style={{
-            fontFamily:"'Share Tech Mono',monospace", fontSize:8, padding:"4px 10px",
+            fontFamily:"var(--f-mono)", fontSize:8, padding:"4px 10px",
             borderRadius:3, cursor:"pointer", flexShrink:0,
             background:`${A.green}18`, color:A.green, border:`1px solid ${A.green}`,
           }}>RETRY</button>
@@ -674,10 +640,10 @@ function NearestFreqsTab({ T, A }) {
         {(gpsState==="idle"||gpsState==="loading") && (
           <div style={{ padding:"40px 20px", textAlign:"center" }}>
             <div style={{ fontSize:32, marginBottom:10, opacity:0.25 }}>📡</div>
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:A.amber, letterSpacing:2, animation:"commPulse 1.5s ease infinite" }}>
+            <div style={{ fontFamily:"var(--f-mono)", fontSize:9, color:A.amber, letterSpacing:2, animation:"commPulse 1.5s ease infinite" }}>
               {gpsState==="loading" ? "ACQUIRING GPS POSITION…" : "INITIALIZING…"}
             </div>
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, marginTop:8, lineHeight:1.8 }}>
+            <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:T.textDim, marginTop:8, lineHeight:1.8 }}>
               NEAREST AIRPORTS & FREQUENCIES{"\n"}WILL APPEAR HERE AUTOMATICALLY
             </div>
           </div>
@@ -685,8 +651,8 @@ function NearestFreqsTab({ T, A }) {
 
         {gpsState==="active" && airports.length===0 && (
           <div style={{ padding:"30px 20px", textAlign:"center" }}>
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:T.textDim, letterSpacing:1 }}>NO AIRPORTS FOUND WITHIN {radius}NM</div>
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, opacity:0.5, marginTop:4 }}>Increase search radius above</div>
+            <div style={{ fontFamily:"var(--f-mono)", fontSize:9, color:T.textDim, letterSpacing:1 }}>NO AIRPORTS FOUND WITHIN {radius}NM</div>
+            <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:T.textDim, opacity:0.5, marginTop:4 }}>Increase search radius above</div>
           </div>
         )}
 
@@ -721,29 +687,29 @@ function NearestFreqsTab({ T, A }) {
                   border:`1px solid ${isFirst ? A.green : T.border}`,
                   borderRadius:4, padding:"4px 8px", minWidth:58,
                 }}>
-                  <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:20, fontWeight:700, color:isFirst?A.green:T.textMain, lineHeight:1 }}>
+                  <div style={{ fontFamily:"var(--f-ui)", fontSize:20, fontWeight:700, color:isFirst?A.green:T.textMain, lineHeight:1 }}>
                     {ap.distNm.toFixed(1)}
                   </div>
-                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:T.textDim, letterSpacing:1 }}>
+                  <div style={{ fontFamily:"var(--f-mono)", fontSize:7, color:T.textDim, letterSpacing:1 }}>
                     NM {bearing}
                   </div>
                 </div>
                 {/* Info */}
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:3 }}>
-                    <span style={{ fontFamily:"'Oswald',sans-serif", fontSize:15, fontWeight:700, letterSpacing:2, color:typeColor }}>
+                    <span style={{ fontFamily:"var(--f-ui)", fontSize:15, fontWeight:700, letterSpacing:2, color:typeColor }}>
                       {ap.id}
                     </span>
-                    <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:typeColor, background:`${typeColor}14`, border:`1px solid ${typeColor}30`, borderRadius:2, padding:"1px 5px", letterSpacing:1 }}>
+                    <span style={{ fontFamily:"var(--f-mono)", fontSize:7, color:typeColor, background:`${typeColor}14`, border:`1px solid ${typeColor}30`, borderRadius:2, padding:"1px 5px", letterSpacing:1 }}>
                       {ap.type}
                     </span>
                     {isFirst && (
-                      <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:A.green, background:`${A.green}14`, border:`1px solid ${A.green}40`, borderRadius:2, padding:"1px 5px", letterSpacing:1 }}>
+                      <span style={{ fontFamily:"var(--f-mono)", fontSize:7, color:A.green, background:`${A.green}14`, border:`1px solid ${A.green}40`, borderRadius:2, padding:"1px 5px", letterSpacing:1 }}>
                         NEAREST
                       </span>
                     )}
                   </div>
-                  <div style={{ fontFamily:"'Rajdhani',sans-serif", fontSize:12, color:T.textDim, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", marginBottom:5 }}>
+                  <div style={{ fontFamily:"var(--f-ui)", fontSize:12, color:T.textDim, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", marginBottom:5 }}>
                     {ap.name}
                   </div>
                   {/* Top freq pills */}
@@ -752,13 +718,13 @@ function NearestFreqsTab({ T, A }) {
                       const fm = freqMeta(f.type);
                       return (
                         <div key={fi} style={{ display:"flex", alignItems:"center", gap:3, background:`${fm.color}12`, border:`1px solid ${fm.color}30`, borderRadius:3, padding:"2px 6px" }}>
-                          <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:fm.color, letterSpacing:1 }}>{fm.label}</span>
-                          <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, fontWeight:700, color:fm.color }}>{f.freq}</span>
+                          <span style={{ fontFamily:"var(--f-mono)", fontSize:7, color:fm.color, letterSpacing:1 }}>{fm.label}</span>
+                          <span style={{ fontFamily:"var(--f-mono)", fontSize:10, fontWeight:700, color:fm.color }}>{f.freq}</span>
                         </div>
                       );
                     })}
                     {ap.freqs.length > topFreqs.length && (
-                      <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:T.textDim, alignSelf:"center" }}>
+                      <span style={{ fontFamily:"var(--f-mono)", fontSize:7, color:T.textDim, alignSelf:"center" }}>
                         +{ap.freqs.length - topFreqs.length} ▾
                       </span>
                     )}
@@ -770,7 +736,7 @@ function NearestFreqsTab({ T, A }) {
               {/* Expanded full frequency list */}
               {isExpanded && (
                 <div style={{ borderTop:`1px solid ${T.border}`, padding:"8px 12px", display:"flex", flexDirection:"column", gap:4, animation:"commSlideIn 0.15s ease" }}>
-                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:2, marginBottom:4 }}>
+                  <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:T.textDim, letterSpacing:2, marginBottom:4 }}>
                     ALL FREQUENCIES · {ap.id} · ELEV {ap.elev.toLocaleString()} FT MSL
                   </div>
                   {sortedFreqs.map((f,fi) => {
@@ -784,13 +750,13 @@ function NearestFreqsTab({ T, A }) {
                         borderLeft:`3px solid ${fm.color}`,
                         borderRadius:3,
                       }}>
-                        <div style={{ flexShrink:0, width:62, fontFamily:"'Share Tech Mono',monospace", fontSize:8, fontWeight:700, letterSpacing:1, color:fm.color }}>
+                        <div style={{ flexShrink:0, width:62, fontFamily:"var(--f-mono)", fontSize:8, fontWeight:700, letterSpacing:1, color:fm.color }}>
                           {fm.label}
                         </div>
-                        <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:22, fontWeight:700, color:f.type==="EMRG"?A.red:fm.color, letterSpacing:1, flex:1 }}>
+                        <div style={{ fontFamily:"var(--f-ui)", fontSize:22, fontWeight:700, color:f.type==="EMRG"?A.red:fm.color, letterSpacing:1, flex:1 }}>
                           {f.freq}
                         </div>
-                        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, textAlign:"right", flexShrink:0 }}>
+                        <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:T.textDim, textAlign:"right", flexShrink:0 }}>
                           {f.name}
                         </div>
                       </div>
@@ -853,9 +819,6 @@ export function CommPage({
   onClearIfrRaw  = () => {},
 }) {
   
-  // ── Theme computed from prop — recalculates on every lightMode toggle ──────
-  const T = buildTheme(lightMode);
-
   // ── Local UI state only ────────────────────────────────────────────────────
   const [ifrOverlay,  setIfrOverlay]  = useState(false);
   const [activeTab,   setActiveTab]   = useState("active");
@@ -880,39 +843,10 @@ export function CommPage({
       height:"100%", display:"flex", flexDirection:"column",
       overflow:"hidden", position:"relative",
       background: T.pageBg,
-      fontFamily:"'Rajdhani',sans-serif",
+      fontFamily:"var(--f-ui)",
       animation: isUnanswered ? "commFlash 0.5s ease infinite alternate" : "none",
       transition:"background 0.2s ease",
     }}>
-
-      <style>{`
-        @keyframes commFlash {
-          from { background:${lightMode?"#f4f5fa":"#0d0f12"}; }
-          to   { background:rgba(232,90,74,0.18); }
-        }
-        @keyframes commPulse {
-          0%   { box-shadow:0 0 0 0 rgba(232,90,74,0.6); }
-          70%  { box-shadow:0 0 0 10px rgba(232,90,74,0); }
-          100% { box-shadow:0 0 0 0 rgba(232,90,74,0); }
-        }
-        @keyframes commGlow {
-          0%   { box-shadow:0 0 0 0 rgba(61,190,108,0.5); }
-          70%  { box-shadow:0 0 0 8px rgba(61,190,108,0); }
-          100% { box-shadow:0 0 0 0 rgba(61,190,108,0); }
-        }
-        @keyframes commSlideIn {
-          from { opacity:0; transform:translateY(-8px); }
-          to   { opacity:1; transform:translateY(0); }
-        }
-        @keyframes commSlideUp {
-          from { opacity:0; transform:translateY(14px); }
-          to   { opacity:1; transform:translateY(0); }
-        }
-        @keyframes vuBar {
-          0%,100% { opacity:0.72; }
-          50%     { opacity:1; }
-        }
-      `}</style>
 
       {/* ═══ SECTION A — HEADER ══════════════════════════════════════════════ */}
       <div style={{
@@ -932,10 +866,10 @@ export function CommPage({
         </svg>
 
         <div style={{ flex:1 }}>
-          <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:14, fontWeight:700, letterSpacing:3, color:A.teal }}>
+          <div style={{ fontFamily:"var(--f-ui)", fontSize:14, fontWeight:700, letterSpacing:3, color:A.teal }}>
             SMART COMMUNICATION AI
           </div>
-          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:1.5, marginTop:1 }}>
+          <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:T.textDim, letterSpacing:1.5, marginTop:1 }}>
             CALLSIGN: {tail} · {listening ? "MONITORING" : "STANDBY"}
           </div>
         </div>
@@ -951,7 +885,7 @@ export function CommPage({
             }
           }}
           style={{
-            fontFamily:"'Oswald',sans-serif", fontSize:11, fontWeight:700, letterSpacing:2,
+            fontFamily:"var(--f-ui)", fontSize:11, fontWeight:700, letterSpacing:2,
             padding:"5px 14px", borderRadius:4, cursor:"pointer",
             background: listening ? `${A.red}18` : `${A.teal}12`,
             color:  listening ? A.red : A.teal,
@@ -981,15 +915,15 @@ export function CommPage({
             animation:"commGlow 1.5s ease infinite",
           }}/>
           <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:A.teal, letterSpacing:1.5 }}>
+            <div style={{ fontFamily:"var(--f-mono)", fontSize:9, color:A.teal, letterSpacing:1.5 }}>
               CALLSIGN DETECTED · AWAITING TRANSMISSION END
             </div>
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:T.textDim, marginTop:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+            <div style={{ fontFamily:"var(--f-mono)", fontSize:10, color:T.textDim, marginTop:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
               {watchdogTx?.text || ""}
             </div>
           </div>
           <button onClick={onAckCall} style={{
-            fontFamily:"'Share Tech Mono',monospace", fontSize:8, fontWeight:700, letterSpacing:1,
+            fontFamily:"var(--f-mono)", fontSize:8, fontWeight:700, letterSpacing:1,
             padding:"4px 10px", borderRadius:3, cursor:"pointer", flexShrink:0,
             background:"transparent", color:A.teal, border:`1px solid ${A.teal}50`,
           }}>
@@ -1017,15 +951,15 @@ export function CommPage({
             📡
           </div>
           <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:13, fontWeight:700, letterSpacing:2, color:A.amber }}>
+            <div style={{ fontFamily:"var(--f-ui)", fontSize:13, fontWeight:700, letterSpacing:2, color:A.amber }}>
               CALLSIGN ALERT — {ackCountdown}s
             </div>
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:T.textMain, marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+            <div style={{ fontFamily:"var(--f-mono)", fontSize:10, color:T.textMain, marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
               {watchdogTx?.text || ""}
             </div>
           </div>
           <button onClick={onAckCall} style={{
-            fontFamily:"'Oswald',sans-serif", fontSize:13, fontWeight:700, letterSpacing:2,
+            fontFamily:"var(--f-ui)", fontSize:13, fontWeight:700, letterSpacing:2,
             padding:"8px 18px", borderRadius:4, cursor:"pointer", flexShrink:0,
             background:A.amber, color:"#000", border:"none",
             boxShadow:`0 0 12px ${A.amber}60`,
@@ -1054,15 +988,15 @@ export function CommPage({
             🔴
           </div>
           <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:13, fontWeight:700, letterSpacing:2, color:A.red }}>
+            <div style={{ fontFamily:"var(--f-ui)", fontSize:13, fontWeight:700, letterSpacing:2, color:A.red }}>
               ⚠ UNANSWERED CALL
             </div>
-            <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, color:T.textMain, marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+            <div style={{ fontFamily:"var(--f-mono)", fontSize:10, color:T.textMain, marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
               {watchdogTx?.text || ""}
             </div>
           </div>
           <button onClick={onAckCall} style={{
-            fontFamily:"'Oswald',sans-serif", fontSize:13, fontWeight:700, letterSpacing:2,
+            fontFamily:"var(--f-ui)", fontSize:13, fontWeight:700, letterSpacing:2,
             padding:"8px 18px", borderRadius:4, cursor:"pointer", flexShrink:0,
             background:A.red, color:"#000", border:"none",
             boxShadow:`0 0 20px ${A.red}80`,
@@ -1082,7 +1016,7 @@ export function CommPage({
         transition:"background 0.2s ease",
       }}>
         <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:1, width:26, flexShrink:0 }}>
+          <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:T.textDim, letterSpacing:1, width:26, flexShrink:0 }}>
             {listening ? "RX" : "——"}
           </div>
           <div style={{ display:"flex", gap:2, flex:1, height:10, alignItems:"flex-end" }}>
@@ -1099,12 +1033,12 @@ export function CommPage({
               }}/>;
             })}
           </div>
-          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, width:22, textAlign:"right", flexShrink:0 }}>
+          <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:T.textDim, width:22, textAlign:"right", flexShrink:0 }}>
             {micStatus==="denied"?"⛔":micStatus==="error"?"ERR":listening?"ON":"OFF"}
           </div>
         </div>
         <div style={{
-          fontFamily:"'Share Tech Mono',monospace", fontSize:11,
+          fontFamily:"var(--f-mono)", fontSize:11,
           color: transcript ? A.amber : T.textDim,
           minHeight:14, letterSpacing:0.5,
           fontStyle: transcript ? "normal" : "italic",
@@ -1139,7 +1073,7 @@ export function CommPage({
             borderTop:`2px solid ${activeTab===tab.key ? tab.color : "transparent"}`,
             transition:"all 0.12s",
           }}>
-            <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, fontWeight:700, letterSpacing:1.5, color:activeTab===tab.key?tab.color:T.textDim, textTransform:"uppercase" }}>
+            <span style={{ fontFamily:"var(--f-mono)", fontSize:9, fontWeight:700, letterSpacing:1.5, color:activeTab===tab.key?tab.color:T.textDim, textTransform:"uppercase" }}>
               {tab.label}
             </span>
           </button>
@@ -1169,18 +1103,18 @@ export function CommPage({
                     animation:"commSlideIn 0.2s ease", transition:"background 0.2s ease",
                   }}>
                     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
-                      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, fontWeight:700, letterSpacing:2, color:tc.c, background:`${tc.c}14`, padding:"2px 8px", borderRadius:3 }}>
+                      <div style={{ fontFamily:"var(--f-mono)", fontSize:9, fontWeight:700, letterSpacing:2, color:tc.c, background:`${tc.c}14`, padding:"2px 8px", borderRadius:3 }}>
                         {tc.label}
                       </div>
-                      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim }}>
+                      <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:T.textDim }}>
                         {latest.ts.toLocaleTimeString("en-US",{hour12:false,hour:"2-digit",minute:"2-digit",second:"2-digit"})}Z
                       </div>
                     </div>
-                    <div style={{ fontFamily:"'Rajdhani',sans-serif", fontSize:16, fontWeight:700, lineHeight:1.6, color:T.textMain }}>
+                    <div style={{ fontFamily:"var(--f-ui)", fontSize:16, fontWeight:700, lineHeight:1.6, color:T.textMain }}>
                       <TokenText entry={latest}/>
                     </div>
                     {latest.nwkraft && (
-                      <button onClick={() => showIfrOverlay(latest.nwkraft)} style={{ marginTop:8, fontFamily:"'Share Tech Mono',monospace", fontSize:8, fontWeight:700, letterSpacing:1, padding:"3px 10px", borderRadius:3, cursor:"pointer", background:`${A.amber}12`, color:A.amber, border:`1px solid ${A.amber}` }}>
+                      <button onClick={() => showIfrOverlay(latest.nwkraft)} style={{ marginTop:8, fontFamily:"var(--f-mono)", fontSize:8, fontWeight:700, letterSpacing:1, padding:"3px 10px", borderRadius:3, cursor:"pointer", background:`${A.amber}12`, color:A.amber, border:`1px solid ${A.amber}` }}>
                         ✦ VIEW CRAFT
                       </button>
                     )}
@@ -1189,8 +1123,8 @@ export function CommPage({
               })() : (
                 <div style={{ textAlign:"center", padding:"30px 20px" }}>
                   <div style={{ fontSize:32, marginBottom:8, opacity:0.28 }}>📡</div>
-                  <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:13, letterSpacing:3, color:T.textDim }}>AWAITING TRANSMISSION</div>
-                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, marginTop:5, color:T.textDim, opacity:0.5 }}>
+                  <div style={{ fontFamily:"var(--f-ui)", fontSize:13, letterSpacing:3, color:T.textDim }}>AWAITING TRANSMISSION</div>
+                  <div style={{ fontFamily:"var(--f-mono)", fontSize:9, marginTop:5, color:T.textDim, opacity:0.5 }}>
                     {listening ? `MONITORING · ${tail}` : "TAP LISTEN TO BEGIN"}
                   </div>
                 </div>
@@ -1209,13 +1143,13 @@ export function CommPage({
               <div style={{ background:T.cardBg, border:`1px solid ${A.amber}28`, borderRadius:5, overflow:"hidden", transition:"background 0.2s" }}>
                 <div style={{ background: ifrArmState==="armed" ? `${A.amber}20` : `${A.amber}10`, borderBottom:`2px solid ${A.amber}`, padding:"10px 12px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
                   <div style={{ flex:1 }}>
-                    <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:14, fontWeight:700, letterSpacing:3, color:A.amber }}>IFR CLEARANCE</div>
-                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim, letterSpacing:1 }}>
+                    <div style={{ fontFamily:"var(--f-ui)", fontSize:14, fontWeight:700, letterSpacing:3, color:A.amber }}>IFR CLEARANCE</div>
+                    <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:T.textDim, letterSpacing:1 }}>
                       {ifrArmState==="armed" ? "● RECORDING…" : ifrArmState==="done" ? "CAPTURED · AI PARSED" : "CRAFT FORMAT · TAP ARM"}
                     </div>
                   </div>
                   <button onClick={onArmIfr} style={{
-                    fontFamily:"'Oswald',sans-serif", fontSize:13, fontWeight:700, letterSpacing:2,
+                    fontFamily:"var(--f-ui)", fontSize:13, fontWeight:700, letterSpacing:2,
                     padding:"10px 20px", borderRadius:5, cursor:"pointer", minWidth:90,
                     background: ifrArmState==="armed" ? A.amber : `${A.amber}18`,
                     color: ifrArmState==="armed" ? "#000" : A.amber,
@@ -1226,20 +1160,20 @@ export function CommPage({
                   }}>
                     {ifrArmState==="armed" ? "⏹ STOP" : "● ARM"}
                   </button>
-                  <button onClick={onClearIfrRaw} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
+                  <button onClick={onClearIfrRaw} style={{ fontFamily:"var(--f-mono)", fontSize:11, padding:"8px 14px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLR</button>
                 </div>
                 {ifrRawText ? (
                   <div style={{ padding:"10px 14px", borderBottom:`1px solid ${T.border}`, background: ifrArmState==="done" ? `${A.amber}10` : `${A.amber}06`, borderLeft: ifrArmState==="done" ? `4px solid ${A.amber}` : `4px solid ${A.amber}60` }}>
-                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:A.amber, letterSpacing:2, fontWeight:700, marginBottom:6 }}>
+                    <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:A.amber, letterSpacing:2, fontWeight:700, marginBottom:6 }}>
                       {ifrArmState==="armed" ? "▶ LIVE BUFFER" : "✓ CAPTURED TEXT"}
                     </div>
-                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:16, fontWeight:700, color: ifrArmState==="armed" ? A.amber : T.textMain, lineHeight:1.6, letterSpacing:0.4 }}>
+                    <div style={{ fontFamily:"var(--f-mono)", fontSize:16, fontWeight:700, color: ifrArmState==="armed" ? A.amber : T.textMain, lineHeight:1.6, letterSpacing:0.4 }}>
                       {ifrRawText}
                     </div>
                   </div>
                 ) : ifrArmState==="armed" ? (
                   <div style={{ padding:"10px 14px", borderBottom:`1px solid ${T.border}`, background:`${A.amber}05`, borderLeft:`4px solid ${A.amber}40` }}>
-                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:A.amber, letterSpacing:1, fontStyle:"italic", animation:"commPulse 1.5s ease infinite" }}>
+                    <div style={{ fontFamily:"var(--f-mono)", fontSize:11, color:A.amber, letterSpacing:1, fontStyle:"italic", animation:"commPulse 1.5s ease infinite" }}>
                       — listening · minimum 8s recording window active —
                     </div>
                   </div>
@@ -1254,9 +1188,9 @@ export function CommPage({
                   ))}
                   {ifrData.T && (
                     <div style={{ background:`${A.blue}12`, border:`1px solid ${A.blue}40`, borderRadius:4, padding:"7px 12px", display:"flex", alignItems:"center", gap:14, marginTop:2 }}>
-                      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:A.blue, letterSpacing:2 }}>SQUAWK</div>
-                      <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:28, fontWeight:700, color:A.amber, letterSpacing:4 }}>{ifrData.T.replace(/[^0-9]/g,"")||ifrData.T}</div>
-                      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, color:T.textDim }}>SET XPDR</div>
+                      <div style={{ fontFamily:"var(--f-mono)", fontSize:9, color:A.blue, letterSpacing:2 }}>SQUAWK</div>
+                      <div style={{ fontFamily:"var(--f-ui)", fontSize:28, fontWeight:700, color:A.amber, letterSpacing:4 }}>{ifrData.T.replace(/[^0-9]/g,"")||ifrData.T}</div>
+                      <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:T.textDim }}>SET XPDR</div>
                     </div>
                   )}
                 </div>
@@ -1269,7 +1203,7 @@ export function CommPage({
           {activeTab === "archive" && (
             <div style={{ padding:"8px 0" }}>
               {txLog.length === 0 ? (
-                <div style={{ padding:"30px 20px", textAlign:"center", fontFamily:"'Share Tech Mono',monospace", fontSize:9, color:T.textDim, letterSpacing:1 }}>
+                <div style={{ padding:"30px 20px", textAlign:"center", fontFamily:"var(--f-mono)", fontSize:9, color:T.textDim, letterSpacing:1 }}>
                   NO TRANSMISSIONS LOGGED
                 </div>
               ) : txLog.map(entry => {
@@ -1282,23 +1216,23 @@ export function CommPage({
                     transition:"background 0.2s",
                   }}>
                     <div style={{ display:"flex", alignItems:"flex-start", gap:8 }}>
-                      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:ec, letterSpacing:1, flexShrink:0, marginTop:2, padding:"1px 5px", borderRadius:2, background:`${ec}14`, border:`1px solid ${ec}22` }}>
+                      <div style={{ fontFamily:"var(--f-mono)", fontSize:7, color:ec, letterSpacing:1, flexShrink:0, marginTop:2, padding:"1px 5px", borderRadius:2, background:`${ec}14`, border:`1px solid ${ec}22` }}>
                         {entry.type.replace("_"," ").toUpperCase()}
                       </div>
                       <div style={{ flex:1, minWidth:0 }}>
-                        <div style={{ fontFamily:"'Rajdhani',sans-serif", fontSize:13, color:T.textMain, lineHeight:1.4 }}>
+                        <div style={{ fontFamily:"var(--f-ui)", fontSize:13, color:T.textMain, lineHeight:1.4 }}>
                           <TokenText entry={entry}/>
                         </div>
-                        <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:T.textDim, marginTop:2 }}>
+                        <div style={{ fontFamily:"var(--f-mono)", fontSize:7, color:T.textDim, marginTop:2 }}>
                           {entry.ts.toLocaleTimeString("en-US",{hour12:false,hour:"2-digit",minute:"2-digit",second:"2-digit"})} LOCAL
                         </div>
                       </div>
                       <div style={{ display:"flex", flexDirection:"column", gap:3, flexShrink:0 }}>
-                        <button onClick={() => replayEntry(entry)} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, padding:"2px 6px", borderRadius:2, cursor:"pointer", background:"transparent", color:isReplaying?A.amber:T.textDim, border:`1px solid ${isReplaying?A.amber:T.border}` }}>
+                        <button onClick={() => replayEntry(entry)} style={{ fontFamily:"var(--f-mono)", fontSize:7, padding:"2px 6px", borderRadius:2, cursor:"pointer", background:"transparent", color:isReplaying?A.amber:T.textDim, border:`1px solid ${isReplaying?A.amber:T.border}` }}>
                           {isReplaying?"▶▶":"▶"}
                         </button>
                         {entry.nwkraft && (
-                          <button onClick={() => showIfrOverlay(entry.nwkraft)} style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, padding:"2px 6px", borderRadius:2, cursor:"pointer", background:`${A.amber}08`, color:A.amber, border:`1px solid ${A.amber}28` }}>IFR</button>
+                          <button onClick={() => showIfrOverlay(entry.nwkraft)} style={{ fontFamily:"var(--f-mono)", fontSize:7, padding:"2px 6px", borderRadius:2, cursor:"pointer", background:`${A.amber}08`, color:A.amber, border:`1px solid ${A.amber}28` }}>IFR</button>
                         )}
                       </div>
                     </div>
@@ -1307,7 +1241,7 @@ export function CommPage({
               })}
               {txLog.length > 0 && (
                 <div style={{ padding:"8px 14px" }}>
-                  <button style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:8, padding:"4px 12px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLEAR LOG</button>
+                  <button style={{ fontFamily:"var(--f-mono)", fontSize:8, padding:"4px 12px", borderRadius:3, cursor:"pointer", background:"transparent", color:A.red, border:`1px solid ${A.red}50` }}>↺ CLEAR LOG</button>
                 </div>
               )}
             </div>
@@ -1338,17 +1272,17 @@ export function CommPage({
               position:"sticky", top:0, zIndex:10,
             }}>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                <div style={{ fontFamily:"'Oswald',sans-serif", fontSize:13, fontWeight:700, letterSpacing:3, color:A.amber }}>
+                <div style={{ fontFamily:"var(--f-ui)", fontSize:13, fontWeight:700, letterSpacing:3, color:A.amber }}>
                   ✦ IFR CLEARANCE CAPTURED — CRAFT
                 </div>
                 {forceIfrMode && (
-                  <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:A.teal, background:`${A.teal}12`, border:`1px solid ${A.teal}38`, padding:"1px 6px", borderRadius:2, letterSpacing:1 }}>
+                  <div style={{ fontFamily:"var(--f-mono)", fontSize:7, color:A.teal, background:`${A.teal}12`, border:`1px solid ${A.teal}38`, padding:"1px 6px", borderRadius:2, letterSpacing:1 }}>
                     FORCED
                   </div>
                 )}
               </div>
               <button onClick={() => setIfrOverlay(false)} style={{
-                fontFamily:"'Rajdhani',sans-serif", fontSize:11, fontWeight:700, letterSpacing:1,
+                fontFamily:"var(--f-ui)", fontSize:11, fontWeight:700, letterSpacing:1,
                 padding:"4px 14px", borderRadius:3, cursor:"pointer",
                 background:`${A.red}12`, color:A.red, border:`1px solid ${A.red}`,
               }}>✕ CLOSE</button>
@@ -1386,7 +1320,7 @@ export function CommPage({
             <line x1="4" y1="4" x2="4" y2="16" stroke={replayActive?A.amber:A.blue} strokeWidth="2.5" strokeLinecap="round" opacity="0.92"/>
           </svg>
           <span style={{
-            fontFamily:"'Oswald',sans-serif", fontSize:12, fontWeight:700, letterSpacing:3,
+            fontFamily:"var(--f-ui)", fontSize:12, fontWeight:700, letterSpacing:3,
             color: replayActive ? A.amber : A.blue, textTransform:"uppercase",
           }}>
             {replayActive ? "▶ REPLAYING LAST 10s…" : "⏮ REPLAY LAST 10 SECONDS"}
@@ -1412,17 +1346,17 @@ export function CommPage({
             animation: listening ? "commGlow 2s ease infinite" : "none",
             transition:"all 0.3s",
           }}/>
-          <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:T.textDim, letterSpacing:1.5 }}>
+          <span style={{ fontFamily:"var(--f-mono)", fontSize:7, color:T.textDim, letterSpacing:1.5 }}>
             {listening ? "ACTIVE" : "STANDBY"}
           </span>
         </div>
-        <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:T.textDim, letterSpacing:1 }}>{tail}</span>
-        <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:T.textDim, letterSpacing:1 }}>{txLog.length} TX</span>
+        <span style={{ fontFamily:"var(--f-mono)", fontSize:7, color:T.textDim, letterSpacing:1 }}>{tail}</span>
+        <span style={{ fontFamily:"var(--f-mono)", fontSize:7, color:T.textDim, letterSpacing:1 }}>{txLog.length} TX</span>
         {forceIfrMode && (
-          <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:A.teal, letterSpacing:1, marginLeft:"auto" }}>▶ IFR FORCE</span>
+          <span style={{ fontFamily:"var(--f-mono)", fontSize:7, color:A.teal, letterSpacing:1, marginLeft:"auto" }}>▶ IFR FORCE</span>
         )}
         {watchdogState !== "clear" && (
-          <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:7, color:isUnanswered?A.red:A.amber, letterSpacing:1, marginLeft:"auto", animation:"commPulse 1s ease infinite" }}>
+          <span style={{ fontFamily:"var(--f-mono)", fontSize:7, color:isUnanswered?A.red:A.amber, letterSpacing:1, marginLeft:"auto", animation:"commPulse 1s ease infinite" }}>
             ⚠ {isUnanswered ? "UNANSWERED" : "ALERT"}
           </span>
         )}
