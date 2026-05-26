@@ -2651,25 +2651,44 @@ const commParseGround = (text) => {
           className="efb-radio-panel"
           data-watchdog={commWatchdogState}
           onClick={() => setCurrentPage("comm")}
-          style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 14px", cursor: "pointer"
-          }}
         >
-          <span className={`efb-status-dot${commWatchdogState === "unanswered" ? " warn" : commWatchdogState === "alert" ? " accent" : commListening ? " ok" : ""}`}/>
-          <span style={{ fontFamily:"var(--f-mono)", fontSize:11, fontWeight:700, letterSpacing:"0.12em", color:"var(--t-secondary)", flexShrink:0 }}>
+          {/* Status indicator dot */}
+          <span className={`efb-status-dot${
+            commWatchdogState === "unanswered" ? " warn"
+            : commWatchdogState === "alert"     ? " accent"
+            : commListening                     ? " ok"
+            : ""
+          }`}/>
+
+          {/* Mode label — changes colour/text on watchdog alert */}
+          <span className={`efb-rp-label${commWatchdogState !== "clear" ? " alert" : ""}`}>
             {commWatchdogState !== "clear" ? "⚠ ATC GUARD:" : "📡 RADIO:"}
           </span>
-          <span style={{ fontFamily:"var(--f-mono)", fontSize:13, fontWeight:600, color: commTranscript ? "var(--accent)" : commTxLog.length > 0 ? "var(--t-primary)" : "var(--t-tertiary)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flex:1 }}>
+
+          {/* Scrolling transcript / last log entry / idle hint */}
+          <span className={`efb-rp-transcript${
+            commTranscript          ? " live"
+            : commTxLog.length > 0  ? " logged"
+            : ""
+          }`}>
             {commTranscript
               ? commTranscript
               : commTxLog.length > 0
                 ? commTxLog[0].text
-                : commListening ? "Monitoring frequency…" : "Radio guard standby. Tap to open."
+                : commListening
+                  ? "Monitoring frequency…"
+                  : "Radio guard standby. Tap to open."
             }
           </span>
-          <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }} onClick={e => e.stopPropagation()}>
+
+          {/* Action buttons — stopPropagation so clicks don't bubble to nav */}
+          <div className="efb-rp-actions" onClick={e => e.stopPropagation()}>
             <button
               className={`efb-btn sm${commListening ? " warn" : " ok"}`}
-              onClick={() => { if (commListening) { commStopListening(); } else { commStopListening(); setTimeout(() => commStartListening(), 50); } }}
+              onClick={() => {
+                if (commListening) { commStopListening(); }
+                else { commStopListening(); setTimeout(() => commStartListening(), 50); }
+              }}
             >
               <Icon name={commListening ? "mic-off" : "mic"} size={13}/>
               {commListening ? " STOP" : " LISTEN"}

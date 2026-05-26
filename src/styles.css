@@ -208,6 +208,40 @@ ul, li { list-style: none; padding: 0; margin: 0; }
 .efb-radio-panel[data-watchdog="alert"]     { background: color-mix(in oklab, var(--accent) 8%, var(--bg-1)); border-color: var(--accent-line); }
 .efb-radio-panel[data-watchdog="unanswered"] { background: color-mix(in oklab, var(--warn) 12%, var(--bg-1)); border-color: var(--warn); animation: efb-warn-flash 0.5s ease infinite alternate; }
 
+/* Radio panel inner elements */
+.efb-rp-label {
+  font-family: var(--f-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--t-secondary);
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+.efb-rp-label.alert { color: var(--warn); }
+
+.efb-rp-transcript {
+  font-family: var(--f-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+  transition: color 0.2s ease;
+}
+.efb-rp-transcript.live   { color: var(--accent); }
+.efb-rp-transcript.logged { color: var(--t-primary); }
+
+.efb-rp-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-shrink: 0;
+}
+
 /* ============================================================
    Status bar — row 4
    ============================================================ */
