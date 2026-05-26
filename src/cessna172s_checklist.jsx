@@ -3033,6 +3033,190 @@ const commParseGround = (text) => {
         </div>
       )}
 
+      {/* ── POH OVERLAY ── */}
+      {activeDrawer.size > 0 && (
+        <div className="efb-poh-backdrop" onClick={() => setActiveDrawer(new Set())}>
+          <div className="efb-poh-panel" onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div className="efb-poh-head">
+              <div>
+                <div className="efb-poh-eyebrow">CESSNA 172S SKYHAWK · POH REFERENCE</div>
+                <div className="efb-poh-aircraft">{aircraft?.tailNumber || "N12345"} · Quick Reference Data</div>
+              </div>
+              <button className="efb-btn ghost" onClick={() => setActiveDrawer(new Set())}>ESC ✕</button>
+            </div>
+
+            {/* Tab bar */}
+            <div className="efb-poh-tabs">
+              {[
+                { key: "vspeeds", label: "V-SPEEDS",   dot: "#3a9ad4" },
+                { key: "perf",    label: "T/O & LNDG", dot: "#e8c84a" },
+                { key: "climb",   label: "CLIMB PERF", dot: "#3dbe6c" },
+                { key: "cruise",  label: "CRUISE PERF",dot: "#a78bfa" },
+              ].map(tab => (
+                <button
+                  key={tab.key}
+                  className={`efb-poh-tab${pohTab === tab.key ? " active" : ""}`}
+                  onClick={() => setPohTab(tab.key)}
+                >
+                  <span className="efb-poh-tab-dot" style={{ background: tab.dot }}/>
+                  {tab.label}
+                </button>
+              ))}
+              <div className="efb-poh-tab-actions">
+                {pohTab === "vspeeds" && vspeedEditing && (
+                  <button className="efb-btn sm warn" onClick={resetVspeeds}>↺ RESET</button>
+                )}
+                {pohTab === "vspeeds" && (
+                  <button className={`efb-btn sm${vspeedEditing ? "" : " ghost"}`} onClick={() => setVspeedEditing(v => !v)}>
+                    {vspeedEditing ? "✓ DONE" : "✎ EDIT"}
+                  </button>
+                )}
+                {pohTab === "perf" && perfEditing && (
+                  <button className="efb-btn sm warn" onClick={resetPerfData}>↺ RESET</button>
+                )}
+                {pohTab === "perf" && (
+                  <button className={`efb-btn sm${perfEditing ? "" : " ghost"}`} onClick={() => setPerfEditing(v => !v)}>
+                    {perfEditing ? "✓ DONE" : "✎ EDIT"}
+                  </button>
+                )}
+                {pohTab === "climb" && climbEditing && (
+                  <button className="efb-btn sm warn" onClick={resetClimbData}>↺ RESET</button>
+                )}
+                {pohTab === "climb" && (
+                  <button className={`efb-btn sm${climbEditing ? "" : " ghost"}`} onClick={() => setClimbEditing(v => !v)}>
+                    {climbEditing ? "✓ DONE" : "✎ EDIT"}
+                  </button>
+                )}
+                {pohTab === "cruise" && cruiseEditing && (
+                  <button className="efb-btn sm warn" onClick={resetCruiseData}>↺ RESET</button>
+                )}
+                {pohTab === "cruise" && (
+                  <button className={`efb-btn sm${cruiseEditing ? "" : " ghost"}`} onClick={() => setCruiseEditing(v => !v)}>
+                    {cruiseEditing ? "✓ DONE" : "✎ EDIT"}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Scrollable content */}
+            <div className="efb-poh-content">
+
+              {/* ── V-SPEEDS ── */}
+              {pohTab === "vspeeds" && vspeeds.map((group, gi) => (
+                <div key={gi} className="efb-poh-group">
+                  <div className="efb-poh-group-label">{group.group.toUpperCase()}</div>
+                  <div className="efb-poh-cards">
+                    {group.items.map((item, ii) => (
+                      <div key={ii} className="efb-poh-card">
+                        <div className="efb-poh-card-top">
+                          <span className="efb-poh-card-code">
+                            {vspeedEditing
+                              ? <input value={item.code} onChange={e => updateVspeed(gi, ii, "code", e.target.value)} className="efb-poh-input"/>
+                              : item.code}
+                          </span>
+                          <span className="efb-poh-card-unit">{item.unit}</span>
+                        </div>
+                        <div className="efb-poh-card-value">
+                          {vspeedEditing
+                            ? <input value={item.value} onChange={e => updateVspeed(gi, ii, "value", e.target.value)} className="efb-poh-input wide"/>
+                            : item.value}
+                        </div>
+                        <div className="efb-poh-card-desc">
+                          {vspeedEditing
+                            ? <input value={item.desc} onChange={e => updateVspeed(gi, ii, "desc", e.target.value)} className="efb-poh-input full"/>
+                            : item.desc}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              {/* ── T/O & LANDING ── */}
+              {pohTab === "perf" && perfData.map((section, si) => (
+                <div key={si} className="efb-poh-group">
+                  <div className="efb-poh-group-label" style={{ color: "#e8c84a" }}>{section.group.toUpperCase()}</div>
+                  {section.note && <div className="efb-poh-group-note">{section.note}</div>}
+                  <table className="efb-poh-table">
+                    <thead>
+                      <tr>{section.cols.map((col, ci) => <th key={ci}>{col}</th>)}</tr>
+                    </thead>
+                    <tbody>
+                      {section.rows.map((row, ri) => (
+                        <tr key={ri}>
+                          {row.map((cell, ci) => (
+                            <td key={ci} className={ci === 0 ? "efb-poh-td-key" : ""} style={ci > 0 ? { color: "#e8c84a" } : {}}>
+                              {perfEditing
+                                ? <input value={cell} onChange={e => updatePerfCell(si, ri, ci, e.target.value)} className="efb-poh-input full"/>
+                                : cell}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+
+              {/* ── CLIMB PERFORMANCE ── */}
+              {pohTab === "climb" && climbData.map((section, si) => (
+                <div key={si} className="efb-poh-group">
+                  <div className="efb-poh-group-label" style={{ color: "#3dbe6c" }}>{section.group.toUpperCase()}</div>
+                  {section.note && <div className="efb-poh-group-note">{section.note}</div>}
+                  <table className="efb-poh-table">
+                    <thead>
+                      <tr>{section.cols.map((col, ci) => <th key={ci}>{col}</th>)}</tr>
+                    </thead>
+                    <tbody>
+                      {section.rows.map((row, ri) => (
+                        <tr key={ri}>
+                          {row.map((cell, ci) => (
+                            <td key={ci} className={ci === 0 ? "efb-poh-td-key" : ""} style={ci > 0 ? { color: "#3dbe6c" } : {}}>
+                              {climbEditing
+                                ? <input value={cell} onChange={e => updateClimbCell(si, ri, ci, e.target.value)} className="efb-poh-input full"/>
+                                : cell}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+
+              {/* ── CRUISE PERFORMANCE ── */}
+              {pohTab === "cruise" && cruiseData.map((section, si) => (
+                <div key={si} className="efb-poh-group">
+                  <div className="efb-poh-group-label" style={{ color: "#a78bfa" }}>{section.group.toUpperCase()}</div>
+                  {section.note && <div className="efb-poh-group-note">{section.note}</div>}
+                  <table className="efb-poh-table">
+                    <thead>
+                      <tr>{section.cols.map((col, ci) => <th key={ci}>{col}</th>)}</tr>
+                    </thead>
+                    <tbody>
+                      {section.rows.map((row, ri) => (
+                        <tr key={ri}>
+                          {row.map((cell, ci) => (
+                            <td key={ci} className={ci === 0 ? "efb-poh-td-key" : ""} style={ci > 0 ? { color: "#a78bfa" } : {}}>
+                              {cruiseEditing
+                                ? <input value={cell} onChange={e => updateCruiseCell(si, ri, ci, e.target.value)} className="efb-poh-input full"/>
+                                : cell}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── SCRATCHPAD OVERLAY ── */}
       {scratchpadOpen && (
         <div className="efb-sp-backdrop" onClick={() => setScratchpadOpen(false)}>
