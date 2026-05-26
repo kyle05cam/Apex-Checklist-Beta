@@ -805,19 +805,16 @@ export const MORE_REFS = [
 // ─────────────────────────────────────────────────────────────────────────────
 // SCRATCHPAD CANVAS — persistent draw-on canvas widget
 // ─────────────────────────────────────────────────────────────────────────────
-function ScratchpadCanvas({ storageKey }) {
+function ScratchpadCanvas({ storageKey, tool, penSize, penColor, clearRef }) {
   const canvasRef = useRef(null);
   const drawingRef = useRef(false);
   const lastPos = useRef(null);
   const saveTimerRef = useRef(null);
-  const [tool, setTool] = useState("pen");
-  const [penSize, setPenSize] = useState(2.5);
-  const [penColor, setPenColor] = useState("#e8e4d8");
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const load = async () => {
+    const timer = setTimeout(() => {
       try {
         const saved = localStorage.getItem(storageKey);
         if (saved) {
@@ -831,8 +828,7 @@ function ScratchpadCanvas({ storageKey }) {
           img.src = saved;
         }
       } catch {}
-    };
-    const timer = setTimeout(load, 50);
+    }, 50);
     return () => clearTimeout(timer);
   }, [storageKey]);
 
@@ -846,6 +842,15 @@ function ScratchpadCanvas({ storageKey }) {
       } catch {}
     }, 600);
   };
+
+  const clearCanvas = useCallback(() => {
+    if (!canvasRef.current) return;
+    canvasRef.current.getContext("2d").clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    try { localStorage.removeItem(storageKey); } catch {}
+  }, [storageKey]);
+
+  // Expose clear function to parent via ref
+  useEffect(() => { if (clearRef) clearRef.current = clearCanvas; }, [clearRef, clearCanvas]);
 
   const getPos = (e) => {
     const canvas = canvasRef.current;
@@ -868,7 +873,7 @@ function ScratchpadCanvas({ storageKey }) {
     if (tool === "eraser") {
       ctx.globalCompositeOperation = "destination-out";
       ctx.strokeStyle = "rgba(0,0,0,1)";
-      ctx.lineWidth = 24;
+      ctx.lineWidth = 28;
     } else {
       ctx.globalCompositeOperation = "source-over";
       ctx.strokeStyle = penColor;
@@ -878,48 +883,17 @@ function ScratchpadCanvas({ storageKey }) {
     lastPos.current = pos;
   };
   const endDraw = (e) => { e.preventDefault(); drawingRef.current = false; lastPos.current = null; persist(); };
-  const clearCanvas = () => {
-    if (!canvasRef.current) return;
-    canvasRef.current.getContext("2d").clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-    try { localStorage.removeItem(storageKey); } catch {}
-  };
-
-  const PEN_COLORS = ["#e8e4d8","#4ae888","#4ab8e8","#e8c84a","#e85a4a","#c87ae8","#e8a030"];
-  const PEN_SIZES = [1.5, 2.5, 4, 7];
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "#0d1a12", borderBottom: "1px solid #1e3528", flexShrink: 0, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", background: "#0a0c10", border: "1px solid #1e3528", borderRadius: 4, overflow: "hidden" }}>
-          {[["pen","✏ PEN"],["eraser","◻ ERASE"]].map(([t, label]) => (
-            <button key={t} onClick={() => setTool(t)} style={{ fontFamily: "var(--f-ui)", fontSize: 10, fontWeight: 700, letterSpacing: 1, padding: "4px 12px", cursor: "pointer", border: "none", background: tool === t ? "rgba(61,190,108,0.15)" : "transparent", color: tool === t ? "#3dbe6c" : "#4a5068", borderRight: t === "pen" ? "1px solid #1e3528" : "none" }}>{label}</button>
-          ))}
-        </div>
-        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-          {PEN_SIZES.map(s => (
-            <button key={s} onClick={() => { setPenSize(s); setTool("pen"); }} style={{ width: 26, height: 26, borderRadius: 4, border: `1.5px solid ${penSize === s && tool === "pen" ? "#3dbe6c" : "#1e3528"}`, background: penSize === s && tool === "pen" ? "rgba(61,190,108,0.12)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}>
-              <div style={{ width: s * 2.2, height: s * 2.2, borderRadius: "50%", background: "#e8e4d8" }} />
-            </button>
-          ))}
-        </div>
-        <div style={{ display: "flex", gap: 4 }}>
-          {PEN_COLORS.map(c => (
-            <button key={c} onClick={() => { setPenColor(c); setTool("pen"); }} style={{ width: 22, height: 22, borderRadius: 4, border: `2px solid ${penColor === c && tool === "pen" ? "#fff" : "transparent"}`, background: c, cursor: "pointer", padding: 0 }} />
-          ))}
-        </div>
-        <div style={{ flex: 1 }} />
-        <button onClick={clearCanvas} style={{ fontFamily: "var(--f-ui)", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "4px 12px", borderRadius: 3, cursor: "pointer", background: "transparent", color: "#6a3030", border: "1px solid #3a2020" }}>↺ CLEAR CANVAS</button>
-      </div>
-      <div style={{ flex: 1, position: "relative", touchAction: "none", background: "#050e09" }}>
-        <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }} preserveAspectRatio="none">
-          {Array.from({ length: 20 }, (_, i) => <line key={i} x1="0" y1={`${(i + 1) * 5}%`} x2="100%" y2={`${(i + 1) * 5}%`} stroke="rgba(74,159,232,0.06)" strokeWidth="1"/>)}
-          <line x1="5%" y1="0" x2="5%" y2="100%" stroke="rgba(232,90,74,0.1)" strokeWidth="1"/>
-        </svg>
-        <canvas ref={canvasRef} width={1200} height={900} style={{ display: "block", width: "100%", height: "100%", cursor: tool === "eraser" ? "cell" : "crosshair", touchAction: "none" }}
-          onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
-          onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}
-        />
-      </div>
+    <div className="efb-sp-canvas-wrap">
+      <canvas
+        ref={canvasRef}
+        className="efb-sp-canvas"
+        width={1800} height={1200}
+        style={{ cursor: tool === "eraser" ? "cell" : "crosshair" }}
+        onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
+        onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}
+      />
     </div>
   );
 }
@@ -1060,6 +1034,10 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   const [scratchpadOpen, setScratchpadOpen] = useState(false);
   const [scratchpadMode, setScratchpadMode] = useState("draw");
   const [scratchpadText, setScratchpadText] = useState("");
+  const [spTool, setSpTool] = useState("pen");
+  const [spPenSize, setSpPenSize] = useState(4);
+  const [spPenColor, setSpPenColor] = useState("#e6ecf2");
+  const spClearRef = useRef(null);
   const [moreOpen, setMoreOpen] = useState(false);
   const [activeMoreRef, setActiveMoreRef] = useState("light_gun");
   const [activeDrawer, setActiveDrawer] = useState(new Set());   // Set of open keys — multiple allowed
@@ -3222,48 +3200,94 @@ const commParseGround = (text) => {
       )}
 
       {/* ── SCRATCHPAD OVERLAY ── */}
-      {scratchpadOpen && (
-        <div className="efb-sp-backdrop" onClick={() => setScratchpadOpen(false)}>
-          <div className="efb-sp-panel" onClick={e => e.stopPropagation()}>
-            <div className="efb-sp-head">
-              <div>
-                <div className="efb-sp-eyebrow">APEX AVIATION</div>
-                <div className="efb-sp-head-title">PILOT SCRATCHPAD</div>
-              </div>
-              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                <div className="efb-sp-mode-tabs">
-                  {["draw","type"].map(mode => (
-                    <button key={mode} className={`efb-sp-tab${scratchpadMode === mode ? " active" : ""}`} onClick={() => setScratchpadMode(mode)}>
-                      {mode === "draw" ? "✏ DRAW" : "⌨ TYPE"}
-                    </button>
-                  ))}
+      {scratchpadOpen && (() => {
+        const SP_COLORS = ["#e6ecf2","#4ae888","#4ab8e8","#e8c84a","#e85a4a","#c87ae8","#e8a030"];
+        const SP_SIZES  = [1.5, 4, 8];
+        return (
+          <div className="efb-sp-backdrop" onClick={() => setScratchpadOpen(false)}>
+            <div className="efb-sp-panel" onClick={e => e.stopPropagation()}>
+
+              {/* ── Head ── */}
+              <div className="efb-sp-head">
+                <div>
+                  <div className="efb-sp-eyebrow">PILOT SCRATCHPAD</div>
+                  <div className="efb-sp-title">Notes · {aircraft?.tailNumber || "N12345"}</div>
                 </div>
-                <button className="efb-btn warn" onClick={() => setScratchpadOpen(false)}>✕ CLOSE</button>
-              </div>
-            </div>
-            <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", padding:"10px 14px 14px" }}>
-              {scratchpadMode === "draw" ? (
-                <div style={{ flex:1, position:"relative", background:"var(--bg-inset)", border:"1px solid var(--line)", borderRadius:6, overflow:"hidden", cursor:"crosshair" }}>
-                  <ScratchpadCanvas storageKey="scratchpad-main-canvas"/>
+                <div style={{ display:"flex", alignItems:"center", gap: 8 }}>
+                  <div className="efb-sp-mode-tabs">
+                    <button className={`efb-sp-tab${scratchpadMode==="draw"?" active":""}`} onClick={() => setScratchpadMode("draw")}>✏ DRAW</button>
+                    <button className={`efb-sp-tab${scratchpadMode==="type"?" active":""}`} onClick={() => setScratchpadMode("type")}>☰ TYPE</button>
+                  </div>
+                  <button className="efb-btn ghost" onClick={() => setScratchpadOpen(false)}>ESC ✕</button>
                 </div>
-              ) : (
-                <div style={{ flex:1, display:"flex", flexDirection:"column", gap:8 }}>
-                  <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:"var(--t-tertiary)", letterSpacing:"0.12em" }}>✎ FREE TEXT · AUTO-SAVED · {scratchpadText.length} CHARS</div>
+              </div>
+
+              {/* ── Draw toolbar ── */}
+              {scratchpadMode === "draw" && (
+                <div className="efb-sp-toolbar">
+                  <div className="efb-sp-tool-group">
+                    <button className={`efb-sp-tool-btn${spTool==="pen"?" active":""}`} onClick={() => setSpTool("pen")}>✏ PEN</button>
+                    <button className={`efb-sp-tool-btn${spTool==="eraser"?" active":""}`} onClick={() => setSpTool("eraser")}>◻ ERASE</button>
+                  </div>
+                  <span className="efb-sp-divider"/>
+                  <div className="efb-sp-size-group">
+                    {SP_SIZES.map(s => (
+                      <button key={s} className={`efb-sp-size-btn${spPenSize===s&&spTool==="pen"?" active":""}`}
+                        onClick={() => { setSpPenSize(s); setSpTool("pen"); }}>
+                        <span className="efb-sp-size-dot" style={{ width: Math.max(s*2, 4), height: Math.max(s*2, 4) }}/>
+                      </button>
+                    ))}
+                  </div>
+                  <span className="efb-sp-divider"/>
+                  <div className="efb-sp-color-group">
+                    {SP_COLORS.map(c => (
+                      <button key={c} className={`efb-sp-color-btn${spPenColor===c&&spTool==="pen"?" active":""}`}
+                        style={{ background: c }}
+                        onClick={() => { setSpPenColor(c); setSpTool("pen"); }}/>
+                    ))}
+                  </div>
+                  <span className="efb-sp-toolbar-spacer"/>
+                  <button className="efb-btn sm warn" onClick={() => spClearRef.current && spClearRef.current()}>↺ CLEAR</button>
+                </div>
+              )}
+
+              {/* ── Body ── */}
+              <div className="efb-sp-body">
+                {scratchpadMode === "draw" ? (
+                  <ScratchpadCanvas
+                    storageKey="scratchpad-main-canvas"
+                    tool={spTool}
+                    penSize={spPenSize}
+                    penColor={spPenColor}
+                    clearRef={spClearRef}
+                  />
+                ) : (
                   <textarea
+                    className="efb-sp-textarea"
                     value={scratchpadText}
                     onChange={e => { setScratchpadText(e.target.value); try { localStorage.setItem("scratchpad-text", e.target.value); } catch {} }}
                     placeholder="ATIS · CLEARANCES · FREQUENCIES · WEATHER · NOTAMS · PIREPS..."
-                    style={{ flex:1, resize:"none", outline:"none", background:"var(--bg-inset)", border:"1px solid var(--line)", borderRadius:6, color:"var(--t-primary)", fontFamily:"var(--f-mono)", fontSize:14, lineHeight:1.7, padding:"14px 16px", caretColor:"var(--accent)" }}
                   />
-                  <div style={{ display:"flex", justifyContent:"flex-end" }}>
-                    <button className="efb-btn sm ghost" onClick={() => { setScratchpadText(""); try { localStorage.removeItem("scratchpad-text"); } catch {}; }}>↺ CLEAR TEXT</button>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
+
+              {/* ── Status bar ── */}
+              <div className="efb-sp-statusbar">
+                <span>
+                  {scratchpadMode === "type"
+                    ? `FREE TEXT · AUTO-SAVED · ${scratchpadText.length} CHARS`
+                    : spTool === "eraser"
+                      ? "ERASER · DRAG TO ERASE"
+                      : `PEN · ${spPenSize}PX · ${spPenColor.toUpperCase()}`
+                  }
+                </span>
+                <span>ESC TO CLOSE · NOTES PERSIST FOR THIS FLIGHT</span>
+              </div>
+
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
     </div>
   );

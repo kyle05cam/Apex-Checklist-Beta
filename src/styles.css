@@ -1734,7 +1734,8 @@ ul, li { list-style: none; padding: 0; margin: 0; }
   background: var(--bg-2);
 }
 .efb-sp-head-title { display: flex; flex-direction: column; gap: 2px; }
-.efb-sp-eyebrow { font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+.efb-sp-eyebrow { font-family: var(--f-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin-bottom: 2px; }
+.efb-sp-title { font-family: var(--f-ui); font-size: 18px; font-weight: 600; color: var(--t-primary); letter-spacing: 0.01em; }
 .efb-sp-aircraft { font-family: var(--f-mono); font-size: 13px; font-weight: 500; color: var(--t-primary); letter-spacing: 0.04em; }
 
 .efb-sp-mode-tabs {
@@ -1762,9 +1763,9 @@ ul, li { list-style: none; padding: 0; margin: 0; }
 }
 .efb-sp-tab:hover { color: var(--t-secondary); }
 .efb-sp-tab.active {
-  background: var(--accent-bg);
-  color: var(--accent);
-  box-shadow: inset 0 0 0 1px var(--accent-line);
+  background: var(--accent);
+  color: #fff;
+  box-shadow: none;
 }
 
 .efb-sp-toolbar {
@@ -1772,8 +1773,9 @@ ul, li { list-style: none; padding: 0; margin: 0; }
   align-items: center;
   gap: var(--s-3);
   padding: var(--s-3) var(--s-5);
-  background: var(--bg-2);
+  background: var(--bg-1);
   border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
 }
 .efb-sp-tool-group, .efb-sp-size-group, .efb-sp-color-group { display: flex; gap: var(--s-1); }
 .efb-sp-divider { width: 1px; height: 24px; background: var(--line); margin: 0 var(--s-1); }
@@ -1800,9 +1802,9 @@ ul, li { list-style: none; padding: 0; margin: 0; }
 .efb-sp-tool-btn.active { background: var(--accent-bg); color: var(--accent); border-color: var(--accent-line); }
 
 .efb-sp-size-btn {
-  width: 30px; height: 30px;
+  width: 28px; height: 28px;
   border: 1px solid var(--line);
-  background: var(--bg-1);
+  background: var(--bg-0);
   border-radius: var(--r-sm);
   display: grid; place-items: center;
   cursor: pointer;
@@ -1814,17 +1816,17 @@ ul, li { list-style: none; padding: 0; margin: 0; }
 .efb-sp-size-btn.active .efb-sp-size-dot { background: var(--accent); }
 
 .efb-sp-color-btn {
-  width: 28px; height: 28px;
+  width: 26px; height: 26px;
   border-radius: var(--r-sm);
-  border: 2px solid var(--line);
+  border: 2px solid transparent;
   cursor: pointer;
   transition: all 0.12s;
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.2);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.25);
 }
-.efb-sp-color-btn:hover { transform: scale(1.1); }
+.efb-sp-color-btn:hover { transform: scale(1.12); }
 .efb-sp-color-btn.active {
-  border-color: var(--t-primary);
-  box-shadow: 0 0 0 2px var(--bg-2), 0 0 0 3px currentColor;
+  border-color: #fff;
+  box-shadow: 0 0 0 1px var(--bg-1), 0 0 0 3px rgba(255,255,255,0.7), inset 0 0 0 1px rgba(0,0,0,0.2);
   transform: scale(1.08);
 }
 
