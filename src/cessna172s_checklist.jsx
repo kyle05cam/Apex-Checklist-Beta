@@ -1063,6 +1063,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [activeMoreRef, setActiveMoreRef] = useState("light_gun");
   const [activeDrawer, setActiveDrawer] = useState(new Set());   // Set of open keys — multiple allowed
+  const [pohTab, setPohTab] = useState("vspeeds");               // Active tab in POH overlay
   const [perfSubTab, setPerfSubTab] = useState("perf");     // unused but kept for compat
   const [lightMode, setLightMode] = useState(false);
   useEffect(() => {
@@ -2940,105 +2941,6 @@ const commParseGround = (text) => {
             }
         </div>
 
-        {currentPage !== "comm" && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 40, pointerEvents: "none", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 4px 4px 4px" }}>
-            <div style={{ pointerEvents: "auto", display: "flex", flexDirection: "column", gap: "0px" }}>
-              {[
-                { key: "vspeeds", label: "V-SPEEDS · C172S",           color: "#3a9ad4", headerBg: "rgba(58,154,212,0.12)",  contentBg: "rgba(5,17,24,0.96)"  },
-                { key: "perf",    label: "T/O & LANDING · C172S",      color: "#e8c84a", headerBg: "rgba(232,200,74,0.12)",  contentBg: "rgba(14,10,0,0.96)"  },
-                { key: "climb",   label: "CLIMB PERFORMANCE · C172S",  color: "#3dbe6c", headerBg: "rgba(61,190,108,0.12)",  contentBg: "rgba(2,14,6,0.96)"   },
-                { key: "cruise",  label: "CRUISE PERFORMANCE · C172S", color: "#3a9ad4", headerBg: "rgba(58,154,212,0.12)",  contentBg: "rgba(5,17,24,0.96)"  },
-              ].map((acc, index) => {
-                const isOpen = activeDrawer.has(acc.key);
-                const toggle = () => setActiveDrawer(prev => { const next = new Set(prev); isOpen ? next.delete(acc.key) : next.add(acc.key); return next; });
-                const isFirst = index === 0;
-                return (
-                  <div key={acc.key} style={{ display: "flex", flexDirection: "column", borderRadius: "6px", overflow: "hidden", marginTop: isFirst ? "0px" : "-6px", boxShadow: `0 -4px 10px ${acc.color}${isOpen ? "40" : "20"}, 0 4px 12px rgba(0,0,0,0.8)`, borderTop: `1px solid ${isOpen ? acc.color : `${acc.color}55`}`, borderLeft: `1px solid ${isOpen ? acc.color : `${acc.color}55`}`, borderRight: `1px solid ${isOpen ? acc.color : `${acc.color}55`}`, borderBottom: isOpen ? `1px solid ${acc.color}` : "none", backgroundColor: isOpen ? acc.contentBg : "rgba(13,17,22,0.65)", backdropFilter: "blur(4px)", position: "relative", zIndex: isOpen ? 50 : 40 + index, transition: "all 0.2s ease" }}>
-                    <button onClick={toggle} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "6px 14px", cursor: "pointer", background: `linear-gradient(90deg, ${acc.headerBg} 0%, rgba(13,15,18,0.2) 60%, transparent 100%)`, backgroundColor: "transparent", border: "none", outline: "none", textAlign: "left", flexShrink: 0, userSelect: "none" }}>
-                      <span style={{ fontFamily: "var(--f-mono)", fontSize: 10, color: acc.color, fontWeight: 700, display: "inline-block", transform: isOpen ? "rotate(180deg)" : "rotate(90deg)", transition: "transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)" }}>▲</span>
-                      <span style={{ fontFamily: "var(--f-ui)", fontSize: 13, color: acc.color, fontWeight: 700, letterSpacing: 2, flex: 1 }}>{acc.label}</span>
-                      {acc.key === "vspeeds" && vspeedEditing && <button onClick={e => { e.stopPropagation(); resetVspeeds(); }} style={{ fontFamily: "var(--f-mono)", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer", marginRight: 4 }}>↺ RESET</button>}
-                      {acc.key === "vspeeds" && <button onClick={e => { e.stopPropagation(); setVspeedEditing(v => !v); }} style={{ fontFamily: "var(--f-ui)", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "3px 10px", borderRadius: 3, cursor: "pointer", background: vspeedEditing ? `${acc.color}25` : "transparent", color: vspeedEditing ? "#e8c84a" : acc.color, border: `1px solid ${vspeedEditing ? "#e8c84a" : acc.color}`, marginRight: 6 }}>{vspeedEditing ? "✓ DONE" : "✎ EDIT"}</button>}
-                      {acc.key === "perf" && perfEditing && <button onClick={e => { e.stopPropagation(); resetPerfData(); }} style={{ fontFamily: "var(--f-mono)", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer", marginRight: 4 }}>↺ RESET</button>}
-                      {acc.key === "perf" && <button onClick={e => { e.stopPropagation(); setPerfEditing(v => !v); }} style={{ fontFamily: "var(--f-ui)", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "3px 10px", borderRadius: 3, cursor: "pointer", background: perfEditing ? `${acc.color}25` : "transparent", color: perfEditing ? "#e8c84a" : acc.color, border: `1px solid ${perfEditing ? "#e8c84a" : acc.color}`, marginRight: 6 }}>{perfEditing ? "✓ DONE" : "✎ EDIT"}</button>}
-                      {acc.key === "climb" && climbEditing && <button onClick={e => { e.stopPropagation(); resetClimbData(); }} style={{ fontFamily: "var(--f-mono)", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer", marginRight: 4 }}>↺ RESET</button>}
-                      {acc.key === "climb" && <button onClick={e => { e.stopPropagation(); setClimbEditing(v => !v); }} style={{ fontFamily: "var(--f-ui)", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "3px 10px", borderRadius: 3, cursor: "pointer", background: climbEditing ? `${acc.color}25` : "transparent", color: climbEditing ? "#e8c84a" : acc.color, border: `1px solid ${climbEditing ? "#e8c84a" : acc.color}`, marginRight: 6 }}>{climbEditing ? "✓ DONE" : "✎ EDIT"}</button>}
-                      {acc.key === "cruise" && cruiseEditing && <button onClick={e => { e.stopPropagation(); resetCruiseData(); }} style={{ fontFamily: "var(--f-mono)", fontSize: 8, color: "#e85a4a", border: "1px solid #e85a4a", borderRadius: 3, padding: "2px 8px", background: "transparent", cursor: "pointer", marginRight: 4 }}>↺ RESET</button>}
-                      {acc.key === "cruise" && <button onClick={e => { e.stopPropagation(); setCruiseEditing(v => !v); }} style={{ fontFamily: "var(--f-ui)", fontSize: 11, fontWeight: 700, letterSpacing: 1, padding: "3px 10px", borderRadius: 3, cursor: "pointer", background: cruiseEditing ? `${acc.color}25` : "transparent", color: cruiseEditing ? "#e8c84a" : acc.color, border: `1px solid ${cruiseEditing ? "#e8c84a" : acc.color}`, marginRight: 6 }}>{cruiseEditing ? "✓ DONE" : "✎ EDIT"}</button>}
-                    </button>
-                    <div style={{ maxHeight: isOpen ? "380px" : "0px", overflow: "hidden", transition: "max-height 0.3s cubic-bezier(0.25, 1, 0.5, 1)" }}>
-                      <div style={{ maxHeight: "380px", overflowY: "auto", scrollbarWidth: "thin", padding: "8px 0 16px 0", borderTop: `1px solid ${acc.color}35` }}>
-                        {acc.key === "vspeeds" && vspeeds.map((group, gi) => (
-                          <div key={gi} style={{ padding: "10px 14px 4px" }}>
-                            <div style={{ fontFamily: "var(--f-mono)", fontSize: 9, color: acc.color, letterSpacing: 3, marginBottom: 6, opacity: 0.8 }}>{group.group.toUpperCase()}</div>
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, paddingBottom: 8 }}>
-                              {group.items.map((item, ii) => (
-                                <div key={ii} style={{ background: "rgba(10,22,30,0.6)", border: `1px solid ${acc.color}25`, borderRadius: 8, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 2 }}>
-                                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-                                    <span style={{ fontFamily: "var(--f-mono)", fontSize: 12, color: acc.color, fontWeight: 700 }}>{vspeedEditing ? <input value={item.code} onChange={e => updateVspeed(gi, ii, "code", e.target.value)} style={{ width: 40, background: "#141820", border: `1px solid ${acc.color}`, borderRadius: 2, padding: "1px 4px", fontFamily: "var(--f-mono)", fontSize: 10, color: acc.color, outline: "none" }} /> : item.code}</span>
-                                    <span style={{ fontFamily: "var(--f-mono)", fontSize: 9, color: "#5a6578" }}>{item.unit}</span>
-                                  </div>
-                                  <div style={{ fontFamily: "var(--f-ui)", fontSize: 32, fontWeight: 700, color: "#e8c84a", lineHeight: 1.1 }}>{vspeedEditing ? <input value={item.value} onChange={e => updateVspeed(gi, ii, "value", e.target.value)} style={{ width: 64, background: "#141820", border: "1px solid #e8c84a", borderRadius: 2, padding: "2px 4px", fontFamily: "var(--f-ui)", fontSize: 22, color: "#e8c84a", outline: "none" }} /> : item.value}</div>
-                                  <div style={{ fontFamily: "var(--f-ui)", fontSize: 11, color: "#a0a8b5", lineHeight: 1.2 }}>{vspeedEditing ? <input value={item.desc} onChange={e => updateVspeed(gi, ii, "desc", e.target.value)} style={{ width: "100%", background: "#141820", border: "1px solid #2a3040", borderRadius: 2, padding: "1px 4px", fontFamily: "var(--f-ui)", fontSize: 10, color: "#e8e4d8", outline: "none" }} /> : item.desc}</div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                        {acc.key === "perf" && perfData.map((section, si) => (
-                          <div key={si} style={{ padding: "10px 14px 4px" }}>
-                            <div style={{ fontFamily: "var(--f-ui)", fontSize: 12, fontWeight: 700, color: "#e8c84a", letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
-                            {section.note && <div style={{ fontFamily: "var(--f-mono)", fontSize: 8, color: "rgba(232,200,74,0.6)", marginBottom: 6 }}>{section.note}</div>}
-                            <div style={{ border: "1px solid rgba(232,200,74,0.25)", borderRadius: 6, overflow: "hidden", marginBottom: 8 }}>
-                              <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: "rgba(232,200,74,0.12)" }}>
-                                {section.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "var(--f-mono)", fontSize: 9, color: "#e8c84a", letterSpacing: 1, padding: "6px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(232,200,74,0.15)" : "none", textTransform: "uppercase" }}>{col}</div>)}
-                              </div>
-                              {section.rows.map((row, ri) => (
-                                <div key={ri} style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: ri % 2 === 0 ? "rgba(232,200,74,0.04)" : "transparent", borderTop: "1px solid rgba(232,200,74,0.1)" }}>
-                                  {row.map((cell, ci) => <div key={ci} style={{ fontFamily: ci === 0 ? "var(--f-ui)" : "var(--f-mono)", fontSize: ci === 0 ? 13 : 12, fontWeight: ci === 0 ? 600 : 400, color: ci === 0 ? "#e8e4d8" : "#e8c84a", padding: "6px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(232,200,74,0.08)" : "none" }}>{perfEditing ? <input value={cell} onChange={e => updatePerfCell(si, ri, ci, e.target.value)} style={{ width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #2a3040", fontFamily: "inherit", fontSize: "inherit", color: "inherit", outline: "none", padding: 0 }} /> : cell}</div>)}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                        {acc.key === "climb" && climbData.map((section, si) => (
-                          <div key={si} style={{ padding: "10px 14px 4px" }}>
-                            <div style={{ fontFamily: "var(--f-ui)", fontSize: 12, fontWeight: 700, color: "#3dbe6c", letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
-                            {section.note && <div style={{ fontFamily: "var(--f-mono)", fontSize: 8, color: "rgba(61,190,108,0.6)", marginBottom: 6 }}>{section.note}</div>}
-                            <div style={{ border: "1px solid rgba(61,190,108,0.25)", borderRadius: 6, overflow: "hidden", marginBottom: 8 }}>
-                              <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: "rgba(61,190,108,0.12)" }}>
-                                {section.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "var(--f-mono)", fontSize: 9, color: "#3dbe6c", letterSpacing: 1, padding: "6px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(61,190,108,0.15)" : "none", textTransform: "uppercase" }}>{col}</div>)}
-                              </div>
-                              {section.rows.map((row, ri) => (
-                                <div key={ri} style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: ri % 2 === 0 ? "rgba(61,190,108,0.04)" : "transparent", borderTop: "1px solid rgba(61,190,108,0.1)" }}>
-                                  {row.map((cell, ci) => <div key={ci} style={{ fontFamily: ci === 0 ? "var(--f-ui)" : "var(--f-mono)", fontSize: ci === 0 ? 13 : 12, fontWeight: ci === 0 ? 600 : 400, color: ci === 0 ? "#e8e4d8" : "#3dbe6c", padding: "6px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(61,190,108,0.08)" : "none" }}>{climbEditing ? <input value={cell} onChange={e => updateClimbCell(si, ri, ci, e.target.value)} style={{ width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #2a3040", fontFamily: "inherit", fontSize: "inherit", color: "inherit", outline: "none", padding: 0 }} /> : cell}</div>)}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                        {acc.key === "cruise" && cruiseData.map((section, si) => (
-                          <div key={si} style={{ padding: "10px 14px 4px" }}>
-                            <div style={{ fontFamily: "var(--f-ui)", fontSize: 12, fontWeight: 700, color: acc.color, letterSpacing: 2, marginBottom: 2 }}>{section.group.toUpperCase()}</div>
-                            {section.note && <div style={{ fontFamily: "var(--f-mono)", fontSize: 8, color: "rgba(58,154,212,0.6)", marginBottom: 6 }}>{section.note}</div>}
-                            <div style={{ border: `1px solid ${acc.color}35`, borderRadius: 6, overflow: "hidden", marginBottom: 8 }}>
-                              <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: "rgba(58,154,212,0.12)" }}>
-                                {section.cols.map((col, ci) => <div key={ci} style={{ fontFamily: "var(--f-mono)", fontSize: 9, color: acc.color, letterSpacing: 1, padding: "6px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(58,154,212,0.15)" : "none", textTransform: "uppercase" }}>{col}</div>)}
-                              </div>
-                              {section.rows.map((row, ri) => (
-                                <div key={ri} style={{ display: "grid", gridTemplateColumns: `repeat(${section.cols.length}, 1fr)`, background: ri % 2 === 0 ? "rgba(58,154,212,0.04)" : "transparent", borderTop: "1px solid rgba(58,154,212,0.1)" }}>
-                                  {row.map((cell, ci) => <div key={ci} style={{ fontFamily: ci === 0 ? "var(--f-ui)" : "var(--f-mono)", fontSize: ci === 0 ? 13 : 12, fontWeight: ci === 0 ? 600 : 400, color: ci === 0 ? "#e8e4d8" : acc.color, padding: "6px 10px", borderRight: ci < section.cols.length - 1 ? "1px solid rgba(58,154,212,0.08)" : "none" }}>{cruiseEditing ? <input value={cell} onChange={e => updateCruiseCell(si, ri, ci, e.target.value)} style={{ width: "100%", background: "transparent", border: "none", borderBottom: "1px solid #2a3040", fontFamily: "inherit", fontSize: "inherit", color: "inherit", outline: "none", padding: 0 }} /> : cell}</div>)}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-        </div>}
       </main>
 
       {/* ── RIGHT RAIL ── */}
