@@ -128,11 +128,11 @@ function MiniScribbleField({ T, label, value, onChange, color, placeholder }) {
   };
 
   return (
-    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+    <div style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 0", borderBottom:"1px solid var(--line-faint)" }}>
       {label && (
         <div style={{
-          fontFamily:"var(--f-mono)", fontSize:8, letterSpacing:1.5,
-          color:color, flexShrink:0, minWidth:90, textTransform:"uppercase",
+          fontFamily:"var(--f-mono)", fontSize:10, letterSpacing:1,
+          color:"var(--t-secondary)", flexShrink:0, minWidth:100, textTransform:"uppercase",
         }}>
           {label}
         </div>
@@ -235,7 +235,7 @@ function AtisCard({ T, data, onSetAtisData, armState, rawText, onArm, onClearRaw
         </div>
       ) : null}
       {/* ── Data fields ── */}
-      <div style={{ padding:"8px 12px", display:"flex", flexDirection:"column", gap:6 }}>
+      <div style={{ padding:"0 14px 4px", display:"flex", flexDirection:"column" }}>
         {FIELDS.map(f => (
           <MiniScribbleField key={f.key} T={T} label={f.label} color={f.color} placeholder={f.hint}
             value={data[f.key]||""}
@@ -258,7 +258,7 @@ function TaxiCard({ T, data, onSetTaxiData, armState, rawText, onArm, onClearRaw
         <div style={{ flex:1 }}>
           <div style={{ fontFamily:"var(--f-ui)", fontSize:14, fontWeight:700, letterSpacing:2, color:A.blue }}>TAXI INSTRUCTIONS</div>
           <div style={{ fontFamily:"var(--f-ui)", fontSize:11, color:"var(--t-secondary)", marginTop:2 }}>
-            {isArmed ? "● Recording…" : isDone ? "Captured · AI parsed" : "Tap ARM to capture"}
+            {isArmed ? "● Recording…" : isDone ? "Captured · AI parsed" : "Ground frequency"}
           </div>
         </div>
         <button onClick={onArm} style={{
@@ -295,37 +295,40 @@ function TaxiCard({ T, data, onSetTaxiData, armState, rawText, onArm, onClearRaw
       ) : null}
 
       {/* ── Data fields ── */}
-      <div style={{ padding:"8px 12px", display:"flex", flexDirection:"column", gap:6 }}>
-        {/* Runway — standard field */}
+      <div style={{ padding:"0 14px 4px", display:"flex", flexDirection:"column" }}>
         <MiniScribbleField T={T} label="RUNWAY" color={A.blue} placeholder="e.g. 12C"
           value={data.runway||""} onChange={v => onSetTaxiData({ ...data, runway:v })} />
 
-        {/* Route — standard field */}
         <MiniScribbleField T={T} label="TAXI VIA" color={A.teal} placeholder="e.g. Y > Y1 > B > H"
           value={data.route||""} onChange={v => onSetTaxiData({ ...data, route:v })} />
 
-        {/* Hold Short — safety-critical */}
-        <div style={{ borderLeft:`3px solid ${A.red}`, borderRadius:4, paddingLeft:10, paddingTop:6, paddingBottom:6 }}>
-          <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:A.red, letterSpacing:1.5, marginBottom:5, fontWeight:700 }}>
-            ⚠ HOLD SHORT
+        {/* Hold Short — full-width red banner + input */}
+        <div style={{ borderBottom:"1px solid var(--line-faint)" }}>
+          <div style={{
+            display:"flex", alignItems:"center", gap:6,
+            padding:"6px 0 6px", borderBottom:"1px solid var(--line-faint)",
+          }}>
+            <span style={{ fontFamily:"var(--f-mono)", fontSize:10, color:A.red, letterSpacing:1, fontWeight:700 }}>⚠ HOLD SHORT</span>
           </div>
-          <input
-            type="text"
-            value={data.holdShort||""}
-            onChange={e => onSetTaxiData({ ...data, holdShort:e.target.value })}
-            placeholder="e.g. RWY 12R"
-            className="efb-comm-input"
-            style={{
-              width:"100%", boxSizing:"border-box",
-              background:"var(--bg-inset)", border:"1px solid var(--line)",
-              borderRadius:4, padding:"9px 10px", outline:"none",
-              fontFamily:"var(--f-mono)", fontSize:14, fontWeight:700,
-              color: data.holdShort ? A.red : "var(--t-tertiary)", caretColor:A.red,
-            }}
-          />
+          <div style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 0" }}>
+            <input
+              type="text"
+              value={data.holdShort||""}
+              onChange={e => onSetTaxiData({ ...data, holdShort:e.target.value })}
+              placeholder="e.g. RWY 12R"
+              className="efb-comm-input"
+              style={{
+                flex:1, boxSizing:"border-box",
+                background:"var(--bg-inset)", border:"1px solid var(--line)",
+                borderRadius:4, padding:"9px 10px", outline:"none",
+                fontFamily:"var(--f-mono)", fontSize:14, fontWeight:700,
+                color: data.holdShort ? A.red : "var(--t-tertiary)", caretColor:A.red,
+              }}
+            />
+            <div style={{ width:30 }}/>
+          </div>
         </div>
 
-        {/* Instructions — secondary */}
         <MiniScribbleField T={T} label="INSTRUCTIONS" color={A.amber} placeholder="e.g. Contact tower 119.9 when ready"
           value={data.instructions||""} onChange={v => onSetTaxiData({ ...data, instructions:v })} />
       </div>
@@ -352,7 +355,7 @@ function GndCard({ T, data, onSetGndData, armState, rawText, onArm, onClearRaw }
         <div style={{ flex:1 }}>
           <div style={{ fontFamily:"var(--f-ui)", fontSize:14, fontWeight:700, letterSpacing:2, color:A.green }}>GROUND CLEARANCE</div>
           <div style={{ fontFamily:"var(--f-ui)", fontSize:11, color:"var(--t-secondary)", marginTop:2 }}>
-            {isArmed ? "● Recording…" : isDone ? "Captured · AI parsed" : "Tap ARM to capture"}
+            {isArmed ? "● Recording…" : isDone ? "Captured · AI parsed" : "IFR / VFR"}
           </div>
         </div>
         <button onClick={onArm} style={{
@@ -387,7 +390,7 @@ function GndCard({ T, data, onSetGndData, armState, rawText, onArm, onClearRaw }
         </div>
       ) : null}
       {/* ── Data fields ── */}
-      <div style={{ padding:"8px 12px", display:"flex", flexDirection:"column", gap:6 }}>
+      <div style={{ padding:"0 14px 4px", display:"flex", flexDirection:"column" }}>
         {FIELDS.map(f => (
           <MiniScribbleField key={f.key} T={T} label={f.label} color={f.color} placeholder={f.hint}
             value={data[f.key]||""}
@@ -1187,7 +1190,7 @@ export function CommPage({
                     </div>
                   </div>
                 ) : null}
-                <div style={{ padding:"8px 12px", display:"flex", flexDirection:"column", gap:6 }}>
+                <div style={{ padding:"0 14px 4px", display:"flex", flexDirection:"column" }}>
                   {CRAFT_FIELDS.map(f => (
                     <MiniScribbleField key={f.key} T={T}
                       label={f.label.replace("— ","")} color={f.color} placeholder={f.hint}
