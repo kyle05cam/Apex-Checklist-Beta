@@ -116,96 +116,67 @@ function TokenText({ entry }) {
 }
 
 // ─── MINI SCRIBBLE FIELD ──────────────────────────────────────────────────────
-// Dual-input field: text box + tap-to-expand inline drawing canvas
+// Input row: label + text field + copy-to-clipboard button
 function MiniScribbleField({ T, label, value, onChange, color, placeholder }) {
-  const [canvasOpen, setCanvasOpen] = useState(false);
-  const canvasRef = useRef(null);
-  const drawingRef = useRef({ active: false, lastX: 0, lastY: 0 });
+  const [copied, setCopied] = useState(false);
 
-  const startDraw = (e) => {
-    const canvas = canvasRef.current; if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const src  = e.touches ? e.touches[0] : e;
-    drawingRef.current = { active: true, lastX: src.clientX - rect.left, lastY: src.clientY - rect.top };
-  };
-  const draw = (e) => {
-    if (!drawingRef.current.active) return;
-    e.preventDefault();
-    const canvas = canvasRef.current; if (!canvas) return;
-    const ctx  = canvas.getContext("2d");
-    const rect = canvas.getBoundingClientRect();
-    const src  = e.touches ? e.touches[0] : e;
-    const x = src.clientX - rect.left, y = src.clientY - rect.top;
-    ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.lineCap = "round"; ctx.lineJoin = "round";
-    ctx.beginPath(); ctx.moveTo(drawingRef.current.lastX, drawingRef.current.lastY);
-    ctx.lineTo(x, y); ctx.stroke();
-    drawingRef.current = { active: true, lastX: x, lastY: y };
-  };
-  const endDraw = () => { drawingRef.current.active = false; };
-  const clearCanvas = () => {
-    const canvas = canvasRef.current; if (!canvas) return;
-    canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+  const copyValue = () => {
+    if (!value) return;
+    try { navigator.clipboard.writeText(value); } catch {}
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1200);
   };
 
   return (
-    <div style={{ marginBottom: 2 }}>
-      {/* Row: label + text input + scribble toggle */}
-      <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom: canvasOpen ? 4 : 0 }}>
-        <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:color, letterSpacing:1.5, flexShrink:0, width:70 }}>
+    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+      {label && (
+        <div style={{
+          fontFamily:"var(--f-mono)", fontSize:8, letterSpacing:1.5,
+          color:color, flexShrink:0, minWidth:90, textTransform:"uppercase",
+        }}>
           {label}
         </div>
-        <input
-          type="text"
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          placeholder={placeholder}
-          style={{
-            flex:1, boxSizing:"border-box",
-            background:T.inputBg, border:`1px solid ${T.inputBdr(color)}`,
-            borderRadius:3, padding:"5px 8px", outline:"none",
-            fontFamily:"var(--f-mono)", fontSize:14, fontWeight:700,
-            color:value ? color : T.textDim, caretColor:color,
-          }}
-        />
-        <button
-          onClick={() => setCanvasOpen(o => !o)}
-          title={canvasOpen ? "Hide scribble pad" : "Open scribble pad"}
-          style={{
-            flexShrink:0, width:28, height:28, borderRadius:3, cursor:"pointer", border:`1px solid ${color}40`,
-            background: canvasOpen ? `${color}18` : "transparent",
-            color: canvasOpen ? color : T.textDim,
-            display:"flex", alignItems:"center", justifyContent:"center",
-            fontSize:14, lineHeight:1, transition:"all 0.15s",
-          }}
-        >
-          ✏
-        </button>
-      </div>
-      {/* Inline canvas — only rendered when open */}
-      {canvasOpen && (
-        <div style={{ position:"relative", marginLeft:76 }}>
-          <canvas
-            ref={canvasRef}
-            width={340} height={52}
-            onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
-            onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}
-            style={{
-              display:"block", width:"100%", height:52, borderRadius:3, cursor:"crosshair",
-              background:T.inputBg, border:`1px dashed ${color}40`,
-              touchAction:"none",
-            }}
-          />
-          <button
-            onClick={clearCanvas}
-            style={{
-              position:"absolute", top:3, right:3,
-              fontFamily:"var(--f-mono)", fontSize:7, padding:"1px 5px",
-              borderRadius:2, cursor:"pointer", background:"transparent",
-              color:T.textDim, border:`1px solid ${T.border}`,
-            }}
-          >CLR</button>
-        </div>
       )}
+      <input
+        type="text"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="efb-comm-input"
+        style={{
+          flex:1, boxSizing:"border-box",
+          background:T.inputBg, border:`1px solid ${T.inputBdr(color)}`,
+          borderRadius:4, padding:"9px 10px", outline:"none",
+          fontFamily:"var(--f-mono)", fontSize:14, fontWeight:700,
+          color: value ? color : T.textDim, caretColor:color,
+        }}
+      />
+      {/* Copy to clipboard */}
+      <button
+        onClick={copyValue}
+        title={copied ? "Copied!" : "Copy to clipboard"}
+        style={{
+          flexShrink:0, width:30, height:30, borderRadius:4, cursor:"pointer",
+          border:`1px solid ${value ? `${color}40` : T.border}`,
+          background: copied ? `${color}20` : "transparent",
+          color: copied ? color : T.textDim,
+          display:"flex", alignItems:"center", justifyContent:"center",
+          transition:"all 0.15s",
+        }}
+      >
+        {copied ? (
+          <svg width={13} height={13} viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 12l4 4 10-10"/>
+          </svg>
+        ) : (
+          <svg width={13} height={13} viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="9" y="9" width="11" height="11" rx="2"/>
+            <path d="M5 15V5a2 2 0 0 1 2-2h10"/>
+          </svg>
+        )}
+      </button>
     </div>
   );
 }
@@ -229,7 +200,7 @@ function AtisCard({ T, data, onSetAtisData, armState, rawText, onArm, onClearRaw
         <div style={{ flex:1 }}>
           <div style={{ fontFamily:"var(--f-ui)", fontSize:14, fontWeight:700, letterSpacing:3, color:A.teal }}>ATIS</div>
           <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:T.textDim, letterSpacing:1 }}>
-            {isArmed ? "● RECORDING…" : isDone ? "CAPTURED · AI PARSED" : "TAP ARM TO CAPTURE"}
+            {isArmed ? "● Recording…" : isDone ? "Captured · AI parsed" : "Tap ARM to capture"}
           </div>
         </div>
         {/* ARM / STOP button — primary action, left of CLR */}
@@ -289,7 +260,7 @@ function TaxiCard({ T, data, onSetTaxiData, armState, rawText, onArm, onClearRaw
         <div style={{ flex:1 }}>
           <div style={{ fontFamily:"var(--f-ui)", fontSize:14, fontWeight:700, letterSpacing:3, color:A.blue }}>TAXI INSTRUCTIONS</div>
           <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:T.textDim, letterSpacing:1 }}>
-            {isArmed ? "● RECORDING…" : isDone ? "CAPTURED · AI PARSED" : "TAP ARM TO CAPTURE"}
+            {isArmed ? "● Recording…" : isDone ? "Captured · AI parsed" : "Tap ARM to capture"}
           </div>
         </div>
         <button onClick={onArm} style={{
@@ -345,10 +316,11 @@ function TaxiCard({ T, data, onSetTaxiData, armState, rawText, onArm, onClearRaw
             value={data.holdShort||""}
             onChange={e => onSetTaxiData({ ...data, holdShort:e.target.value })}
             placeholder="e.g. RWY 12R"
+            className="efb-comm-input"
             style={{
               width:"100%", boxSizing:"border-box",
               background:T.inputBg, border:`1px solid ${A.red}40`,
-              borderRadius:3, padding:"6px 10px", outline:"none",
+              borderRadius:3, padding:"9px 10px", outline:"none",
               fontFamily:"var(--f-mono)", fontSize:16, fontWeight:700,
               color: data.holdShort ? A.red : T.textDim, caretColor:A.red,
             }}
@@ -382,7 +354,7 @@ function GndCard({ T, data, onSetGndData, armState, rawText, onArm, onClearRaw }
         <div style={{ flex:1 }}>
           <div style={{ fontFamily:"var(--f-ui)", fontSize:14, fontWeight:700, letterSpacing:3, color:A.green }}>GROUND CLEARANCE</div>
           <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:T.textDim, letterSpacing:1 }}>
-            {isArmed ? "● RECORDING…" : isDone ? "CAPTURED · AI PARSED" : "TAP ARM TO CAPTURE"}
+            {isArmed ? "● Recording…" : isDone ? "Captured · AI parsed" : "Tap ARM to capture"}
           </div>
         </div>
         <button onClick={onArm} style={{
@@ -1157,13 +1129,13 @@ export function CommPage({
                 <div style={{ textAlign:"center", padding:"32px 20px 20px" }}>
                   <svg width={40} height={40} viewBox="0 0 24 24" fill="none"
                     stroke={T.textDim} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
-                    style={{ opacity:0.32, display:"block", margin:"0 auto 10px" }}>
+                    style={{ opacity:0.32, display:"block", margin:"0 auto 12px" }}>
                     <path d="M12 20v-6M8 8a4 4 0 0 1 8 0M5 5a8 8 0 0 1 14 0M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/>
                   </svg>
-                  <div style={{ fontFamily:"var(--f-ui)", fontSize:14, fontWeight:600, letterSpacing:0.5, color:T.textDim }}>
+                  <div style={{ fontFamily:"var(--f-mono)", fontSize:12, fontWeight:700, letterSpacing:2.5, color:T.textDim, textTransform:"uppercase" }}>
                     Awaiting Transmission
                   </div>
-                  <div style={{ fontFamily:"var(--f-ui)", fontSize:12, marginTop:5, color:T.textDim, opacity:0.55 }}>
+                  <div style={{ fontFamily:"var(--f-ui)", fontSize:12, marginTop:6, color:T.textDim, opacity:0.55 }}>
                     {listening ? `Monitoring · ${tail}` : "Forms below auto-fill from captured ATC audio."}
                   </div>
                 </div>
@@ -1184,7 +1156,7 @@ export function CommPage({
                   <div style={{ flex:1 }}>
                     <div style={{ fontFamily:"var(--f-ui)", fontSize:14, fontWeight:700, letterSpacing:3, color:A.amber }}>IFR CLEARANCE</div>
                     <div style={{ fontFamily:"var(--f-mono)", fontSize:8, color:T.textDim, letterSpacing:1 }}>
-                      {ifrArmState==="armed" ? "● RECORDING…" : ifrArmState==="done" ? "CAPTURED · AI PARSED" : "CRAFT FORMAT · TAP ARM"}
+                      {ifrArmState==="armed" ? "● Recording…" : ifrArmState==="done" ? "Captured · AI parsed" : "CRAFT format · Tap ARM"}
                     </div>
                   </div>
                   <button onClick={onArmIfr} style={{

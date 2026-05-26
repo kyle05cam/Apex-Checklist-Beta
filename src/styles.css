@@ -2243,3 +2243,13 @@ ul, li { list-style: none; padding: 0; margin: 0; }
 .efb-text-accent    { color: var(--accent); }
 .efb-text-warn      { color: var(--warn); }
 .efb-text-ok        { color: var(--ok); }
+
+/* ============================================================
+   Smart Coms — form input fields
+   ============================================================ */
+.efb-comm-input::placeholder {
+  font-family: var(--f-ui);
+  font-style: italic;
+  font-weight: 400;
+  color: var(--t-tertiary);
+}
