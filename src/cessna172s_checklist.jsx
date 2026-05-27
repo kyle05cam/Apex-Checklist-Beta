@@ -2643,13 +2643,15 @@ const commParseGround = (text) => {
           </div>
         </div>
 
-        {/* ── CENTER: aircraft ident (left) + clocks (right, space-between) ── */}
+        {/* ── CENTER: aircraft ident (centered) + clocks (right) ── */}
         <div className="efb-topbar-center">
-          <div className="efb-tail">
-            <span className="efb-tail-no">{aircraft ? aircraft.tail : "N12345"}</span>
-            <span className="efb-tail-type">
-              {aircraft ? aircraft.type : "CESSNA 172S SKYHAWK"}
-            </span>
+          <div className="efb-tail-center">
+            <div className="efb-tail">
+              <span className="efb-tail-no">{aircraft ? aircraft.tail : "N12345"}</span>
+              <span className="efb-tail-type">
+                {aircraft ? aircraft.type : "CESSNA 172S SKYHAWK"}
+              </span>
+            </div>
           </div>
           <div className="efb-clocks">
             <div className="efb-clock">

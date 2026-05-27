@@ -155,20 +155,19 @@ ul, li { list-style: none; padding: 0; margin: 0; }
   min-width: 0;
 }
 .efb-topbar-center {
-  position: relative;
-  justify-content: flex-end;
-  gap: var(--s-6);
+  justify-content: flex-start;
+  gap: 0;
   border-left: 1px solid var(--line);
   border-right: 1px solid var(--line);
   padding: 0 var(--s-5);
 }
-/* Aircraft ident: pinned to the absolute center of the center zone */
-.efb-topbar-center .efb-tail {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  white-space: nowrap;
-  pointer-events: none;
+/* Expands to fill the space between the left edge and the clocks,
+   then centers the aircraft ident within that space. */
+.efb-tail-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .efb-topbar-right { justify-content: flex-end; gap: var(--s-3); }
 
