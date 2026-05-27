@@ -4,7 +4,7 @@
 // Prop contract preserved for parent cessna172s_checklist.jsx
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { getNearestAirports, FREQ_META } from "./nearest_freqs_data.js";
 
 // ─── ICON COMPONENT ──────────────────────────────────────────────────────────
@@ -69,6 +69,46 @@ function Icon({ name, size = 18, stroke = 1.6 }) {
 }
 
 
+// ─── CLEARANCES CONFIG ────────────────────────────────────────────────────────
+const CLEARANCES = [
+  {
+    id: "atis",
+    name: "ATIS",
+    sub: "Tap ARM to capture",
+    fields: [
+      { id: "ident", label: "Information", placeholder: "Ident letter" },
+      { id: "wind",  label: "Wind",        placeholder: "Dir/speed (e.g. 270° at 12kt)" },
+      { id: "alt",   label: "Altimeter",   placeholder: "e.g. 29.92" },
+      { id: "vis",   label: "Visibility",  placeholder: "e.g. 10SM" },
+      { id: "sky",   label: "Sky",         placeholder: "e.g. FEW 3500" },
+      { id: "caut",  label: "Caution",     placeholder: "NOTAMs / hazards / advisories" },
+    ],
+  },
+  {
+    id: "taxi",
+    name: "Taxi Instructions",
+    sub: "Ground frequency",
+    fields: [
+      { id: "rwy",   label: "Runway",       placeholder: "e.g. 12C" },
+      { id: "via",   label: "Taxi Via",     placeholder: "e.g. Y > Y1 > B > H" },
+      { id: "hold",  label: "Hold Short",   placeholder: "e.g. RWY 12R", critical: true },
+      { id: "instr", label: "Instructions", placeholder: "e.g. Contact tower 119.9 when ready" },
+    ],
+  },
+  {
+    id: "clearance",
+    name: "Ground Clearance",
+    sub: "IFR / VFR",
+    fields: [
+      { id: "to",    label: "Cleared To", placeholder: "Destination" },
+      { id: "route", label: "Route",      placeholder: "Via / as filed" },
+      { id: "alt2",  label: "Altitude",   placeholder: "Maintain / expect" },
+      { id: "freq",  label: "Departure",  placeholder: "e.g. 124.9" },
+      { id: "sq",    label: "Squawk",     placeholder: "e.g. 4271" },
+    ],
+  },
+];
+
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 export function CommPage({
   aircraft,
@@ -84,6 +124,58 @@ export function CommPage({
   ...rest
 }) {
   const [tab, setTab] = useState("active");
+
+  // ── Map design field IDs → parent data values ──
+  const getFieldValue = (id) => {
+    const map = {
+      ident: atisData?.info,        wind:  atisData?.wind,
+      alt:   atisData?.altimeter,   vis:   atisData?.visibility,
+      sky:   atisData?.sky,         caut:  atisData?.caution,
+      rwy:   taxiData?.runway,      via:   taxiData?.route,
+      hold:  taxiData?.holdShort,   instr: taxiData?.instructions,
+      to:    gndData?.clearedTo,    route: gndData?.route,
+      alt2:  gndData?.altitude,     freq:  gndData?.frequency,
+      sq:    gndData?.squawk,
+    };
+    return map[id] ?? "";
+  };
+
+  // ── Map design field IDs → parent set callbacks ──
+  const setField = (id, value) => {
+    const atisMap = { ident: "info", wind: "wind", alt: "altimeter", vis: "visibility", sky: "sky", caut: "caution" };
+    const taxiMap = { rwy: "runway", via: "route", hold: "holdShort", instr: "instructions" };
+    const gndMap  = { to: "clearedTo", route: "route", alt2: "altitude", freq: "frequency", sq: "squawk" };
+    if (id in atisMap)      onSetAtisData?.({ ...atisData, [atisMap[id]]: value });
+    else if (id in taxiMap) onSetTaxiData?.({ ...taxiData, [taxiMap[id]]: value });
+    else if (id in gndMap)  onSetGndData?.({ ...gndData,  [gndMap[id]]:  value });
+  };
+
+  // ── Armed state from parent ──
+  const isArmed = (cardId) => {
+    if (cardId === "atis")      return atisArmState === "armed" || atisArmState === "done";
+    if (cardId === "taxi")      return taxiArmState === "armed" || taxiArmState === "done";
+    if (cardId === "clearance") return gndArmState  === "armed" || gndArmState  === "done";
+    return false;
+  };
+
+  const handleArm = (cardId) => {
+    if (cardId === "atis")           onArmAtis?.();
+    else if (cardId === "taxi")      onArmTaxi?.();
+    else if (cardId === "clearance") onArmGnd?.();
+  };
+
+  const handleClear = (cardId) => {
+    if (cardId === "atis")           onClearAtisRaw?.();
+    else if (cardId === "taxi")      onClearTaxiRaw?.();
+    else if (cardId === "clearance") onClearGndRaw?.();
+  };
+
+  // ── Has any captured data? (controls empty-state visibility) ──
+  const hasValues = (
+    Object.values(atisData || {}).some(Boolean) ||
+    Object.values(taxiData || {}).some(Boolean) ||
+    Object.values(gndData  || {}).some(Boolean)
+  );
 
   const handleListen = () => {
     if (listening) onStopListen?.();
@@ -144,8 +236,7 @@ export function CommPage({
             className={`radio-tab${tab === "active" ? " active" : ""}`}
             onClick={() => setTab("active")}
           >
-            Active Feed{" "}
-            <span className="tab-count">{Math.min(txLog.length, 5)}</span>
+            Active Feed <span className="tab-count">3</span>
           </div>
           <div
             className={`radio-tab${tab === "archive" ? " active" : ""}`}
@@ -162,24 +253,111 @@ export function CommPage({
           </div>
         </div>
 
-        {/* ── Active Feed — last 5 transmissions ── */}
+        {/* ── Active Feed ── */}
         {tab === "active" && (
           <>
-            {txLog.length === 0 ? (
+            {/* Recent transmissions quick reference — top 5, only shown when data exists */}
+            {txLog.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{
+                  fontFamily: "var(--f-mono)", fontSize: 10, letterSpacing: "0.1em",
+                  textTransform: "uppercase", color: "var(--t-tertiary)",
+                  marginBottom: 8,
+                }}>
+                  Recent Transmissions
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <TransmissionFeed txLog={txLog} limit={5}/>
+                </div>
+              </div>
+            )}
+
+            {/* Empty state — only when idle and nothing captured yet */}
+            {!listening && !hasValues && (
               <div className="radio-empty">
                 <div className="radio-empty-icon">
                   <Icon name="antenna" size={22}/>
                 </div>
                 <div className="radio-empty-title">Awaiting Transmission</div>
                 <div className="radio-empty-sub">
-                  Recent ATC transmissions will appear here.
+                  Forms below auto-fill from captured ATC audio.
                 </div>
               </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <TransmissionFeed txLog={txLog} limit={5}/>
-              </div>
             )}
+
+            {/* Clearance cards */}
+            {CLEARANCES.map((c) => (
+              <div
+                key={c.id}
+                className={`clearance-card${isArmed(c.id) ? " armed" : ""}`}
+              >
+                <div className="clearance-head">
+                  <div className="clearance-title">
+                    <span className="clearance-name">{c.name}</span>
+                    <span className="clearance-sub">{c.sub}</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      className={`btn btn-sm${isArmed(c.id) ? " btn-ok" : ""}`}
+                      onClick={() => handleArm(c.id)}
+                    >
+                      <span style={{
+                        width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
+                        background: isArmed(c.id) ? "var(--ok)" : "var(--t-quiet)",
+                      }}/>
+                      {isArmed(c.id) ? "ARMED" : "ARM"}
+                    </button>
+                    <button
+                      className="btn btn-sm btn-warn"
+                      onClick={() => handleClear(c.id)}
+                    >
+                      <Icon name="reset" size={10}/>
+                      CLR
+                    </button>
+                  </div>
+                </div>
+
+                <div className="clearance-body">
+                  {c.fields.map((f) => (
+                    <React.Fragment key={f.id}>
+                      {f.critical && (
+                        <div className="hold-short-banner">
+                          <Icon name="alert" size={10}/>
+                          Hold Short
+                        </div>
+                      )}
+                      <span className="field-label">{f.label}</span>
+                      <input
+                        className={[
+                          "field-input",
+                          f.critical ? "critical" : "",
+                          getFieldValue(f.id) ? "has-value" : "",
+                        ].filter(Boolean).join(" ")}
+                        placeholder={f.placeholder}
+                        value={getFieldValue(f.id)}
+                        onChange={(e) => setField(f.id, e.target.value)}
+                      />
+                      <button
+                        className="field-copy"
+                        title="Copy"
+                        onClick={() => {
+                          const v = getFieldValue(f.id);
+                          if (v) try { navigator.clipboard.writeText(v); } catch {}
+                        }}
+                      >
+                        <Icon name="copy" size={12}/>
+                      </button>
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            {/* Replay bar */}
+            <div className="radio-replay-bar" onClick={() => onReplay?.(10)}>
+              <Icon name="play" size={11}/>
+              Replay Last 10 Seconds
+            </div>
           </>
         )}
 
