@@ -3030,9 +3030,9 @@ const commParseGround = (text) => {
             <div className="efb-poh-tabs">
               {[
                 { key: "vspeeds", label: "V-SPEEDS",   dot: "#3a9ad4" },
-                { key: "perf",    label: "T/O & LNDG", dot: "#e8c84a" },
-                { key: "climb",   label: "CLIMB PERF", dot: "#3dbe6c" },
-                { key: "cruise",  label: "CRUISE PERF",dot: "#a78bfa" },
+                { key: "perf",    label: "T/O & LNDG", dot: "#3a9ad4" },
+                { key: "climb",   label: "CLIMB PERF", dot: "#3a9ad4" },
+                { key: "cruise",  label: "CRUISE PERF",dot: "#3a9ad4" },
               ].map(tab => (
                 <button
                   key={tab.key}
@@ -3120,7 +3120,7 @@ const commParseGround = (text) => {
               {/* ── T/O & LANDING ── */}
               {pohTab === "perf" && perfData.map((section, si) => (
                 <div key={si} className="efb-poh-group">
-                  <div className="efb-poh-section-title" style={{ color: "#e8c84a" }}>{section.group.toUpperCase()}</div>
+                  <div className="efb-poh-section-title" style={{ color: "#3a9ad4" }}>{section.group.toUpperCase()}</div>
                   {section.note && <div className="efb-poh-group-note">{section.note}</div>}
                   <table className="efb-poh-table">
                     <thead>
@@ -3146,7 +3146,7 @@ const commParseGround = (text) => {
               {/* ── CLIMB PERFORMANCE ── */}
               {pohTab === "climb" && climbData.map((section, si) => (
                 <div key={si} className="efb-poh-group">
-                  <div className="efb-poh-section-title" style={{ color: "#3dbe6c" }}>{section.group.toUpperCase()}</div>
+                  <div className="efb-poh-section-title" style={{ color: "#3a9ad4" }}>{section.group.toUpperCase()}</div>
                   {section.note && <div className="efb-poh-group-note">{section.note}</div>}
                   <table className="efb-poh-table">
                     <thead>
@@ -3172,7 +3172,7 @@ const commParseGround = (text) => {
               {/* ── CRUISE PERFORMANCE ── */}
               {pohTab === "cruise" && cruiseData.map((section, si) => (
                 <div key={si} className="efb-poh-group">
-                  <div className="efb-poh-section-title" style={{ color: "#a78bfa" }}>{section.group.toUpperCase()}</div>
+                  <div className="efb-poh-section-title" style={{ color: "#3a9ad4" }}>{section.group.toUpperCase()}</div>
                   {section.note && <div className="efb-poh-group-note">{section.note}</div>}
                   <table className="efb-poh-table">
                     <thead>
