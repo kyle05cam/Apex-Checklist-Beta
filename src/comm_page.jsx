@@ -383,6 +383,7 @@ export function CommPage({
       {/* ── Field edit popover ── */}
       {editPopover && (
         <EditPopover
+          fieldId={editPopover.id}
           label={editPopover.label}
           initialValue={editPopover.value}
           inputMode={editPopover.inputMode}
@@ -395,20 +396,88 @@ export function CommPage({
 }
 
 // ─── EDIT POPOVER ─────────────────────────────────────────────────────────────
-// Bottom-sheet overlay for correcting a single transcribed field.
-// Large input + confirm/cancel — designed for cockpit fat-finger use.
-function EditPopover({ label, initialValue, inputMode = "text", onConfirm, onCancel }) {
-  const [val, setVal] = useState(initialValue);
+// Centered modal for correcting a single transcribed field.
+// Dispatches to a specialized sub-editor based on fieldId.
+function EditPopover({ fieldId, label, initialValue, inputMode = "text", onConfirm, onCancel }) {
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onCancel}
+        style={{
+          position: "fixed", inset: 0,
+          background: "rgba(7,10,15,0.75)",
+          zIndex: 400,
+          backdropFilter: "blur(3px)",
+        }}
+      />
+
+      {/* Centered modal */}
+      <div style={{
+        position: "fixed",
+        top: "50%", left: "50%",
+        transform: "translate(-50%, -50%)",
+        zIndex: 401,
+        background: "var(--bg-1)",
+        border: "1px solid var(--accent-line)",
+        borderRadius: "var(--r-lg)",
+        padding: "24px",
+        width: "min(440px, calc(100vw - 32px))",
+        display: "flex", flexDirection: "column", gap: 18,
+        boxShadow: "0 16px 56px rgba(0,0,0,0.7)",
+      }}>
+        {/* Header */}
+        <div>
+          <div style={{
+            fontFamily: "var(--f-mono)", fontSize: 10,
+            color: "var(--accent)", letterSpacing: "0.12em",
+            textTransform: "uppercase", marginBottom: 4,
+          }}>
+            Editing — {label}
+          </div>
+          <div style={{
+            fontFamily: "var(--f-mono)", fontSize: 11,
+            color: "var(--t-tertiary)", letterSpacing: "0.06em",
+          }}>
+            {fieldId === "wind" ? "Enter speed, direction, and optional gust" :
+             fieldId === "vis"  ? "Enter visibility — SM will be appended" :
+             fieldId === "sky"  ? "Select condition, then enter altitude if required" :
+                                  "Correct the transcribed value below"}
+          </div>
+        </div>
+
+        {/* Dispatch to the right sub-editor */}
+        {fieldId === "wind" ? (
+          <WindEditor initialValue={initialValue} onConfirm={onConfirm} onCancel={onCancel}/>
+        ) : fieldId === "vis" ? (
+          <VisEditor initialValue={initialValue} onConfirm={onConfirm} onCancel={onCancel}/>
+        ) : fieldId === "sky" ? (
+          <SkyEditor initialValue={initialValue} onConfirm={onConfirm} onCancel={onCancel}/>
+        ) : (
+          <DefaultEditor fieldId={fieldId} initialValue={initialValue} inputMode={inputMode} onConfirm={onConfirm} onCancel={onCancel}/>
+        )}
+      </div>
+    </>
+  );
+}
+
+// ─── DEFAULT EDITOR ───────────────────────────────────────────────────────────
+// Generic large-input editor. Auto-uppercases when fieldId === "ident".
+function DefaultEditor({ fieldId, initialValue, inputMode = "text", onConfirm, onCancel }) {
+  const [val, setVal] = useState(initialValue ?? "");
   const inputRef = useRef(null);
 
   useEffect(() => {
-    // Short delay lets the CSS transition render before focusing
     const t = setTimeout(() => {
       inputRef.current?.focus();
       inputRef.current?.select();
     }, 60);
     return () => clearTimeout(t);
   }, []);
+
+  const handleChange = (e) => {
+    setVal(fieldId === "ident" ? e.target.value.toUpperCase() : e.target.value);
+  };
 
   const handleKey = (e) => {
     if (e.key === "Enter")  onConfirm(val);
@@ -417,93 +486,356 @@ function EditPopover({ label, initialValue, inputMode = "text", onConfirm, onCan
 
   return (
     <>
-      {/* Backdrop */}
-      <div
-        onClick={onCancel}
+      <input
+        ref={inputRef}
+        value={val}
+        onChange={handleChange}
+        inputMode={inputMode}
+        onKeyDown={handleKey}
         style={{
-          position: "fixed", inset: 0,
-          background: "rgba(7,10,15,0.72)",
-          zIndex: 400,
-          backdropFilter: "blur(2px)",
+          fontFamily: "var(--f-mono)",
+          fontSize: 28, fontWeight: 600,
+          letterSpacing: "0.04em",
+          background: "var(--bg-inset)",
+          border: "1px solid var(--accent-line)",
+          borderRadius: "var(--r-md)",
+          padding: "16px 18px",
+          color: "var(--t-primary)",
+          width: "100%", boxSizing: "border-box",
+          outline: "none",
+          caretColor: "var(--accent)",
+          textAlign: "center",
         }}
       />
+      <div style={{ display: "flex", gap: 10 }}>
+        <button className="btn btn-sm btn-ghost" onClick={onCancel} style={{ flex: 1, height: 44, fontSize: 12 }}>
+          Cancel
+        </button>
+        <button className="btn btn-sm btn-primary" onClick={() => onConfirm(val)} style={{ flex: 2, height: 44, fontSize: 13, fontWeight: 600 }}>
+          <Icon name="check" size={14}/>Confirm
+        </button>
+      </div>
+    </>
+  );
+}
 
-      {/* Sheet */}
-      <div style={{
-        position: "fixed", left: 0, right: 0, bottom: 0,
-        zIndex: 401,
-        background: "var(--bg-1)",
-        borderTop: "2px solid var(--accent-line)",
-        borderRadius: "14px 14px 0 0",
-        padding: "24px 24px 32px",
-        display: "flex", flexDirection: "column", gap: 20,
-        boxShadow: "0 -8px 40px rgba(0,0,0,0.5)",
-      }}>
+// ─── WIND EDITOR ─────────────────────────────────────────────────────────────
+// Three-field structured input: [speed] @ [direction] Gusting [gust(optional)]
+// Preview line shows the built string live. Gust is optional — omitted if blank.
+function WindEditor({ initialValue, onConfirm, onCancel }) {
+  // Parse stored format "X @ Y gusting Z" or "X @ Y"
+  const parse = (v = "") => {
+    const lc = v.toLowerCase();
+    const g = lc.match(/(\d+)\s*@\s*(\d+)\s+gusting\s+(\d+)/);
+    if (g) return { speed: g[1], dir: g[2], gust: g[3] };
+    const s = lc.match(/(\d+)\s*@\s*(\d+)/);
+    if (s) return { speed: s[1], dir: s[2], gust: "" };
+    return { speed: "", dir: "", gust: "" };
+  };
 
-        {/* Drag handle */}
-        <div style={{
-          width: 36, height: 4, borderRadius: 2,
-          background: "var(--line-strong)",
-          alignSelf: "center", marginBottom: 4,
-        }}/>
+  const init = parse(initialValue);
+  const [speed, setSpeed] = useState(init.speed);
+  const [dir,   setDir]   = useState(init.dir);
+  const [gust,  setGust]  = useState(init.gust);
+  const speedRef = useRef(null);
 
-        {/* Field label */}
-        <div>
-          <div style={{
-            fontFamily: "var(--f-mono)", fontSize: 10,
-            color: "var(--accent)", letterSpacing: "0.12em",
-            textTransform: "uppercase", marginBottom: 6,
-          }}>
-            Editing — {label}
-          </div>
-          <div style={{
-            fontFamily: "var(--f-mono)", fontSize: 11,
-            color: "var(--t-tertiary)", letterSpacing: "0.06em",
-          }}>
-            Correct the transcribed value below
-          </div>
+  useEffect(() => {
+    const t = setTimeout(() => speedRef.current?.focus(), 60);
+    return () => clearTimeout(t);
+  }, []);
+
+  const preview = speed && dir
+    ? `${speed} @ ${dir}${gust ? ` gusting ${gust}` : ""}`
+    : null;
+
+  const fieldStyle = {
+    fontFamily: "var(--f-mono)",
+    fontSize: 22, fontWeight: 600,
+    letterSpacing: "0.04em",
+    background: "var(--bg-inset)",
+    border: "1px solid var(--accent-line)",
+    borderRadius: "var(--r-md)",
+    padding: "10px 8px",
+    color: "var(--t-primary)",
+    width: "100%", boxSizing: "border-box",
+    outline: "none",
+    caretColor: "var(--accent)",
+    textAlign: "center",
+  };
+
+  const labelStyle = {
+    fontFamily: "var(--f-mono)", fontSize: 9,
+    color: "var(--t-tertiary)", letterSpacing: "0.1em",
+    textTransform: "uppercase", marginBottom: 5,
+    textAlign: "center",
+  };
+
+  const divStyle = {
+    fontFamily: "var(--f-mono)", fontSize: 17, fontWeight: 600,
+    color: "var(--t-tertiary)", flexShrink: 0,
+    alignSelf: "flex-end", paddingBottom: 11,
+  };
+
+  return (
+    <>
+      {/* Template row: [speed kt] @ [dir °]  Gusting  [gust kt] */}
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 6 }}>
+        <div style={{ flex: 1 }}>
+          <div style={labelStyle}>Speed kt</div>
+          <input ref={speedRef} value={speed} onChange={e => setSpeed(e.target.value.replace(/\D/g, ""))} inputMode="numeric" style={fieldStyle}/>
         </div>
+        <span style={divStyle}>@</span>
+        <div style={{ flex: 1 }}>
+          <div style={labelStyle}>Dir °</div>
+          <input value={dir} onChange={e => setDir(e.target.value.replace(/\D/g, ""))} inputMode="numeric" style={fieldStyle}/>
+        </div>
+        <span style={{ ...divStyle, fontSize: 10, paddingBottom: 13, letterSpacing: "0.06em", textTransform: "uppercase" }}>Gust</span>
+        <div style={{ flex: 1 }}>
+          <div style={labelStyle}>Gust kt</div>
+          <input
+            value={gust}
+            onChange={e => setGust(e.target.value.replace(/\D/g, ""))}
+            inputMode="numeric"
+            placeholder="opt"
+            style={{ ...fieldStyle, opacity: gust ? 1 : 0.5 }}
+          />
+        </div>
+      </div>
 
-        {/* Large input */}
+      {/* Live preview */}
+      <div style={{
+        fontFamily: "var(--f-mono)", fontSize: 15, fontWeight: 700,
+        letterSpacing: "0.04em",
+        color: preview ? "var(--t-primary)" : "var(--t-quiet)",
+        background: "var(--bg-inset)",
+        border: "1px solid var(--line)",
+        borderRadius: "var(--r-md)",
+        padding: "10px 14px",
+        textAlign: "center",
+      }}>
+        {preview ?? "— fill speed and direction —"}
+      </div>
+
+      {/* Buttons */}
+      <div style={{ display: "flex", gap: 10 }}>
+        <button className="btn btn-sm btn-ghost" onClick={onCancel} style={{ flex: 1, height: 44, fontSize: 12 }}>Cancel</button>
+        <button
+          className="btn btn-sm btn-primary"
+          onClick={() => preview && onConfirm(preview)}
+          disabled={!speed || !dir}
+          style={{ flex: 2, height: 44, fontSize: 13, fontWeight: 600 }}
+        >
+          <Icon name="check" size={14}/>Confirm
+        </button>
+      </div>
+    </>
+  );
+}
+
+// ─── VISIBILITY EDITOR ────────────────────────────────────────────────────────
+// Number input with a static "SM" suffix tile. Stores result as e.g. "10SM".
+function VisEditor({ initialValue, onConfirm, onCancel }) {
+  const initNum = (initialValue ?? "").replace(/sm/i, "").trim();
+  const [num, setNum] = useState(initNum);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => { inputRef.current?.focus(); inputRef.current?.select(); }, 60);
+    return () => clearTimeout(t);
+  }, []);
+
+  const handleKey = (e) => {
+    if (e.key === "Enter"  && num) onConfirm(`${num}SM`);
+    if (e.key === "Escape")        onCancel();
+  };
+
+  return (
+    <>
+      {/* Number + SM suffix */}
+      <div style={{ display: "flex", alignItems: "stretch" }}>
         <input
           ref={inputRef}
-          value={val}
-          onChange={(e) => setVal(e.target.value)}
-          inputMode={inputMode}
+          value={num}
+          onChange={e => setNum(e.target.value.replace(/[^\d.]/g, ""))}
+          inputMode="decimal"
           onKeyDown={handleKey}
+          placeholder="10"
           style={{
             fontFamily: "var(--f-mono)",
-            fontSize: 28, fontWeight: 600,
+            fontSize: 32, fontWeight: 700,
             letterSpacing: "0.04em",
             background: "var(--bg-inset)",
             border: "1px solid var(--accent-line)",
-            borderRadius: "var(--r-md)",
-            padding: "16px 18px",
+            borderRight: "none",
+            borderRadius: "var(--r-md) 0 0 var(--r-md)",
+            padding: "14px 18px",
             color: "var(--t-primary)",
-            width: "100%", boxSizing: "border-box",
+            flex: 1, minWidth: 0,
             outline: "none",
             caretColor: "var(--accent)",
+            textAlign: "center",
           }}
         />
-
-        {/* Buttons */}
-        <div style={{ display: "flex", gap: 10 }}>
-          <button
-            className="btn btn-sm btn-ghost"
-            onClick={onCancel}
-            style={{ flex: 1, height: 44, fontSize: 12 }}
-          >
-            Cancel
-          </button>
-          <button
-            className="btn btn-sm btn-primary"
-            onClick={() => onConfirm(val)}
-            style={{ flex: 2, height: 44, fontSize: 13, fontWeight: 600 }}
-          >
-            <Icon name="check" size={14}/>
-            Confirm
-          </button>
+        <div style={{
+          fontFamily: "var(--f-mono)",
+          fontSize: 22, fontWeight: 700,
+          color: "var(--t-secondary)",
+          background: "var(--bg-2)",
+          border: "1px solid var(--accent-line)",
+          borderLeft: "none",
+          borderRadius: "0 var(--r-md) var(--r-md) 0",
+          padding: "14px 18px",
+          display: "flex", alignItems: "center",
+          letterSpacing: "0.08em",
+          flexShrink: 0,
+        }}>
+          SM
         </div>
+      </div>
+
+      {/* Buttons */}
+      <div style={{ display: "flex", gap: 10 }}>
+        <button className="btn btn-sm btn-ghost" onClick={onCancel} style={{ flex: 1, height: 44, fontSize: 12 }}>Cancel</button>
+        <button
+          className="btn btn-sm btn-primary"
+          onClick={() => num && onConfirm(`${num}SM`)}
+          disabled={!num}
+          style={{ flex: 2, height: 44, fontSize: 13, fontWeight: 600 }}
+        >
+          <Icon name="check" size={14}/>Confirm
+        </button>
+      </div>
+    </>
+  );
+}
+
+// ─── SKY EDITOR ───────────────────────────────────────────────────────────────
+// 6 tap-to-select condition buttons (CLR SKC FEW SCT BKN OVC) + optional
+// altitude input for ceiling conditions. Preview shows the built METAR string.
+function SkyEditor({ initialValue, onConfirm, onCancel }) {
+  const CONDITIONS  = ["CLR", "SKC", "FEW", "SCT", "BKN", "OVC"];
+  const NEEDS_ALT   = ["FEW", "SCT", "BKN", "OVC"];
+
+  const parse = (v = "") => {
+    const parts = v.trim().toUpperCase().split(/\s+/);
+    const cond  = CONDITIONS.includes(parts[0]) ? parts[0] : null;
+    return { cond, alt: parts[1] ?? "" };
+  };
+
+  const init = parse(initialValue);
+  const [cond, setCond] = useState(init.cond);
+  const [alt,  setAlt]  = useState(init.alt);
+  const altRef = useRef(null);
+
+  const needsAlt = NEEDS_ALT.includes(cond);
+
+  useEffect(() => {
+    if (needsAlt) {
+      const t = setTimeout(() => altRef.current?.focus(), 80);
+      return () => clearTimeout(t);
+    }
+  }, [cond, needsAlt]);
+
+  const handleSelect = (c) => {
+    setCond(c);
+    if (!NEEDS_ALT.includes(c)) setAlt("");
+  };
+
+  // previewStr always shows feedback (uses ___ when altitude is pending)
+  const previewStr = !cond ? null
+    : needsAlt ? `${cond}${alt ? ` ${alt}` : " ___"}` : cond;
+
+  // resultStr is the clean value we'll save — null until ready to confirm
+  const resultStr  = !cond ? null
+    : needsAlt && alt ? `${cond} ${alt}` : !needsAlt ? cond : null;
+
+  const canConfirm = !!cond && (!needsAlt || !!alt);
+
+  return (
+    <>
+      {/* Condition tap buttons — 3×2 grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+        {CONDITIONS.map(c => (
+          <button
+            key={c}
+            onClick={() => handleSelect(c)}
+            style={{
+              fontFamily: "var(--f-mono)",
+              fontSize: 15, fontWeight: 700,
+              letterSpacing: "0.1em",
+              padding: "13px 0",
+              borderRadius: "var(--r-md)",
+              border: cond === c ? "2px solid var(--accent)" : "1px solid var(--line)",
+              background: cond === c ? "var(--accent-bg)" : "var(--bg-inset)",
+              color: cond === c ? "var(--accent)" : "var(--t-secondary)",
+              cursor: "pointer",
+              transition: "all 0.1s",
+            }}
+          >
+            {c}
+          </button>
+        ))}
+      </div>
+
+      {/* Altitude input — only when a ceiling condition is selected */}
+      {needsAlt && (
+        <div>
+          <div style={{
+            fontFamily: "var(--f-mono)", fontSize: 9,
+            color: "var(--t-tertiary)", letterSpacing: "0.1em",
+            textTransform: "uppercase", marginBottom: 6,
+          }}>
+            Altitude (ft — e.g. 3500)
+          </div>
+          <input
+            ref={altRef}
+            value={alt}
+            onChange={e => setAlt(e.target.value.replace(/\D/g, ""))}
+            inputMode="numeric"
+            placeholder="3500"
+            style={{
+              fontFamily: "var(--f-mono)",
+              fontSize: 28, fontWeight: 600,
+              letterSpacing: "0.04em",
+              background: "var(--bg-inset)",
+              border: "1px solid var(--accent-line)",
+              borderRadius: "var(--r-md)",
+              padding: "14px 18px",
+              color: "var(--t-primary)",
+              width: "100%", boxSizing: "border-box",
+              outline: "none",
+              caretColor: "var(--accent)",
+              textAlign: "center",
+            }}
+          />
+        </div>
+      )}
+
+      {/* Live preview */}
+      <div style={{
+        fontFamily: "var(--f-mono)", fontSize: 15, fontWeight: 700,
+        letterSpacing: "0.06em",
+        color: resultStr ? "var(--t-primary)" : "var(--t-quiet)",
+        background: "var(--bg-inset)",
+        border: "1px solid var(--line)",
+        borderRadius: "var(--r-md)",
+        padding: "10px 14px",
+        textAlign: "center",
+      }}>
+        {previewStr ?? "— tap a condition —"}
+      </div>
+
+      {/* Buttons */}
+      <div style={{ display: "flex", gap: 10 }}>
+        <button className="btn btn-sm btn-ghost" onClick={onCancel} style={{ flex: 1, height: 44, fontSize: 12 }}>Cancel</button>
+        <button
+          className="btn btn-sm btn-primary"
+          onClick={() => resultStr && onConfirm(resultStr)}
+          disabled={!canConfirm}
+          style={{ flex: 2, height: 44, fontSize: 13, fontWeight: 600 }}
+        >
+          <Icon name="check" size={14}/>Confirm
+        </button>
       </div>
     </>
   );
