@@ -179,20 +179,6 @@ export function CommPage({
     Object.values(gndData  || {}).some(Boolean)
   );
 
-  // ── Demo Capture — pre-fills ATIS + Taxi with sample values ──
-  const seedExample = () => {
-    onSetAtisData?.({
-      info: "Charlie", wind: "270° AT 12KT", altimeter: "29.92",
-      visibility: "10SM", sky: "FEW 3500", caution: "Birds in vicinity",
-    });
-    onSetTaxiData?.({
-      runway: "12C", route: "Y > Y1 > B",
-      holdShort: "RWY 12R", instructions: "Contact tower 119.9 when ready",
-    });
-    if (atisArmState === "idle") onArmAtis?.();
-    if (taxiArmState === "idle") onArmTaxi?.();
-  };
-
   const handleListen = () => {
     if (listening) onStopListen?.();
     else onStartListen?.();
@@ -219,9 +205,6 @@ export function CommPage({
               </div>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button className="btn btn-sm" onClick={seedExample}>
-                Demo Capture
-              </button>
               <button
                 className={`btn btn-sm ${listening ? "btn-warn" : "btn-primary"}`}
                 onClick={handleListen}
