@@ -2729,9 +2729,8 @@ const commParseGround = (text) => {
                 <span className="efb-rb-sub">Standby · Tap Listen to begin monitoring</span>
               )}
             </div>
-            {/* Right: gear · Smart Coms · separator · [ACK] · LISTEN/STOP */}
+            {/* Right: Smart Coms · separator · [ACK] · LISTEN/STOP */}
             <div className="efb-rb-right" onClick={e => e.stopPropagation()}>
-              <Icon name="gear" size={13}/>
               <span className="efb-rb-sc">Smart Coms</span>
               <span className="efb-rb-sep"/>
               {commWatchdogState !== "clear" && (
