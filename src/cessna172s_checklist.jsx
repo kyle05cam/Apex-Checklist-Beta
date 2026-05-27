@@ -3013,8 +3013,12 @@ const commParseGround = (text) => {
         <div className="efb-qr-backdrop" onClick={() => setMoreOpen(false)}>
           <div className="efb-qr-panel" onClick={e => e.stopPropagation()}>
             <div className="efb-qr-head">
-              <Icon name="menu" size={16}/>
-              <span>QUICK REFERENCE</span>
+              <div className="efb-qr-head-title">
+                <span className="efb-qr-head-super">Quick Reference</span>
+                <span className="efb-qr-head-sub">
+                  {aircraft?.tail || "N12345"} · {aircraft?.type || "Cessna 172S Skyhawk"}
+                </span>
+              </div>
               <button className="efb-btn warn" onClick={() => setMoreOpen(false)}>✕ CLOSE</button>
             </div>
             <div className="efb-qr-body">
