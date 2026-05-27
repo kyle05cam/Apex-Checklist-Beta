@@ -3019,15 +3019,29 @@ const commParseGround = (text) => {
             </div>
             <div className="efb-qr-body">
               <div className="efb-qr-sidebar">
-                {MORE_REFS.map(ref => (
-                  <button
-                    key={ref.id}
-                    className={`efb-qr-nav-item${activeMoreRef === ref.id ? " active" : ""}`}
-                    style={activeMoreRef === ref.id ? {"--accent": ref.color} : {}}
-                    onClick={() => setActiveMoreRef(ref.id)}
-                  >
-                    {ref.title}
-                  </button>
+                {[
+                  { label: "Communications", ids: ["light_gun", "transponder", "phonetic"] },
+                  { label: "Regulations",    ids: ["wx_minimums", "airspeed_limits", "vfr_altitudes", "airspace_entry"] },
+                  { label: "Aircraft",       ids: ["c172_engine", "c172_electrical", "fuel_oil", "weight_cg", "tire_pressures"] },
+                  { label: "Airport",        ids: ["runway_markings"] },
+                ].map(group => (
+                  <div key={group.label} className="efb-qr-group">
+                    <div className="efb-qr-group-label">{group.label}</div>
+                    {group.ids.map(id => {
+                      const ref = MORE_REFS.find(r => r.id === id);
+                      if (!ref) return null;
+                      return (
+                        <button
+                          key={ref.id}
+                          className={`efb-qr-nav-item${activeMoreRef === ref.id ? " active" : ""}`}
+                          style={activeMoreRef === ref.id ? {"--accent": ref.color} : {}}
+                          onClick={() => setActiveMoreRef(ref.id)}
+                        >
+                          {ref.title}
+                        </button>
+                      );
+                    })}
+                  </div>
                 ))}
               </div>
               <div className="efb-qr-content">
