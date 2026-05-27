@@ -623,6 +623,7 @@ export const MORE_REFS = [
       ["Flashing WHITE",  "Return to start",            "—"],
       ["Alternating R/G", "Exercise extreme caution",   "Exercise extreme caution"],
     ],
+    signalDots: ["steady-green", "flash-green", "steady-red", "flash-red", "flash-white", "alt-rg"],
   },
   {
     id: "transponder", title: "Transponder Codes", color: "#4a9fe8",
@@ -3047,7 +3048,14 @@ const commParseGround = (text) => {
                           {ref.rows.map((row, ri) => (
                             <tr key={ri}>
                               {row.map((cell, ci) => (
-                                <td key={ci} className={ci === 0 ? "efb-qr-cell-key" : ""}>{cell}</td>
+                                <td key={ci} className={ci === 0 ? "efb-qr-cell-key" : ""}>
+                                  {ci === 0 && ref.signalDots?.[ri] ? (
+                                    <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                                      <span className={`lgd-dot lgd-${ref.signalDots[ri]}`}/>
+                                      {cell}
+                                    </span>
+                                  ) : cell}
+                                </td>
                               ))}
                             </tr>
                           ))}

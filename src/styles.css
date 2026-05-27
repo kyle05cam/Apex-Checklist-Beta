@@ -1730,6 +1730,52 @@ ul, li { list-style: none; padding: 0; margin: 0; }
 .efb-qr-table tr.row-ok      .efb-qr-cell-key { color: var(--ok); }
 
 /* ============================================================
+   ATC Light Gun Signal dots
+   ============================================================ */
+@keyframes lgd-flash {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.08; }
+}
+@keyframes lgd-alt-rg {
+  0%, 49% { background: #e85a4a; box-shadow: 0 0 7px rgba(232,90,74,0.75); }
+  50%, 100% { background: #3dbe6c; box-shadow: 0 0 7px rgba(61,190,108,0.75); }
+}
+
+.lgd-dot {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.lgd-steady-green {
+  background: #3dbe6c;
+  box-shadow: 0 0 7px rgba(61,190,108,0.75);
+}
+.lgd-steady-red {
+  background: #e85a4a;
+  box-shadow: 0 0 7px rgba(232,90,74,0.75);
+}
+.lgd-flash-green {
+  background: #3dbe6c;
+  box-shadow: 0 0 7px rgba(61,190,108,0.75);
+  animation: lgd-flash 0.9s step-end infinite;
+}
+.lgd-flash-red {
+  background: #e85a4a;
+  box-shadow: 0 0 7px rgba(232,90,74,0.75);
+  animation: lgd-flash 0.9s step-end infinite;
+}
+.lgd-flash-white {
+  background: #ddd8cc;
+  box-shadow: 0 0 7px rgba(221,216,204,0.65);
+  animation: lgd-flash 0.9s step-end infinite;
+}
+.lgd-alt-rg {
+  animation: lgd-alt-rg 0.9s step-end infinite;
+}
+
+/* ============================================================
    Scratchpad Overlay
    ============================================================ */
 .efb-sp-backdrop {
