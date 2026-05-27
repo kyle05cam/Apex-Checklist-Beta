@@ -155,11 +155,20 @@ ul, li { list-style: none; padding: 0; margin: 0; }
   min-width: 0;
 }
 .efb-topbar-center {
-  justify-content: space-between;
+  position: relative;
+  justify-content: flex-end;
   gap: var(--s-6);
   border-left: 1px solid var(--line);
   border-right: 1px solid var(--line);
   padding: 0 var(--s-5);
+}
+/* Aircraft ident: pinned to the absolute center of the center zone */
+.efb-topbar-center .efb-tail {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  pointer-events: none;
 }
 .efb-topbar-right { justify-content: flex-end; gap: var(--s-3); }
 
