@@ -442,6 +442,7 @@ function EditPopover({ fieldId, label, initialValue, inputMode = "text", onConfi
             {fieldId === "wind" ? "Enter speed, direction, and optional gust" :
              fieldId === "vis"  ? "Enter visibility — SM will be appended" :
              fieldId === "sky"  ? "Select condition, then enter altitude if required" :
+             fieldId === "alt"  ? "Type 4 digits — decimal placed automatically (e.g. 2994 → 29.94)" :
                                   "Correct the transcribed value below"}
           </div>
         </div>
@@ -462,7 +463,9 @@ function EditPopover({ fieldId, label, initialValue, inputMode = "text", onConfi
 }
 
 // ─── DEFAULT EDITOR ───────────────────────────────────────────────────────────
-// Generic large-input editor. Auto-uppercases when fieldId === "ident".
+// Generic large-input editor.
+// • fieldId === "ident" → forces uppercase
+// • fieldId === "alt"   → auto-inserts decimal after first 2 digits (e.g. 2994 → 29.94)
 function DefaultEditor({ fieldId, initialValue, inputMode = "text", onConfirm, onCancel }) {
   const [val, setVal] = useState(initialValue ?? "");
   const inputRef = useRef(null);
@@ -476,7 +479,15 @@ function DefaultEditor({ fieldId, initialValue, inputMode = "text", onConfirm, o
   }, []);
 
   const handleChange = (e) => {
-    setVal(fieldId === "ident" ? e.target.value.toUpperCase() : e.target.value);
+    if (fieldId === "alt") {
+      // Strip everything except digits, cap at 4, auto-insert decimal after position 2
+      const digits = e.target.value.replace(/\D/g, "").slice(0, 4);
+      setVal(digits.length > 2 ? `${digits.slice(0, 2)}.${digits.slice(2)}` : digits);
+    } else if (fieldId === "ident") {
+      setVal(e.target.value.toUpperCase());
+    } else {
+      setVal(e.target.value);
+    }
   };
 
   const handleKey = (e) => {
