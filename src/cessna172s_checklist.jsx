@@ -613,7 +613,7 @@ export const CRUISE_DATA = [
 
 export const MORE_REFS = [
   {
-    id: "light_gun", title: "ATC Light Gun Signals", color: "#e8c84a",
+    id: "light_gun", title: "ATC Light Gun Signals", color: "#4a9fe8",
     cols: ["Signal", "On Ground", "In Flight"],
     rows: [
       ["Steady GREEN",    "Cleared for takeoff",       "Cleared to land"],
@@ -636,7 +636,7 @@ export const MORE_REFS = [
     ],
   },
   {
-    id: "wx_minimums", title: "VFR Weather Minimums", color: "#3dbe6c",
+    id: "wx_minimums", title: "VFR Weather Minimums", color: "#4a9fe8",
     note: "14 CFR 91.155 — Basic VFR minimums",
     cols: ["Airspace", "Visibility", "Cloud Clearance"],
     rows: [
@@ -651,7 +651,7 @@ export const MORE_REFS = [
     ],
   },
   {
-    id: "airspeed_limits", title: "Airspeed Limits (§91.117)", color: "#e85a4a",
+    id: "airspeed_limits", title: "Airspeed Limits (§91.117)", color: "#4a9fe8",
     note: "§91.117 — No person may operate an aircraft at indicated airspeed in excess of these limits",
     cols: ["Rule", "Speed Limit"],
     rows: [
@@ -664,7 +664,7 @@ export const MORE_REFS = [
     ],
   },
   {
-    id: "vfr_altitudes", title: "VFR Cruising Altitudes (§91.159)", color: "#4ae8c8",
+    id: "vfr_altitudes", title: "VFR Cruising Altitudes (§91.159)", color: "#4a9fe8",
     note: "Applies above 3,000 ft AGL in cruising flight",
     cols: ["Magnetic Course", "Altitude"],
     rows: [
@@ -675,7 +675,7 @@ export const MORE_REFS = [
     ],
   },
   {
-    id: "airspace_entry", title: "Airspace Entry Requirements", color: "#c87ae8",
+    id: "airspace_entry", title: "Airspace Entry Requirements", color: "#4a9fe8",
     cols: ["Class", "Equipment Required", "Clearance"],
     rows: [
       ["A", "IFR-equipped, IFR flight plan",       "ATC clearance reqd"],
@@ -687,7 +687,7 @@ export const MORE_REFS = [
     ],
   },
   {
-    id: "c172_engine", title: "C172S Engine Specifications", color: "#e8c84a",
+    id: "c172_engine", title: "C172S Engine Specifications", color: "#4a9fe8",
     cols: ["Item", "Specification"],
     rows: [
       ["Engine Model",          "Lycoming IO-360-L2A"],
@@ -723,7 +723,7 @@ export const MORE_REFS = [
     ],
   },
   {
-    id: "runway_markings", title: "Runway Markings & Lighting", color: "#3dbe6c",
+    id: "runway_markings", title: "Runway Markings & Lighting", color: "#4a9fe8",
     cols: ["Item", "Meaning"],
     rows: [
       ["Threshold (white bars)",    "Beginning of landing area"],
@@ -746,7 +746,7 @@ export const MORE_REFS = [
     ],
   },
   {
-    id: "fuel_oil", title: "C172S Fuel & Oil Quick Ref", color: "#e85a4a",
+    id: "fuel_oil", title: "C172S Fuel & Oil Quick Ref", color: "#4a9fe8",
     cols: ["Item", "Specification"],
     rows: [
       ["Fuel Type",           "100LL AVGAS (blue)"],
@@ -760,7 +760,7 @@ export const MORE_REFS = [
     ],
   },
   {
-    id: "weight_cg", title: "C172S Weight & CG Limits", color: "#e85a4a",
+    id: "weight_cg", title: "C172S Weight & CG Limits", color: "#4a9fe8",
     cols: ["Limit", "Value"],
     rows: [
       ["Max Gross Weight",    "2,550 lb"],
@@ -773,7 +773,7 @@ export const MORE_REFS = [
     ],
   },
   {
-    id: "tire_pressures", title: "C172S Tire Pressures", color: "#3dbe6c",
+    id: "tire_pressures", title: "C172S Tire Pressures", color: "#4a9fe8",
     note: "Check cold pressure only. Inspect for cuts, wear, and proper inflation before each flight.",
     cols: ["Tire", "Pressure", "Size / Notes"],
     rows: [
@@ -782,7 +782,7 @@ export const MORE_REFS = [
     ],
   },
   {
-    id: "phonetic", title: "NATO Phonetic Alphabet", color: "#c87ae8",
+    id: "phonetic", title: "NATO Phonetic Alphabet", color: "#4a9fe8",
     cols: ["Letter", "Word", "Letter", "Word"],
     rows: [
       ["A","Alpha",   "N","November"],
