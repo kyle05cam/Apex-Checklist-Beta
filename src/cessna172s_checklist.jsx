@@ -2434,7 +2434,7 @@ const commParseGround = (text) => {
                : pg.id === "spin"        ? "SPIN RECOVERY"
                : pg.id === "fires"       ? "FIRES"
                : pg.id === "icing"       ? "ICING"
-               : pg.id === "electrical"  ? "ELEC FAILURE"
+               : pg.id === "electrical"  ? "ELECTRICAL FAILURE"
                : pg.label || pg.id.toUpperCase()}
             </h1>
             <div className="efb-page-subtitle">
