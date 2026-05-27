@@ -958,42 +958,86 @@ function DrawingNotepad({ title, footer, onClose, storageKey, initialImage, onSa
     if (onSave) onSave(null);
   };
 
-  const PEN_COLORS = ["#e8e4d8","#4ae888","#4ab8e8","#e8c84a","#e85a4a"];
-  const PEN_SIZES = [1.5, 2.5, 4, 7];
+  const PEN_COLORS = ["var(--t-primary)","#4ae888","#4ab8e8","#e8c84a","#e85a4a"];
+  const PEN_SIZES  = [1.5, 2.5, 4, 7];
 
   return (
-    <div style={{ border: "1px solid #1e3528", borderRadius: 4, overflow: "hidden", margin: "4px 0" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 8px", background: "#0a1410", borderBottom: "1px solid #1e3528", flexWrap: "wrap" }}>
-        <span style={{ fontFamily: "var(--f-mono)", fontSize: 9, color: "#4a9fe8", letterSpacing: 1, marginRight: 4 }}>{title}</span>
+    <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)", overflow: "hidden", margin: "4px 0" }}>
+
+      {/* ── Toolbar ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", background: "var(--bg-2)", borderBottom: "1px solid var(--line)", flexWrap: "wrap" }}>
+
+        {/* Title */}
+        <span style={{ fontFamily: "var(--f-mono)", fontSize: 9, color: "var(--accent)", letterSpacing: "0.1em", marginRight: 4, textTransform: "uppercase" }}>
+          {title}
+        </span>
+
+        {/* Pen size pickers */}
         <div style={{ display: "flex", gap: 3 }}>
           {PEN_SIZES.map(s => (
-            <button key={s} onClick={() => setPenSize(s)} style={{ width: 20, height: 20, borderRadius: 3, border: `1px solid ${penSize === s ? "#3dbe6c" : "#1e3528"}`, background: penSize === s ? "rgba(61,190,108,0.1)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}>
-              <div style={{ width: s * 1.8, height: s * 1.8, borderRadius: "50%", background: "#e8e4d8" }} />
+            <button key={s} onClick={() => setPenSize(s)} style={{
+              width: 20, height: 20, borderRadius: "var(--r-sm)",
+              border: `1px solid ${penSize === s ? "var(--accent-line)" : "var(--line)"}`,
+              background: penSize === s ? "var(--accent-bg)" : "transparent",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", padding: 0,
+            }}>
+              <div style={{ width: s * 1.8, height: s * 1.8, borderRadius: "50%", background: "var(--t-secondary)" }}/>
             </button>
           ))}
         </div>
+
+        {/* Color pickers */}
         <div style={{ display: "flex", gap: 3 }}>
           {PEN_COLORS.map(c => (
-            <button key={c} onClick={() => setPenColor(c)} style={{ width: 16, height: 16, borderRadius: 3, border: `2px solid ${penColor === c ? "#fff" : "transparent"}`, background: c, cursor: "pointer", padding: 0 }} />
+            <button key={c} onClick={() => setPenColor(c)} style={{
+              width: 16, height: 16, borderRadius: "var(--r-sm)",
+              border: `2px solid ${penColor === c ? "var(--t-primary)" : "transparent"}`,
+              background: c, cursor: "pointer", padding: 0,
+            }}/>
           ))}
         </div>
-        <div style={{ width: 1, height: 16, background: "#1e3528" }} />
-        <button onClick={clearCanvas} style={{ fontFamily: "var(--f-ui)", fontSize: 10, fontWeight: 700, letterSpacing: 0.5, background: "transparent", border: "1px solid #1e3528", color: "#7a8090", padding: "2px 7px", borderRadius: 3, cursor: "pointer" }}>CLR</button>
-        <button onClick={onClose} style={{ fontFamily: "var(--f-ui)", fontSize: 10, fontWeight: 700, letterSpacing: 0.5, background: "transparent", border: "1px solid #1e3528", color: "#7a8090", padding: "2px 7px", borderRadius: 3, cursor: "pointer" }}>✕</button>
+
+        {/* Divider */}
+        <div style={{ width: 1, height: 16, background: "var(--line)" }}/>
+
+        {/* CLR + Close */}
+        <button onClick={clearCanvas} style={{
+          fontFamily: "var(--f-mono)", fontSize: 10, letterSpacing: "0.06em",
+          background: "transparent", border: "1px solid var(--line)",
+          color: "var(--t-tertiary)", padding: "2px 7px",
+          borderRadius: "var(--r-sm)", cursor: "pointer",
+        }}>CLR</button>
+        <button onClick={onClose} style={{
+          fontFamily: "var(--f-mono)", fontSize: 10, letterSpacing: "0.06em",
+          background: "transparent", border: "1px solid var(--line)",
+          color: "var(--t-tertiary)", padding: "2px 7px",
+          borderRadius: "var(--r-sm)", cursor: "pointer",
+        }}>✕</button>
       </div>
-      <div style={{ position: "relative", touchAction: "none", background: "#050e09" }}>
+
+      {/* ── Canvas area ── */}
+      <div style={{ position: "relative", touchAction: "none", background: "var(--bg-inset)" }}>
         <svg style={{ position: "absolute", inset: 0, width: "100%", height: 160, pointerEvents: "none" }} preserveAspectRatio="none">
-          {[1,2,3,4,5,6].map(i => <line key={i} x1="0" y1={i * 24} x2="100%" y2={i * 24} stroke="rgba(74,159,232,0.10)" strokeWidth="1"/>)}
-          <line x1="36" y1="0" x2="36" y2="160" stroke="rgba(232,90,74,0.15)" strokeWidth="1"/>
+          {[1,2,3,4,5,6].map(i => (
+            <line key={i} x1="0" y1={i * 24} x2="100%" y2={i * 24} stroke="rgba(77,163,255,0.07)" strokeWidth="1"/>
+          ))}
+          <line x1="36" y1="0" x2="36" y2="160" stroke="rgba(255,107,107,0.12)" strokeWidth="1"/>
         </svg>
-        <canvas ref={canvasRef} width={600} height={160} style={{ display: "block", width: "100%", height: 160, cursor: "crosshair", touchAction: "none" }}
+        <canvas
+          ref={canvasRef} width={600} height={160}
+          style={{ display: "block", width: "100%", height: 160, cursor: "crosshair", touchAction: "none" }}
           onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
           onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}
         />
       </div>
+
+      {/* ── Footer prompt ── */}
       {footer && (
-        <div style={{ padding: "3px 10px", background: "#0d1a12", borderTop: "1px solid #1e3528" }}>
-          <span style={{ fontFamily: "var(--f-mono)", fontSize: 8.5, color: "#1e3528", letterSpacing: 0.8 }}>{footer}</span>
+        <div style={{ padding: "4px 10px", background: "var(--bg-2)", borderTop: "1px solid var(--line)" }}>
+          <span style={{ fontFamily: "var(--f-mono)", fontSize: 9, color: "var(--t-quiet)", letterSpacing: "0.06em" }}>
+            {footer}
+          </span>
         </div>
       )}
     </div>
