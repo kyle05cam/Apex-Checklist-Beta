@@ -236,7 +236,7 @@ export function CommPage({
             className={`radio-tab${tab === "active" ? " active" : ""}`}
             onClick={() => setTab("active")}
           >
-            Active Feed <span className="tab-count">3</span>
+            Active Feed
           </div>
           <div
             className={`radio-tab${tab === "archive" ? " active" : ""}`}
