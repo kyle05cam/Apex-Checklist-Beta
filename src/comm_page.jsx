@@ -122,6 +122,25 @@ const CLEARANCES = [
   },
 ];
 
+// ─── TAXI VIA FORMATTER ──────────────────────────────────────────────────────
+// Parses raw taxiway input and joins identifiers with " > ".
+// Token rules (applied to uppercase, stripped of spaces and existing " > "):
+//   • Two consecutive IDENTICAL letters + optional digits → single token (AA, BB, AA1)
+//   • One letter + optional digits                        → single token (Y, Y1, B2)
+// Examples:
+//   YBA    → Y > B > A
+//   Y1BA   → Y1 > B > A
+//   AA B   → AA > B      (AA stays together because same-letter pair)
+//   Y1B2   → Y1 > B2
+function formatTaxiVia(raw) {
+  // Strip spaces and " > " separators so we always work from bare characters
+  const stripped = raw.replace(/[\s>]/g, "");
+  if (!stripped) return "";
+  // Greedy: same-letter-pair + optional digits first, then single-letter + optional digits
+  const tokens = stripped.match(/([A-Z])\1\d*|[A-Z]\d*/g) ?? [];
+  return tokens.join(" > ");
+}
+
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 export function CommPage({
   aircraft,
@@ -352,7 +371,12 @@ export function CommPage({
                         ].filter(Boolean).join(" ")}
                         placeholder={f.placeholder}
                         value={getFieldValue(f.id)}
-                        onChange={(e) => setField(f.id, e.target.value)}
+                        onChange={(e) => {
+                          let v = e.target.value;
+                          if (f.id === "rwy" || f.id === "hold") v = v.toUpperCase();
+                          else if (f.id === "via") v = formatTaxiVia(v.toUpperCase());
+                          setField(f.id, v);
+                        }}
                       />
                       <button
                         className="field-copy"
@@ -443,6 +467,7 @@ function EditPopover({ fieldId, label, initialValue, inputMode = "text", onConfi
              fieldId === "vis"  ? "Enter visibility — SM will be appended" :
              fieldId === "sky"  ? "Select condition, then enter altitude if required" :
              fieldId === "alt"  ? "Type 4 digits — decimal placed automatically (e.g. 2994 → 29.94)" :
+             fieldId === "via"  ? "Type taxiways without spaces — arrows added automatically (e.g. YBA → Y > B > A)" :
                                   "Correct the transcribed value below"}
           </div>
         </div>
@@ -463,9 +488,10 @@ function EditPopover({ fieldId, label, initialValue, inputMode = "text", onConfi
 }
 
 // ─── DEFAULT EDITOR ───────────────────────────────────────────────────────────
-// Generic large-input editor.
-// • fieldId === "ident" → forces uppercase
-// • fieldId === "alt"   → auto-inserts decimal after first 2 digits (e.g. 2994 → 29.94)
+// Generic large-input editor with per-field transforms:
+// • ident / rwy / hold → forced uppercase
+// • alt                → auto-decimal after 2 digits (2994 → 29.94)
+// • via                → taxiway auto-formatter (YBA → Y > B > A)
 function DefaultEditor({ fieldId, initialValue, inputMode = "text", onConfirm, onCancel }) {
   const [val, setVal] = useState(initialValue ?? "");
   const inputRef = useRef(null);
@@ -479,14 +505,16 @@ function DefaultEditor({ fieldId, initialValue, inputMode = "text", onConfirm, o
   }, []);
 
   const handleChange = (e) => {
+    const raw = e.target.value;
     if (fieldId === "alt") {
-      // Strip everything except digits, cap at 4, auto-insert decimal after position 2
-      const digits = e.target.value.replace(/\D/g, "").slice(0, 4);
+      const digits = raw.replace(/\D/g, "").slice(0, 4);
       setVal(digits.length > 2 ? `${digits.slice(0, 2)}.${digits.slice(2)}` : digits);
-    } else if (fieldId === "ident") {
-      setVal(e.target.value.toUpperCase());
+    } else if (fieldId === "ident" || fieldId === "rwy" || fieldId === "hold") {
+      setVal(raw.toUpperCase());
+    } else if (fieldId === "via") {
+      setVal(formatTaxiVia(raw.toUpperCase()));
     } else {
-      setVal(e.target.value);
+      setVal(raw);
     }
   };
 
