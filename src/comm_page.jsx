@@ -362,36 +362,19 @@ export function CommPage({
                           Hold Short
                         </div>
                       )}
-                      <span className="field-label">{f.label}</span>
-                      <input
+                      <button
                         className={[
-                          "field-input",
+                          "field-row",
                           f.critical ? "critical" : "",
                           getFieldValue(f.id) ? "has-value" : "",
                         ].filter(Boolean).join(" ")}
-                        placeholder={f.placeholder}
-                        value={getFieldValue(f.id)}
-                        onChange={(e) => {
-                          let v = e.target.value;
-                          if (f.id === "rwy" || f.id === "hold" || f.id === "to") {
-                            v = v.toUpperCase();
-                          } else if (f.id === "via") {
-                            v = formatTaxiVia(v.toUpperCase());
-                          } else if (f.id === "route") {
-                            v = v.toUpperCase();
-                          } else if (f.id === "freq") {
-                            const d = v.replace(/\D/g, "").slice(0, 4);
-                            v = d.length > 3 ? `${d.slice(0, 3)}.${d.slice(3)}` : d;
-                          }
-                          setField(f.id, v);
-                        }}
-                      />
-                      <button
-                        className="field-copy"
-                        title="Edit field"
                         onClick={() => openEdit(f)}
                       >
-                        <Icon name="edit" size={12}/>
+                        <span className="field-row-label">{f.label}</span>
+                        <span className={`field-row-value${!getFieldValue(f.id) ? " empty" : ""}`}>
+                          {getFieldValue(f.id) || f.placeholder}
+                        </span>
+                        <span className="field-row-hint">›</span>
                       </button>
                     </React.Fragment>
                   ))}
