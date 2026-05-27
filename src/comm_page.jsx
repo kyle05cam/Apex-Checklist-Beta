@@ -373,8 +373,16 @@ export function CommPage({
                         value={getFieldValue(f.id)}
                         onChange={(e) => {
                           let v = e.target.value;
-                          if (f.id === "rwy" || f.id === "hold") v = v.toUpperCase();
-                          else if (f.id === "via") v = formatTaxiVia(v.toUpperCase());
+                          if (f.id === "rwy" || f.id === "hold" || f.id === "to") {
+                            v = v.toUpperCase();
+                          } else if (f.id === "via") {
+                            v = formatTaxiVia(v.toUpperCase());
+                          } else if (f.id === "route") {
+                            v = v.toUpperCase();
+                          } else if (f.id === "freq") {
+                            const d = v.replace(/\D/g, "").slice(0, 4);
+                            v = d.length > 3 ? `${d.slice(0, 3)}.${d.slice(3)}` : d;
+                          }
                           setField(f.id, v);
                         }}
                       />
@@ -463,12 +471,15 @@ function EditPopover({ fieldId, label, initialValue, inputMode = "text", onConfi
             fontFamily: "var(--f-mono)", fontSize: 11,
             color: "var(--t-tertiary)", letterSpacing: "0.06em",
           }}>
-            {fieldId === "wind" ? "Enter speed, direction, and optional gust" :
-             fieldId === "vis"  ? "Enter visibility — SM will be appended" :
-             fieldId === "sky"  ? "Select condition, then enter altitude if required" :
-             fieldId === "alt"  ? "Type 4 digits — decimal placed automatically (e.g. 2994 → 29.94)" :
-             fieldId === "via"  ? "Type taxiways without spaces — arrows added automatically (e.g. YBA → Y > B > A)" :
-                                  "Correct the transcribed value below"}
+            {fieldId === "wind"  ? "Enter speed, direction, and optional gust" :
+             fieldId === "vis"   ? "Enter visibility — SM will be appended" :
+             fieldId === "sky"   ? "Select condition, then enter altitude if required" :
+             fieldId === "alt"   ? "Type 4 digits — decimal placed automatically (e.g. 2994 → 29.94)" :
+             fieldId === "via"   ? "Type taxiways without spaces — arrows added automatically (e.g. YBA → Y > B > A)" :
+             fieldId === "route" ? "Tap As Filed or enter a custom route — all caps" :
+             fieldId === "alt2"  ? "Enter maintain altitude, expected altitude, and minutes" :
+             fieldId === "freq"  ? "Type 4 digits — decimal placed automatically (e.g. 1249 → 124.9)" :
+                                   "Correct the transcribed value below"}
           </div>
         </div>
 
@@ -479,6 +490,10 @@ function EditPopover({ fieldId, label, initialValue, inputMode = "text", onConfi
           <VisEditor initialValue={initialValue} onConfirm={onConfirm} onCancel={onCancel}/>
         ) : fieldId === "sky" ? (
           <SkyEditor initialValue={initialValue} onConfirm={onConfirm} onCancel={onCancel}/>
+        ) : fieldId === "alt2" ? (
+          <ClearanceAltEditor initialValue={initialValue} onConfirm={onConfirm} onCancel={onCancel}/>
+        ) : fieldId === "route" ? (
+          <RouteEditor initialValue={initialValue} onConfirm={onConfirm} onCancel={onCancel}/>
         ) : (
           <DefaultEditor fieldId={fieldId} initialValue={initialValue} inputMode={inputMode} onConfirm={onConfirm} onCancel={onCancel}/>
         )}
@@ -489,9 +504,10 @@ function EditPopover({ fieldId, label, initialValue, inputMode = "text", onConfi
 
 // ─── DEFAULT EDITOR ───────────────────────────────────────────────────────────
 // Generic large-input editor with per-field transforms:
-// • ident / rwy / hold → forced uppercase
-// • alt                → auto-decimal after 2 digits (2994 → 29.94)
-// • via                → taxiway auto-formatter (YBA → Y > B > A)
+// • ident / rwy / hold / to → forced uppercase
+// • alt                     → auto-decimal after 2 digits (2994 → 29.94)
+// • via                     → taxiway auto-formatter (YBA → Y > B > A)
+// • freq                    → frequency format after 3 digits (1249 → 124.9)
 function DefaultEditor({ fieldId, initialValue, inputMode = "text", onConfirm, onCancel }) {
   const [val, setVal] = useState(initialValue ?? "");
   const inputRef = useRef(null);
@@ -509,7 +525,10 @@ function DefaultEditor({ fieldId, initialValue, inputMode = "text", onConfirm, o
     if (fieldId === "alt") {
       const digits = raw.replace(/\D/g, "").slice(0, 4);
       setVal(digits.length > 2 ? `${digits.slice(0, 2)}.${digits.slice(2)}` : digits);
-    } else if (fieldId === "ident" || fieldId === "rwy" || fieldId === "hold") {
+    } else if (fieldId === "freq") {
+      const digits = raw.replace(/\D/g, "").slice(0, 4);
+      setVal(digits.length > 3 ? `${digits.slice(0, 3)}.${digits.slice(3)}` : digits);
+    } else if (fieldId === "ident" || fieldId === "rwy" || fieldId === "hold" || fieldId === "to") {
       setVal(raw.toUpperCase());
     } else if (fieldId === "via") {
       setVal(formatTaxiVia(raw.toUpperCase()));
@@ -871,6 +890,199 @@ function SkyEditor({ initialValue, onConfirm, onCancel }) {
           className="btn btn-sm btn-primary"
           onClick={() => resultStr && onConfirm(resultStr)}
           disabled={!canConfirm}
+          style={{ flex: 2, height: 44, fontSize: 13, fontWeight: 600 }}
+        >
+          <Icon name="check" size={14}/>Confirm
+        </button>
+      </div>
+    </>
+  );
+}
+
+// ─── CLEARANCE ALTITUDE EDITOR ───────────────────────────────────────────────
+// Structured input for IFR clearance altitude.
+// Three rows: [Maintain ___] [Expect ___] [___ min after dep]
+// Expect and minutes are optional. Output: "Maintain 4000 Expect 6000 10 minutes after departure"
+function ClearanceAltEditor({ initialValue, onConfirm, onCancel }) {
+  const parse = (v = "") => {
+    const m = v.match(/[Mm]aintain\s+(\d+)/);
+    const e = v.match(/[Ee]xpect\s+(\d+)/);
+    const n = v.match(/(\d+)\s+min/);
+    return { maintain: m?.[1] ?? "", expect: e?.[1] ?? "", minutes: n?.[1] ?? "" };
+  };
+
+  const init = parse(initialValue);
+  const [maintain, setMaintain] = useState(init.maintain);
+  const [expect,   setExpect]   = useState(init.expect);
+  const [minutes,  setMinutes]  = useState(init.minutes);
+  const maintainRef = useRef(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => maintainRef.current?.focus(), 60);
+    return () => clearTimeout(t);
+  }, []);
+
+  const buildResult = () => {
+    if (!maintain) return null;
+    let r = `Maintain ${maintain}`;
+    if (expect) {
+      r += ` Expect ${expect}`;
+      if (minutes) r += ` ${minutes} minutes after departure`;
+    }
+    return r;
+  };
+  const preview = buildResult();
+
+  const fieldStyle = {
+    fontFamily: "var(--f-mono)", fontSize: 22, fontWeight: 600,
+    letterSpacing: "0.04em", background: "var(--bg-inset)",
+    border: "1px solid var(--accent-line)", borderRadius: "var(--r-md)",
+    padding: "10px 8px", color: "var(--t-primary)",
+    width: "100%", boxSizing: "border-box",
+    outline: "none", caretColor: "var(--accent)", textAlign: "center",
+  };
+  const rowLabel = {
+    fontFamily: "var(--f-mono)", fontSize: 11, fontWeight: 700,
+    color: "var(--t-secondary)", flexShrink: 0,
+    alignSelf: "flex-end", paddingBottom: 11,
+    letterSpacing: "0.08em", textTransform: "uppercase",
+  };
+  const subLabel = {
+    fontFamily: "var(--f-mono)", fontSize: 9, color: "var(--t-tertiary)",
+    letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 5,
+  };
+
+  return (
+    <>
+      {/* Row 1: MAINTAIN [altitude] */}
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
+        <span style={rowLabel}>Maintain</span>
+        <div style={{ flex: 1 }}>
+          <div style={subLabel}>Altitude (ft)</div>
+          <input ref={maintainRef} value={maintain} onChange={e => setMaintain(e.target.value.replace(/\D/g, ""))} inputMode="numeric" style={fieldStyle}/>
+        </div>
+      </div>
+
+      {/* Row 2: EXPECT [altitude] */}
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
+        <span style={rowLabel}>Expect</span>
+        <div style={{ flex: 1 }}>
+          <div style={subLabel}>Altitude (ft) — optional</div>
+          <input value={expect} onChange={e => setExpect(e.target.value.replace(/\D/g, ""))} inputMode="numeric" placeholder="optional" style={{ ...fieldStyle, opacity: expect ? 1 : 0.5 }}/>
+        </div>
+      </div>
+
+      {/* Row 3: [minutes] MIN AFTER DEP */}
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
+        <div style={{ flex: "0 0 72px" }}>
+          <div style={subLabel}>Minutes</div>
+          <input value={minutes} onChange={e => setMinutes(e.target.value.replace(/\D/g, ""))} inputMode="numeric" placeholder="opt" style={{ ...fieldStyle, opacity: minutes ? 1 : 0.5 }}/>
+        </div>
+        <span style={{ ...rowLabel, fontSize: 10, letterSpacing: "0.06em" }}>min after dep</span>
+      </div>
+
+      {/* Live preview */}
+      <div style={{
+        fontFamily: "var(--f-mono)", fontSize: 13, fontWeight: 700,
+        letterSpacing: "0.04em", lineHeight: 1.5,
+        color: preview ? "var(--t-primary)" : "var(--t-quiet)",
+        background: "var(--bg-inset)", border: "1px solid var(--line)",
+        borderRadius: "var(--r-md)", padding: "10px 14px", textAlign: "center",
+      }}>
+        {preview ?? "— enter maintain altitude —"}
+      </div>
+
+      {/* Buttons */}
+      <div style={{ display: "flex", gap: 10 }}>
+        <button className="btn btn-sm btn-ghost" onClick={onCancel} style={{ flex: 1, height: 44, fontSize: 12 }}>Cancel</button>
+        <button
+          className="btn btn-sm btn-primary"
+          onClick={() => preview && onConfirm(preview)}
+          disabled={!maintain}
+          style={{ flex: 2, height: 44, fontSize: 13, fontWeight: 600 }}
+        >
+          <Icon name="check" size={14}/>Confirm
+        </button>
+      </div>
+    </>
+  );
+}
+
+// ─── ROUTE EDITOR ─────────────────────────────────────────────────────────────
+// Two-mode selector for IFR/VFR route.
+// AS FILED mode: confirms with "As filed" instantly on button tap.
+// VIA mode: all-caps free-text input for custom route/fixes.
+function RouteEditor({ initialValue, onConfirm, onCancel }) {
+  const isAsFiledStr = /^as\s+filed$/i.test((initialValue ?? "").trim());
+  const [mode, setMode] = useState(isAsFiledStr ? "filed" : "via");
+  const [via,  setVia]  = useState(isAsFiledStr ? "" : (initialValue ?? "").toUpperCase());
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (mode === "via") {
+      const t = setTimeout(() => { inputRef.current?.focus(); inputRef.current?.select(); }, 80);
+      return () => clearTimeout(t);
+    }
+  }, [mode]);
+
+  const btnBase = (active) => ({
+    fontFamily: "var(--f-mono)", fontSize: 14, fontWeight: 700,
+    letterSpacing: "0.1em", padding: "16px 0",
+    borderRadius: "var(--r-md)",
+    border: active ? "2px solid var(--accent)" : "1px solid var(--line)",
+    background: active ? "var(--accent-bg)" : "var(--bg-inset)",
+    color: active ? "var(--accent)" : "var(--t-secondary)",
+    cursor: "pointer", transition: "all 0.1s",
+  });
+
+  return (
+    <>
+      {/* Mode toggle */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <button onClick={() => setMode("filed")} style={btnBase(mode === "filed")}>AS FILED</button>
+        <button onClick={() => setMode("via")}   style={btnBase(mode === "via")}>VIA…</button>
+      </div>
+
+      {/* Custom route input — shown in VIA mode */}
+      {mode === "via" && (
+        <input
+          ref={inputRef}
+          value={via}
+          onChange={e => setVia(e.target.value.toUpperCase())}
+          inputMode="text"
+          placeholder="FIXES / AIRWAYS / ROUTE"
+          style={{
+            fontFamily: "var(--f-mono)", fontSize: 18, fontWeight: 600,
+            letterSpacing: "0.04em",
+            background: "var(--bg-inset)", border: "1px solid var(--accent-line)",
+            borderRadius: "var(--r-md)", padding: "14px 16px",
+            color: "var(--t-primary)", width: "100%", boxSizing: "border-box",
+            outline: "none", caretColor: "var(--accent)",
+          }}
+        />
+      )}
+
+      {/* Preview */}
+      <div style={{
+        fontFamily: "var(--f-mono)", fontSize: 14, fontWeight: 700,
+        letterSpacing: "0.04em",
+        color: (mode === "filed" || via.trim()) ? "var(--t-primary)" : "var(--t-quiet)",
+        background: "var(--bg-inset)", border: "1px solid var(--line)",
+        borderRadius: "var(--r-md)", padding: "10px 14px", textAlign: "center",
+      }}>
+        {mode === "filed" ? "As filed" : (via.trim() || "— enter route —")}
+      </div>
+
+      {/* Buttons */}
+      <div style={{ display: "flex", gap: 10 }}>
+        <button className="btn btn-sm btn-ghost" onClick={onCancel} style={{ flex: 1, height: 44, fontSize: 12 }}>Cancel</button>
+        <button
+          className="btn btn-sm btn-primary"
+          onClick={() => {
+            const result = mode === "filed" ? "As filed" : via.trim();
+            if (result) onConfirm(result);
+          }}
+          disabled={mode === "via" && !via.trim()}
           style={{ flex: 2, height: 44, fontSize: 13, fontWeight: 600 }}
         >
           <Icon name="check" size={14}/>Confirm
