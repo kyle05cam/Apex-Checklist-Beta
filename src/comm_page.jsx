@@ -4,7 +4,7 @@
 // Prop contract preserved for parent cessna172s_checklist.jsx
 // ─────────────────────────────────────────────────────────────────────────────
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { getNearestAirports, FREQ_META } from "./nearest_freqs_data.js";
 
 // ─── ICON COMPONENT ──────────────────────────────────────────────────────────
@@ -63,6 +63,19 @@ function Icon({ name, size = 18, stroke = 1.6 }) {
           <path d="M12 20v-6M8 8a4 4 0 0 1 8 0M5 5a8 8 0 0 1 14 0M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/>
         </svg>
       );
+    case "edit":
+      return (
+        <svg viewBox="0 0 24 24" style={s}>
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+      );
+    case "check":
+      return (
+        <svg viewBox="0 0 24 24" style={s}>
+          <path d="M20 6L9 17l-5-5"/>
+        </svg>
+      );
     default:
       return null;
   }
@@ -78,7 +91,7 @@ const CLEARANCES = [
     fields: [
       { id: "ident", label: "Information", placeholder: "Ident letter" },
       { id: "wind",  label: "Wind",        placeholder: "Dir/speed (e.g. 270° at 12kt)" },
-      { id: "alt",   label: "Altimeter",   placeholder: "e.g. 29.92" },
+      { id: "alt",   label: "Altimeter",   placeholder: "e.g. 29.92",  inputMode: "decimal" },
       { id: "vis",   label: "Visibility",  placeholder: "e.g. 10SM" },
       { id: "sky",   label: "Sky",         placeholder: "e.g. FEW 3500" },
       { id: "caut",  label: "Caution",     placeholder: "NOTAMs / hazards / advisories" },
@@ -103,8 +116,8 @@ const CLEARANCES = [
       { id: "to",    label: "Cleared To", placeholder: "Destination" },
       { id: "route", label: "Route",      placeholder: "Via / as filed" },
       { id: "alt2",  label: "Altitude",   placeholder: "Maintain / expect" },
-      { id: "freq",  label: "Departure",  placeholder: "e.g. 124.9" },
-      { id: "sq",    label: "Squawk",     placeholder: "e.g. 4271" },
+      { id: "freq",  label: "Departure",  placeholder: "e.g. 124.9",  inputMode: "decimal" },
+      { id: "sq",    label: "Squawk",     placeholder: "e.g. 4271",   inputMode: "numeric" },
     ],
   },
 ];
@@ -124,6 +137,10 @@ export function CommPage({
   ...rest
 }) {
   const [tab, setTab] = useState("active");
+  const [editPopover, setEditPopover] = useState(null); // { id, label, value, inputMode }
+
+  const openEdit = (f) => setEditPopover({ id: f.id, label: f.label, value: getFieldValue(f.id), inputMode: f.inputMode });
+  const confirmEdit = (val) => { setField(editPopover.id, val); setEditPopover(null); };
 
   // ── Map design field IDs → parent data values ──
   const getFieldValue = (id) => {
@@ -339,13 +356,10 @@ export function CommPage({
                       />
                       <button
                         className="field-copy"
-                        title="Copy"
-                        onClick={() => {
-                          const v = getFieldValue(f.id);
-                          if (v) try { navigator.clipboard.writeText(v); } catch {}
-                        }}
+                        title="Edit field"
+                        onClick={() => openEdit(f)}
                       >
-                        <Icon name="copy" size={12}/>
+                        <Icon name="edit" size={12}/>
                       </button>
                     </React.Fragment>
                   ))}
@@ -365,7 +379,133 @@ export function CommPage({
         {tab === "freq"    && <NearestFreqs/>}
 
       </div>
+
+      {/* ── Field edit popover ── */}
+      {editPopover && (
+        <EditPopover
+          label={editPopover.label}
+          initialValue={editPopover.value}
+          inputMode={editPopover.inputMode}
+          onConfirm={confirmEdit}
+          onCancel={() => setEditPopover(null)}
+        />
+      )}
     </div>
+  );
+}
+
+// ─── EDIT POPOVER ─────────────────────────────────────────────────────────────
+// Bottom-sheet overlay for correcting a single transcribed field.
+// Large input + confirm/cancel — designed for cockpit fat-finger use.
+function EditPopover({ label, initialValue, inputMode = "text", onConfirm, onCancel }) {
+  const [val, setVal] = useState(initialValue);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    // Short delay lets the CSS transition render before focusing
+    const t = setTimeout(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }, 60);
+    return () => clearTimeout(t);
+  }, []);
+
+  const handleKey = (e) => {
+    if (e.key === "Enter")  onConfirm(val);
+    if (e.key === "Escape") onCancel();
+  };
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onCancel}
+        style={{
+          position: "fixed", inset: 0,
+          background: "rgba(7,10,15,0.72)",
+          zIndex: 400,
+          backdropFilter: "blur(2px)",
+        }}
+      />
+
+      {/* Sheet */}
+      <div style={{
+        position: "fixed", left: 0, right: 0, bottom: 0,
+        zIndex: 401,
+        background: "var(--bg-1)",
+        borderTop: "2px solid var(--accent-line)",
+        borderRadius: "14px 14px 0 0",
+        padding: "24px 24px 32px",
+        display: "flex", flexDirection: "column", gap: 20,
+        boxShadow: "0 -8px 40px rgba(0,0,0,0.5)",
+      }}>
+
+        {/* Drag handle */}
+        <div style={{
+          width: 36, height: 4, borderRadius: 2,
+          background: "var(--line-strong)",
+          alignSelf: "center", marginBottom: 4,
+        }}/>
+
+        {/* Field label */}
+        <div>
+          <div style={{
+            fontFamily: "var(--f-mono)", fontSize: 10,
+            color: "var(--accent)", letterSpacing: "0.12em",
+            textTransform: "uppercase", marginBottom: 6,
+          }}>
+            Editing — {label}
+          </div>
+          <div style={{
+            fontFamily: "var(--f-mono)", fontSize: 11,
+            color: "var(--t-tertiary)", letterSpacing: "0.06em",
+          }}>
+            Correct the transcribed value below
+          </div>
+        </div>
+
+        {/* Large input */}
+        <input
+          ref={inputRef}
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          inputMode={inputMode}
+          onKeyDown={handleKey}
+          style={{
+            fontFamily: "var(--f-mono)",
+            fontSize: 28, fontWeight: 600,
+            letterSpacing: "0.04em",
+            background: "var(--bg-inset)",
+            border: "1px solid var(--accent-line)",
+            borderRadius: "var(--r-md)",
+            padding: "16px 18px",
+            color: "var(--t-primary)",
+            width: "100%", boxSizing: "border-box",
+            outline: "none",
+            caretColor: "var(--accent)",
+          }}
+        />
+
+        {/* Buttons */}
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            className="btn btn-sm btn-ghost"
+            onClick={onCancel}
+            style={{ flex: 1, height: 44, fontSize: 12 }}
+          >
+            Cancel
+          </button>
+          <button
+            className="btn btn-sm btn-primary"
+            onClick={() => onConfirm(val)}
+            style={{ flex: 2, height: 44, fontSize: 13, fontWeight: 600 }}
+          >
+            <Icon name="check" size={14}/>
+            Confirm
+          </button>
+        </div>
+      </div>
+    </>
   );
 }
 
