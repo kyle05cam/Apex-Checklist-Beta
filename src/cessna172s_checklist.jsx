@@ -2234,6 +2234,12 @@ const commParseGround = (text) => {
   const updateCruiseCell = (si, ri, ci, val) => { setCruiseData(prev => { const next = prev.map((s, sIdx) => sIdx !== si ? s : { ...s, rows: s.rows.map((row, rIdx) => rIdx !== ri ? row : row.map((cell, cIdx) => cIdx !== ci ? cell : val)) }); saveCruiseData(next); return next; }); };
   const resetCruiseData = () => { const f = CRUISE_DATA.map(s => ({ ...s, rows: s.rows.map(r => [...r]) })); setCruiseData(f); saveCruiseData(f); };
 
+  // ── Add row / item helpers ────────────────────────────────────────────────
+  const addPerfRow  = (si) => { setPerfData(prev  => { const next = prev.map((s, i)  => i !== si ? s : { ...s, rows: [...s.rows,  Array(s.cols.length).fill("")]  }); savePerfData(next);  return next; }); };
+  const addClimbRow = (si) => { setClimbData(prev  => { const next = prev.map((s, i)  => i !== si ? s : { ...s, rows: [...s.rows,  Array(s.cols.length).fill("")]  }); saveClimbData(next); return next; }); };
+  const addCruiseRow= (si) => { setCruiseData(prev => { const next = prev.map((s, i)  => i !== si ? s : { ...s, rows: [...s.rows,  Array(s.cols.length).fill("")]  }); saveCruiseData(next);return next; }); };
+  const addVspeedItem=(gi) => { setVspeeds(prev    => { const next = prev.map((g, i)  => i !== gi  ? g : { ...g, items:[...g.items, { code:"", value:"", unit:"KIAS", desc:"" }] }); saveVspeeds(next); return next; }); };
+
   const getMergedItems = (pageId, sectionTitle, sectionItems) => {
     const custom = getSectionCustom(pageId, sectionTitle);
     const renames = custom.renames || {};
@@ -3114,6 +3120,11 @@ const commParseGround = (text) => {
                       );
                     })}
                   </div>
+                  {vspeedEditing && (
+                    <button className="efb-poh-add-row" onClick={() => addVspeedItem(gi)}>
+                      + Add Speed
+                    </button>
+                  )}
                 </div>
               ))}
 
@@ -3140,6 +3151,11 @@ const commParseGround = (text) => {
                       ))}
                     </tbody>
                   </table>
+                  {perfEditing && (
+                    <button className="efb-poh-add-row" onClick={() => addPerfRow(si)}>
+                      + Add Row
+                    </button>
+                  )}
                 </div>
               ))}
 
@@ -3166,6 +3182,11 @@ const commParseGround = (text) => {
                       ))}
                     </tbody>
                   </table>
+                  {climbEditing && (
+                    <button className="efb-poh-add-row" onClick={() => addClimbRow(si)}>
+                      + Add Row
+                    </button>
+                  )}
                 </div>
               ))}
 
@@ -3192,6 +3213,11 @@ const commParseGround = (text) => {
                       ))}
                     </tbody>
                   </table>
+                  {cruiseEditing && (
+                    <button className="efb-poh-add-row" onClick={() => addCruiseRow(si)}>
+                      + Add Row
+                    </button>
+                  )}
                 </div>
               ))}
 

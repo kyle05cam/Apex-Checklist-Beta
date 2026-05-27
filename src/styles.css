@@ -1523,6 +1523,30 @@ ul, li { list-style: none; padding: 0; margin: 0; }
 .efb-poh-input.wide { width: 60px; }
 .efb-poh-input.full { width: 100%; box-sizing: border-box; }
 
+/* Add row / add speed button — shown below a table or card group in edit mode */
+.efb-poh-add-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 6px;
+  padding: 7px 0;
+  background: transparent;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-sm);
+  color: var(--t-tertiary);
+  font-family: var(--f-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.efb-poh-add-row:hover {
+  border-color: var(--accent-line);
+  color: var(--accent);
+  background: var(--accent-bg);
+}
+
 .efb-qr-backdrop {
   position: fixed;
   inset: 0;
