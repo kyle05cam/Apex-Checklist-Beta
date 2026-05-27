@@ -4,7 +4,7 @@
 // Prop contract preserved for parent cessna172s_checklist.jsx
 // ─────────────────────────────────────────────────────────────────────────────
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { getNearestAirports, FREQ_META } from "./nearest_freqs_data.js";
 
 // ─── ICON COMPONENT ──────────────────────────────────────────────────────────
@@ -68,48 +68,6 @@ function Icon({ name, size = 18, stroke = 1.6 }) {
   }
 }
 
-// ─── CLEARANCES CONFIG ────────────────────────────────────────────────────────
-// Field IDs match the design handoff (ident, wind, alt, vis, sky, caut,
-// rwy, via, hold, instr, to, route, alt2, freq, sq).
-// getFieldValue / setField map these to the parent's data objects.
-const CLEARANCES = [
-  {
-    id: "atis",
-    name: "ATIS",
-    sub: "Tap ARM to capture",
-    fields: [
-      { id: "ident", label: "Information", placeholder: "Ident letter" },
-      { id: "wind",  label: "Wind",        placeholder: "Dir/speed (e.g. 270° at 12kt)" },
-      { id: "alt",   label: "Altimeter",   placeholder: "e.g. 29.92" },
-      { id: "vis",   label: "Visibility",  placeholder: "e.g. 10SM" },
-      { id: "sky",   label: "Sky",         placeholder: "e.g. FEW 3500" },
-      { id: "caut",  label: "Caution",     placeholder: "NOTAMs / hazards / advisories" },
-    ],
-  },
-  {
-    id: "taxi",
-    name: "Taxi Instructions",
-    sub: "Ground frequency",
-    fields: [
-      { id: "rwy",   label: "Runway",       placeholder: "e.g. 12C" },
-      { id: "via",   label: "Taxi Via",     placeholder: "e.g. Y > Y1 > B > H" },
-      { id: "hold",  label: "Hold Short",   placeholder: "e.g. RWY 12R", critical: true },
-      { id: "instr", label: "Instructions", placeholder: "e.g. Contact tower 119.9 when ready" },
-    ],
-  },
-  {
-    id: "clearance",
-    name: "Ground Clearance",
-    sub: "IFR / VFR",
-    fields: [
-      { id: "to",    label: "Cleared To", placeholder: "Destination" },
-      { id: "route", label: "Route",      placeholder: "Via / as filed" },
-      { id: "alt2",  label: "Altitude",   placeholder: "Maintain / expect" },
-      { id: "freq",  label: "Departure",  placeholder: "e.g. 124.9" },
-      { id: "sq",    label: "Squawk",     placeholder: "e.g. 4271" },
-    ],
-  },
-];
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 export function CommPage({
@@ -126,58 +84,6 @@ export function CommPage({
   ...rest
 }) {
   const [tab, setTab] = useState("active");
-
-  // ── Map design field IDs → parent data values ──
-  const getFieldValue = (id) => {
-    const map = {
-      ident: atisData?.info,        wind:  atisData?.wind,
-      alt:   atisData?.altimeter,   vis:   atisData?.visibility,
-      sky:   atisData?.sky,         caut:  atisData?.caution,
-      rwy:   taxiData?.runway,      via:   taxiData?.route,
-      hold:  taxiData?.holdShort,   instr: taxiData?.instructions,
-      to:    gndData?.clearedTo,    route: gndData?.route,
-      alt2:  gndData?.altitude,     freq:  gndData?.frequency,
-      sq:    gndData?.squawk,
-    };
-    return map[id] ?? "";
-  };
-
-  // ── Map design field IDs → parent set callbacks ──
-  const setField = (id, value) => {
-    const atisMap = { ident: "info", wind: "wind", alt: "altimeter", vis: "visibility", sky: "sky", caut: "caution" };
-    const taxiMap = { rwy: "runway", via: "route", hold: "holdShort", instr: "instructions" };
-    const gndMap  = { to: "clearedTo", route: "route", alt2: "altitude", freq: "frequency", sq: "squawk" };
-    if (id in atisMap)      onSetAtisData?.({ ...atisData, [atisMap[id]]: value });
-    else if (id in taxiMap) onSetTaxiData?.({ ...taxiData, [taxiMap[id]]: value });
-    else if (id in gndMap)  onSetGndData?.({ ...gndData,  [gndMap[id]]:  value });
-  };
-
-  // ── Armed state from parent ──
-  const isArmed = (cardId) => {
-    if (cardId === "atis")      return atisArmState === "armed" || atisArmState === "done";
-    if (cardId === "taxi")      return taxiArmState === "armed" || taxiArmState === "done";
-    if (cardId === "clearance") return gndArmState  === "armed" || gndArmState  === "done";
-    return false;
-  };
-
-  const handleArm = (cardId) => {
-    if (cardId === "atis")           onArmAtis?.();
-    else if (cardId === "taxi")      onArmTaxi?.();
-    else if (cardId === "clearance") onArmGnd?.();
-  };
-
-  const handleClear = (cardId) => {
-    if (cardId === "atis")           onClearAtisRaw?.();
-    else if (cardId === "taxi")      onClearTaxiRaw?.();
-    else if (cardId === "clearance") onClearGndRaw?.();
-  };
-
-  // ── Has any captured data? (controls empty-state visibility) ──
-  const hasValues = (
-    Object.values(atisData || {}).some(Boolean) ||
-    Object.values(taxiData || {}).some(Boolean) ||
-    Object.values(gndData  || {}).some(Boolean)
-  );
 
   const handleListen = () => {
     if (listening) onStopListen?.();
@@ -238,14 +144,15 @@ export function CommPage({
             className={`radio-tab${tab === "active" ? " active" : ""}`}
             onClick={() => setTab("active")}
           >
-            Active Feed <span className="tab-count">3</span>
+            Active Feed{" "}
+            <span className="tab-count">{Math.min(txLog.length, 5)}</span>
           </div>
           <div
             className={`radio-tab${tab === "archive" ? " active" : ""}`}
             onClick={() => setTab("archive")}
           >
             Archive Log{" "}
-            <span className="tab-count">{txLog.length > 0 ? txLog.length : 12}</span>
+            <span className="tab-count">{txLog.length > 0 ? txLog.length : 0}</span>
           </div>
           <div
             className={`radio-tab${tab === "freq" ? " active" : ""}`}
@@ -255,95 +162,24 @@ export function CommPage({
           </div>
         </div>
 
-        {/* ── Active Feed ── */}
+        {/* ── Active Feed — last 5 transmissions ── */}
         {tab === "active" && (
           <>
-            {/* Empty state — only when idle and nothing captured yet */}
-            {!listening && !hasValues && (
+            {txLog.length === 0 ? (
               <div className="radio-empty">
                 <div className="radio-empty-icon">
                   <Icon name="antenna" size={22}/>
                 </div>
                 <div className="radio-empty-title">Awaiting Transmission</div>
                 <div className="radio-empty-sub">
-                  Forms below auto-fill from captured ATC audio.
+                  Recent ATC transmissions will appear here.
                 </div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <TransmissionFeed txLog={txLog} limit={5}/>
               </div>
             )}
-
-            {/* Clearance cards */}
-            {CLEARANCES.map((c) => (
-              <div
-                key={c.id}
-                className={`clearance-card${isArmed(c.id) ? " armed" : ""}`}
-              >
-                <div className="clearance-head">
-                  <div className="clearance-title">
-                    <span className="clearance-name">{c.name}</span>
-                    <span className="clearance-sub">{c.sub}</span>
-                  </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button
-                      className={`btn btn-sm${isArmed(c.id) ? " btn-ok" : ""}`}
-                      onClick={() => handleArm(c.id)}
-                    >
-                      <span style={{
-                        width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
-                        background: isArmed(c.id) ? "var(--ok)" : "var(--t-quiet)",
-                      }}/>
-                      {isArmed(c.id) ? "ARMED" : "ARM"}
-                    </button>
-                    <button
-                      className="btn btn-sm btn-warn"
-                      onClick={() => handleClear(c.id)}
-                    >
-                      <Icon name="reset" size={10}/>
-                      CLR
-                    </button>
-                  </div>
-                </div>
-
-                <div className="clearance-body">
-                  {c.fields.map((f) => (
-                    <React.Fragment key={f.id}>
-                      {f.critical && (
-                        <div className="hold-short-banner">
-                          <Icon name="alert" size={10}/>
-                          Hold Short
-                        </div>
-                      )}
-                      <span className="field-label">{f.label}</span>
-                      <input
-                        className={[
-                          "field-input",
-                          f.critical ? "critical" : "",
-                          getFieldValue(f.id) ? "has-value" : "",
-                        ].filter(Boolean).join(" ")}
-                        placeholder={f.placeholder}
-                        value={getFieldValue(f.id)}
-                        onChange={(e) => setField(f.id, e.target.value)}
-                      />
-                      <button
-                        className="field-copy"
-                        title="Copy"
-                        onClick={() => {
-                          const v = getFieldValue(f.id);
-                          if (v) try { navigator.clipboard.writeText(v); } catch {}
-                        }}
-                      >
-                        <Icon name="copy" size={12}/>
-                      </button>
-                    </React.Fragment>
-                  ))}
-                </div>
-              </div>
-            ))}
-
-            {/* Replay bar */}
-            <div className="radio-replay-bar" onClick={() => onReplay?.(10)}>
-              <Icon name="play" size={11}/>
-              Replay Last 10 Seconds
-            </div>
           </>
         )}
 
@@ -390,46 +226,37 @@ function Waveform({ live }) {
   );
 }
 
-// ─── ARCHIVE LOG ──────────────────────────────────────────────────────────────
-// Shows live txLog entries if available, falls back to design sample data.
-function ArchiveLog({ txLog = [] }) {
-  const fmtTs = (ts) => {
-    if (!ts) return "—";
-    try {
-      const d = ts instanceof Date ? ts : new Date(ts);
-      return d.toISOString().slice(11, 16) + "Z";
-    } catch { return "—"; }
+// ─── SHARED HELPERS ───────────────────────────────────────────────────────────
+function fmtTs(ts) {
+  if (!ts) return "—";
+  try {
+    const d = ts instanceof Date ? ts : new Date(ts);
+    return d.toISOString().slice(11, 16) + "Z";
+  } catch { return "—"; }
+}
+
+function fmtType(type) {
+  if (!type) return "GENERAL";
+  const lookup = {
+    ifr_departure: "IFR CLRNCE",
+    ifr_approach:  "IFR APPRCH",
+    landing:       "LANDING",
+    pattern:       "PATTERN",
+    general:       "GENERAL",
+    tower:         "TOWER",
+    ground:        "GROUND",
+    clnc_del:      "CLNC DEL",
+    atis:          "ATIS",
   };
+  return lookup[type] ?? type.replace(/_/g, " ").toUpperCase().slice(0, 10);
+}
 
-  const fmtType = (type) => {
-    if (!type) return "GENERAL";
-    const lookup = {
-      ifr_departure: "IFR CLRNCE",
-      ifr_approach:  "IFR APPRCH",
-      landing:       "LANDING",
-      pattern:       "PATTERN",
-      general:       "GENERAL",
-      tower:         "TOWER",
-      ground:        "GROUND",
-      clnc_del:      "CLNC DEL",
-      atis:          "ATIS",
-    };
-    return lookup[type] ?? type.replace(/_/g, " ").toUpperCase().slice(0, 10);
-  };
-
-  const PLACEHOLDER = [
-    { id: "p1", ts: null, type: "tower",   text: "Skyhawk 12345, cleared for takeoff runway 12 center, fly heading 130." },
-    { id: "p2", ts: null, type: "ground",  text: "Skyhawk 12345, taxi to runway 12 center via Yankee, hold short Bravo." },
-    { id: "p3", ts: null, type: "clnc_del",text: "Cleared to KOAK via JANIC, climb maintain 4000, expect 8000 in 10, squawk 4271." },
-    { id: "p4", ts: null, type: "atis",    text: "Information Charlie, wind 270 at 12, altimeter 29.92, runway 12 center in use." },
-  ];
-
-  const entries = txLog.length > 0
-    ? [...txLog].reverse().slice(0, 12)
-    : PLACEHOLDER;
-
+// ─── TRANSMISSION FEED ────────────────────────────────────────────────────────
+// Renders the most recent `limit` entries from txLog in archive-entry format.
+function TransmissionFeed({ txLog = [], limit = 5 }) {
+  const entries = [...txLog].reverse().slice(0, limit);
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    <>
       {entries.map((e, i) => (
         <div key={e.id ?? i} className="archive-entry">
           <span style={{ fontFamily: "var(--f-mono)", fontSize: 11, color: "var(--t-tertiary)", letterSpacing: "0.06em" }}>
@@ -447,6 +274,24 @@ function ArchiveLog({ txLog = [] }) {
           </button>
         </div>
       ))}
+    </>
+  );
+}
+
+// ─── ARCHIVE LOG ──────────────────────────────────────────────────────────────
+// Full log — up to 12 live entries, or placeholder rows when empty.
+const ARCHIVE_PLACEHOLDER = [
+  { id: "p1", ts: null, type: "tower",    text: "Skyhawk 12345, cleared for takeoff runway 12 center, fly heading 130." },
+  { id: "p2", ts: null, type: "ground",   text: "Skyhawk 12345, taxi to runway 12 center via Yankee, hold short Bravo." },
+  { id: "p3", ts: null, type: "clnc_del", text: "Cleared to KOAK via JANIC, climb maintain 4000, expect 8000 in 10, squawk 4271." },
+  { id: "p4", ts: null, type: "atis",     text: "Information Charlie, wind 270 at 12, altimeter 29.92, runway 12 center in use." },
+];
+
+function ArchiveLog({ txLog = [] }) {
+  const source = txLog.length > 0 ? txLog : ARCHIVE_PLACEHOLDER;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <TransmissionFeed txLog={source} limit={12}/>
     </div>
   );
 }
