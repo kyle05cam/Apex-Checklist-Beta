@@ -199,10 +199,10 @@ ul, li { list-style: none; padding: 0; margin: 0; }
 }
 
 /* ============================================================
-   Radio monitoring strip — row 2, two dedicated rows
-   .efb-rx-wrap  outer column container  (grid-row: 2)
-   .efb-rx-bar   thin control bar        (~36 px)
-   .efb-rx-area  transcript display      (auto height)
+   Radio monitoring strip — row 2
+   .efb-rx-wrap     outer column container  (grid-row: 2)
+   .efb-rx-watchdog conditional alert banner (only when ACK needed)
+   .efb-rx-area     transcript display      (auto height)
    ============================================================ */
 
 /* Outer wrapper takes the full row-2 slot */
@@ -213,82 +213,38 @@ ul, li { list-style: none; padding: 0; margin: 0; }
   flex-direction: column;
 }
 
-/* ── ROW A: thin status / control bar ── */
-.efb-rx-bar {
+/* ── WATCHDOG BANNER: only rendered when commWatchdogState !== "clear" ── */
+.efb-rx-watchdog {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: var(--s-3);
   padding: 0 var(--s-4);
   height: 36px;
-  background: var(--bg-1);
-  border-bottom: 1px solid var(--line);
+  background: var(--warn-bg);
+  border-bottom: 1px solid var(--warn-line);
   flex-shrink: 0;
-  cursor: pointer;
-  transition: background 0.15s;
 }
-.efb-rx-bar[data-watchdog="alert"]     { border-color: var(--accent-line); }
-.efb-rx-bar[data-watchdog="unanswered"] {
-  border-color: var(--warn);
+.efb-rx-watchdog[data-state="unanswered"] {
   animation: efb-warn-flash 0.5s ease infinite alternate;
 }
-.efb-rb-left {
-  display: flex;
-  align-items: center;
-  gap: var(--s-2);
-  color: var(--t-tertiary);
-  min-width: 0;
-}
-.efb-rb-label {
-  font-family: var(--f-mono);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--t-secondary);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.efb-rb-freq {
-  font-family: var(--f-mono);
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--ok);
-  background: var(--ok-bg);
-  border: 1px solid var(--ok-line);
-  border-radius: var(--r-sm);
-  padding: 1px var(--s-2);
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.efb-rb-sub {
+.efb-rx-watchdog-msg {
   font-family: var(--f-ui);
-  font-size: 11px;
-  color: var(--t-tertiary);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--warn);
+  flex: 1;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.efb-rb-sub.warn { color: var(--warn); }
-.efb-rb-right {
+.efb-rx-watchdog-actions {
   display: flex;
   align-items: center;
   gap: var(--s-3);
   flex-shrink: 0;
-  color: var(--t-tertiary);
 }
-.efb-rb-sc {
-  font-family: var(--f-mono);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  color: var(--t-secondary);
-  white-space: nowrap;
-}
-.efb-rb-sep {
-  width: 1px;
-  height: 18px;
-  background: var(--line-strong);
-  flex-shrink: 0;
-}
-/* Distinct custom-styled blue LISTEN / red STOP button */
+
+/* Blue LISTEN / red STOP button — used in transcript area */
 .efb-rb-listen-btn {
   display: inline-flex;
   align-items: center;
@@ -312,7 +268,7 @@ ul, li { list-style: none; padding: 0; margin: 0; }
 .efb-rb-listen-btn.active     { background: var(--warn-bg); border-color: var(--warn-line); color: var(--warn); }
 .efb-rb-listen-btn.active:hover { background: rgba(255,107,107,0.18); border-color: var(--warn); }
 
-/* ── ROW B: transcript display area ── */
+/* ── Transcript display area ── */
 .efb-rx-area {
   background: var(--bg-1);
   border-bottom: 1px solid var(--line);
@@ -320,9 +276,6 @@ ul, li { list-style: none; padding: 0; margin: 0; }
   flex-direction: row;
   align-items: stretch;
   transition: background 0.2s;
-}
-.efb-rx-area[data-watchdog="unanswered"] {
-  animation: efb-warn-flash 0.5s ease infinite alternate;
 }
 
 /* Transcript side — takes up the left ~75% */
