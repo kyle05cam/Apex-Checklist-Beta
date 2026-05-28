@@ -89,6 +89,7 @@ const CLEARANCES = [
     name: "ATIS",
     sub: "Tap ARM to capture",
     fields: [
+      { id: "apt",   label: "Airport",      placeholder: "e.g. KFFZ" },
       { id: "ident", label: "Information", placeholder: "Ident letter" },
       { id: "arwy",  label: "Active RWY",  placeholder: "e.g. 22 or 04L", inputMode: "numeric" },
       { id: "wind",  label: "Wind",        placeholder: "Dir/speed (e.g. 270° at 12kt)" },
@@ -178,10 +179,11 @@ export function CommPage({
   // ── Map design field IDs → parent data values ──
   const getFieldValue = (id) => {
     const map = {
-      ident: atisData?.info,        arwy:  atisData?.activeRunway,
-      wind:  atisData?.wind,        alt:   atisData?.altimeter,
-      temp:  atisData?.temperature, vis:   atisData?.visibility,
-      sky:   atisData?.sky,         caut:  atisData?.caution,
+      apt:   atisData?.airport,      ident: atisData?.info,
+      arwy:  atisData?.activeRunway, wind:  atisData?.wind,
+      alt:   atisData?.altimeter,   temp:  atisData?.temperature,
+      vis:   atisData?.visibility,  sky:   atisData?.sky,
+      caut:  atisData?.caution,
       rwy:   taxiData?.runway,      via:   taxiData?.route,
       hold:  taxiData?.holdShort,   instr: taxiData?.instructions,
       to:    gndData?.clearedTo,    route: gndData?.route,
@@ -193,7 +195,7 @@ export function CommPage({
 
   // ── Map design field IDs → parent set callbacks ──
   const setField = (id, value) => {
-    const atisMap = { ident: "info", arwy: "activeRunway", wind: "wind", alt: "altimeter", temp: "temperature", vis: "visibility", sky: "sky", caut: "caution" };
+    const atisMap = { apt: "airport", ident: "info", arwy: "activeRunway", wind: "wind", alt: "altimeter", temp: "temperature", vis: "visibility", sky: "sky", caut: "caution" };
     const taxiMap = { rwy: "runway", via: "route", hold: "holdShort", instr: "instructions" };
     const gndMap  = { to: "clearedTo", route: "route", alt2: "altitude", freq: "frequency", sq: "squawk" };
     if (id in atisMap)      onSetAtisData?.({ ...atisData, [atisMap[id]]: value });
@@ -539,7 +541,8 @@ function EditPopover({ fieldId, label, initialValue, inputMode = "text", onConfi
             fontFamily: "var(--f-mono)", fontSize: 11,
             color: "var(--t-tertiary)", letterSpacing: "0.06em",
           }}>
-            {fieldId === "arwy"  ? "Active runway from ATIS — runway number × 10 = heading (e.g. 22 → 220°). Drives HW/XW in the performance banner." :
+            {fieldId === "apt"   ? "Airport identifier — sets the elevation used for density altitude (e.g. KFFZ). Overrides GPS nearest airport." :
+             fieldId === "arwy"  ? "Active runway from ATIS — runway number × 10 = heading (e.g. 22 → 220°). Drives HW/XW in the performance banner." :
              fieldId === "wind"  ? "Enter speed, direction, and optional gust" :
              fieldId === "vis"   ? "Enter visibility — SM will be appended" :
              fieldId === "sky"   ? "Select condition, then enter altitude if required" :
@@ -601,6 +604,9 @@ function DefaultEditor({ fieldId, initialValue, inputMode = "text", onConfirm, o
     } else if (fieldId === "temp") {
       // Allow negative integers for sub-zero temperatures
       setVal(raw.replace(/[^\d-]/g, "").replace(/(-?\d*).*/, "$1"));
+    } else if (fieldId === "apt") {
+      // Airport ICAO identifier — letters only, uppercase, max 4 chars (e.g. KFFZ)
+      setVal(raw.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4));
     } else if (fieldId === "arwy") {
       // Runway number 01–36 with optional L/R/C suffix — e.g. "22", "04L"
       setVal(raw.toUpperCase().replace(/[^0-9LRC]/g, "").slice(0, 3));

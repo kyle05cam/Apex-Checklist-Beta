@@ -5,7 +5,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState, useEffect, useRef, useCallback } from "react";
 import { CommPage, NrstWidget } from "./comm_page.jsx";
-import { getNearestAirports } from "./nearest_freqs_data.js";
+import { getNearestAirports, AIRPORT_DB } from "./nearest_freqs_data.js";
 import { Icon } from "./icons.jsx";
 
 export const PAGES = [
@@ -1653,7 +1653,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   const [commFreqTabTrigger, setCommFreqTabTrigger] = useState(0);
   const [commForceIfr,      setCommForceIfr]      = useState(false);
   const [commIfrData,       setCommIfrData]       = useState({ C:"",R:"",A:"",F:"",T:"" });
-  const [commAtisData,      setCommAtisData]      = useState({ info:"",wind:"",windDir:"",windSpeed:"",windGust:"",activeRunway:"",altimeter:"",temperature:"",visibility:"",sky:"",caution:"" });
+  const [commAtisData,      setCommAtisData]      = useState({ airport:"",info:"",wind:"",windDir:"",windSpeed:"",windGust:"",activeRunway:"",altimeter:"",temperature:"",visibility:"",sky:"",caution:"" });
   const [commGndData,       setCommGndData]        = useState({ clearedTo:"",route:"",altitude:"",frequency:"",taxi:"",squawk:"" });
   const [commTaxiData,      setCommTaxiData]      = useState({ runway:"",route:"",holdShort:"",instructions:"" });
   // ── GPS nearest airport — single watcher at app level, persists across page changes ──
@@ -1689,14 +1689,16 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   //                                  group1=speed group2=dir  ← ORDER REVERSED
   const handleSetAtisData = (newData) => {
     let out = { ...newData };
+
+    // When wind string changes, parse numeric components for the DA banner
     if (newData.wind !== commAtisData.wind) {
       const w = (newData.wind || "").trim();
       if (/^calm$/i.test(w)) {
         out = { ...out, windDir: "", windSpeed: "0", windGust: "" };
       } else {
-        // Format A — auto-capture: "270° AT 15KT" (direction first)
+        // Format A — auto-capture: "270° AT 15KT"  (direction @ speed)
         const mA = w.match(/^(\d{1,3})\s*°?\s+at\s+(\d{1,3})\s*(?:kt)?(?:\s+gusting\s+(\d{1,3}))?/i);
-        // Format B — WindEditor:   "15 @ 270"     (speed @ direction)
+        // Format B — WindEditor:   "15 @ 270"       (speed @ direction — reversed)
         const mB = w.match(/^(\d{1,3})\s*@\s*(\d{1,3})(?:\s+gusting\s+(\d{1,3}))?/i);
         if (mA) {
           out = { ...out, windDir: mA[1], windSpeed: mA[2], windGust: mA[3] || "" };
@@ -1705,6 +1707,15 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
         }
       }
     }
+
+    // When airport ID is entered/changed, look it up in AIRPORT_DB — the matched
+    // airport is stored separately (as atisAirport) so the GPS nearest stays intact.
+    // The DA banner then uses: entered airport > GPS nearest > elevation override.
+    if (newData.airport !== commAtisData.airport) {
+      const id = (newData.airport || "").trim().toUpperCase();
+      out = { ...out, airport: id }; // normalise to uppercase
+    }
+
     setCommAtisData(out);
   };
 
@@ -2267,7 +2278,7 @@ const commParseTaxi = (text) => {
   };
 
 const commParseAtis = (text) => {
-    const r = { info:"", wind:"", windDir:"", windSpeed:"", windGust:"", activeRunway:"", altimeter:"", temperature:"", visibility:"", sky:"", caution:"" };
+    const r = { airport:"", info:"", wind:"", windDir:"", windSpeed:"", windGust:"", activeRunway:"", altimeter:"", temperature:"", visibility:"", sky:"", caution:"" };
     const t = normalizePhonetic(text);
 
     // Information identifier — broadcast: "information B" or pilot readback:
@@ -3125,21 +3136,29 @@ const commParseGround = (text) => {
             </div>
           </div>
 
-          {(pg.id === "takeoff" || pg.id === "approach") && (
-            <DensityAltitudeHeader
-              altimeter={commAtisData.altimeter}
-              temperature={commAtisData.temperature}
-              windDir={commAtisData.windDir}
-              windSpeed={commAtisData.windSpeed}
-              windGust={commAtisData.windGust}
-              activeRunway={commAtisData.activeRunway}
-              nearestAirport={nearestAirport}
-              gpsReady={nearestReady}
-              pageId={pg.id}
-              pohData={pohData}
-              onNavigate={() => setCurrentPage("comm")}
-            />
-          )}
+          {(pg.id === "takeoff" || pg.id === "approach") && (() => {
+            // Airport priority: manually entered ATIS airport > GPS nearest
+            const atisAirportId = (commAtisData.airport || "").trim().toUpperCase();
+            const atisAirport   = atisAirportId
+              ? (AIRPORT_DB.find(a => a.id === atisAirportId) ?? null)
+              : null;
+            const resolvedAirport = atisAirport ?? nearestAirport;
+            return (
+              <DensityAltitudeHeader
+                altimeter={commAtisData.altimeter}
+                temperature={commAtisData.temperature}
+                windDir={commAtisData.windDir}
+                windSpeed={commAtisData.windSpeed}
+                windGust={commAtisData.windGust}
+                activeRunway={commAtisData.activeRunway}
+                nearestAirport={resolvedAirport}
+                gpsReady={nearestReady || !!atisAirport}
+                pageId={pg.id}
+                pohData={pohData}
+                onNavigate={() => setCurrentPage("comm")}
+              />
+            );
+          })()}
         </div>
 
         {pg.sections.map((section, si) => {
@@ -3627,7 +3646,7 @@ const commParseGround = (text) => {
                   atisArmState={atisArmState}
                   atisRawText={atisRawText}
                   onArmAtis={handleArmAtis}
-                  onClearAtisRaw={() => { setAtisRawText(""); atisArmStateRef.current = "idle"; setAtisArmState("idle"); setCommAtisData({ info:"",wind:"",windDir:"",windSpeed:"",windGust:"",activeRunway:"",altimeter:"",temperature:"",visibility:"",sky:"",caution:"" }); clearTimeout(atisSilenceRef.current); }}
+                  onClearAtisRaw={() => { setAtisRawText(""); atisArmStateRef.current = "idle"; setAtisArmState("idle"); setCommAtisData({ airport:"",info:"",wind:"",windDir:"",windSpeed:"",windGust:"",activeRunway:"",altimeter:"",temperature:"",visibility:"",sky:"",caution:"" }); clearTimeout(atisSilenceRef.current); }}
                   taxiData={commTaxiData}
                   onSetTaxiData={setCommTaxiData}
                   taxiArmState={taxiArmState}
