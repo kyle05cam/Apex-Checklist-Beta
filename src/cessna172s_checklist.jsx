@@ -1866,7 +1866,7 @@ const commParseGround = (text) => {
     watchdogCountdownRef.current = true;
     setCommWatchdogState("alert");
     setCommAckCountdown(5);
-    commPlayChime(false);
+    // No chime here — chime fires only when countdown expires (unanswered)
     let rem = 5;
     commAckIntervalRef.current = setInterval(() => {
       rem--;
@@ -2771,17 +2771,34 @@ const commParseGround = (text) => {
       {currentPage !== "comm" && (
         <div className="efb-rx-wrap">
 
-          {/* ── WATCHDOG BANNER: "alert" = countdown running, "unanswered" = escalated ── */}
-          {(commWatchdogState === "alert" || commWatchdogState === "unanswered") && (
+          {/* ── WATCHDOG BANNER ─────────────────────────────────────────────────────
+               pending    → amber, no ACK button: callsign heard, tx still in progress
+               alert      → amber + countdown: tx ended, 5s for pilot to respond
+               unanswered → red + pulse + ACK: countdown expired, needs acknowledgment
+          ────────────────────────────────────────────────────────────────────── */}
+          {commWatchdogState !== "clear" && (
             <div className="efb-rx-watchdog" data-state={commWatchdogState}>
-              <span className="efb-status-dot warn"/>
+              <span className={`efb-status-dot ${commWatchdogState === "unanswered" ? "warn" : "caution"}`}/>
               <Icon name="antenna" size={13}/>
-              <span className="efb-rx-watchdog-msg">ATC call detected — acknowledgment required</span>
-              <div className="efb-rx-watchdog-actions" onClick={e => e.stopPropagation()}>
-                <button className="efb-btn sm warn" onClick={commAckCall}>
-                  ACK [{commAckCountdown}s]
-                </button>
-              </div>
+              <span className="efb-rx-watchdog-msg">
+                {commWatchdogState === "pending"
+                  ? "ATC calling — monitoring for pilot response"
+                  : commWatchdogState === "alert"
+                  ? "ATC call detected — respond or press ACK"
+                  : "ATC call unanswered — acknowledgment required"}
+              </span>
+              {commWatchdogState !== "pending" && (
+                <div className="efb-rx-watchdog-actions" onClick={e => e.stopPropagation()}>
+                  <button
+                    className={`efb-btn sm ${commWatchdogState === "unanswered" ? "warn" : "caution"}`}
+                    onClick={commAckCall}
+                  >
+                    {commWatchdogState === "unanswered"
+                      ? "ACK CALL"
+                      : `ACK [${commAckCountdown}s]`}
+                  </button>
+                </div>
+              )}
             </div>
           )}
 

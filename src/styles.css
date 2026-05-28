@@ -213,29 +213,40 @@ ul, li { list-style: none; padding: 0; margin: 0; }
   flex-direction: column;
 }
 
-/* ── WATCHDOG BANNER: only rendered when commWatchdogState !== "clear" ── */
+/* ── WATCHDOG BANNER ──────────────────────────────────────────────────────────
+   Three visual states driven by data-state attribute:
+     pending    — amber: callsign heard, transmission still in progress
+     alert      — amber + countdown: tx done, pilot has 5s to respond
+     unanswered — red + pulse: countdown expired, must ACK
+   ──────────────────────────────────────────────────────────────────────────── */
 .efb-rx-watchdog {
   display: flex;
   align-items: center;
   gap: var(--s-3);
   padding: 0 var(--s-4);
   height: 36px;
-  background: var(--warn-bg);
-  border-bottom: 1px solid var(--warn-line);
+  background: var(--caution-bg);
+  border-bottom: 1px solid var(--caution-line);
   flex-shrink: 0;
+  transition: background 0.3s, border-color 0.3s;
 }
 .efb-rx-watchdog[data-state="unanswered"] {
+  background: var(--warn-bg);
+  border-bottom-color: var(--warn-line);
   animation: efb-warn-flash 0.5s ease infinite alternate;
 }
 .efb-rx-watchdog-msg {
   font-family: var(--f-ui);
   font-size: 12px;
   font-weight: 600;
-  color: var(--warn);
+  color: var(--caution);
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.efb-rx-watchdog[data-state="unanswered"] .efb-rx-watchdog-msg {
+  color: var(--warn);
 }
 .efb-rx-watchdog-actions {
   display: flex;
@@ -1218,9 +1229,10 @@ ul, li { list-style: none; padding: 0; margin: 0; }
   background: var(--t-quiet);
   flex-shrink: 0;
 }
-.efb-status-dot.ok     { background: var(--ok); }
-.efb-status-dot.warn   { background: var(--warn); }
-.efb-status-dot.accent { background: var(--accent); }
+.efb-status-dot.ok      { background: var(--ok); }
+.efb-status-dot.warn    { background: var(--warn); }
+.efb-status-dot.caution { background: var(--caution); }
+.efb-status-dot.accent  { background: var(--accent); }
 .efb-status-spacer { flex: 1; }
 .efb-divider-v { width: 1px; height: 16px; background: var(--line); flex-shrink: 0; }
 
