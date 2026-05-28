@@ -1840,7 +1840,8 @@ const commParseGround = (text) => {
   const watchdogPendingEntryRef  = useRef(null);  // the tx entry that triggered pending
   const watchdogSilenceTimerRef  = useRef(null);  // timer waiting for confirmed silence
   const watchdogInterimActiveRef = useRef(false); // true while interim text is flowing
-  const watchdogCountdownRef     = useRef(false); // true while 5s countdown is running
+  const watchdogCountdownRef     = useRef(false); // true while 5s countdown is actively running
+  const watchdogUnansweredRef    = useRef(false); // true once countdown expired — blocks RMS standdown
   const SILENCE_CONFIRM_MS       = 1800;          // ms of RMS silence before countdown starts
   const RMS_SILENCE_THRESHOLD    = 0.04;          // RMS below this = radio silence
 
@@ -1854,6 +1855,7 @@ const commParseGround = (text) => {
     clearTimeout(watchdogSilenceTimerRef.current);
     watchdogPendingEntryRef.current = entry;
     watchdogCountdownRef.current    = false;
+    watchdogUnansweredRef.current   = false;
     setCommWatchdogState("pending");
     setCommWatchdogTx(entry);
     setCommAckCountdown(0);
@@ -1873,6 +1875,8 @@ const commParseGround = (text) => {
       setCommAckCountdown(rem);
       if (rem <= 0) {
         clearInterval(commAckIntervalRef.current);
+        watchdogCountdownRef.current  = false; // countdown done — stop RMS standdown gate
+        watchdogUnansweredRef.current = true;  // lock out RMS/silence handlers until ACK
         setCommWatchdogState("unanswered");
         commPlayChime(true);
         commBeepIntervalRef.current = setInterval(() => commPlayChime(true), 2000);
@@ -1897,12 +1901,10 @@ const commParseGround = (text) => {
   // Called when a final transcript arrives — clears interim gate, starts silence wait
   const commWatchdogOnFinal = useCallback(() => {
     watchdogInterimActiveRef.current = false;
-    // Only arm the silence timer if we're in pending state
-    if (watchdogPendingEntryRef.current && !watchdogCountdownRef.current) {
+    // Only arm the silence timer if pending (not yet counting down, not unanswered)
+    if (watchdogPendingEntryRef.current && !watchdogCountdownRef.current && !watchdogUnansweredRef.current) {
       clearTimeout(watchdogSilenceTimerRef.current);
       watchdogSilenceTimerRef.current = setTimeout(() => {
-        // Final gate: check RMS is also quiet before starting countdown
-        // rmsCheckRef will have been confirming silence during this window
         commStartWatchdogCountdown();
       }, SILENCE_CONFIRM_MS);
     }
@@ -1911,11 +1913,12 @@ const commParseGround = (text) => {
   // Wire RMS check into the watchdog — called from VU meter animation frame
   watchdogRmsCheckRef.current = (rmsLevel) => {
     if (!watchdogPendingEntryRef.current) return;
+    if (watchdogUnansweredRef.current) return; // unanswered — only ACK button clears this
     if (rmsLevel > RMS_SILENCE_THRESHOLD) {
       // Audio detected — reset the silence confirmation timer
       clearTimeout(watchdogSilenceTimerRef.current);
       watchdogInterimActiveRef.current = true;
-      // If counting down and audio spikes, pilot is transmitting — standdown
+      // If countdown is actively running and audio spikes, pilot is transmitting — standdown
       if (watchdogCountdownRef.current) {
         commClearTimers();
         watchdogCountdownRef.current = false;
@@ -2168,8 +2171,9 @@ const commParseGround = (text) => {
   const commAckCall = () => {
     commClearTimers();
     clearTimeout(watchdogSilenceTimerRef.current);
-    watchdogPendingEntryRef.current = null;
-    watchdogCountdownRef.current    = false;
+    watchdogPendingEntryRef.current  = null;
+    watchdogCountdownRef.current     = false;
+    watchdogUnansweredRef.current    = false;
     watchdogInterimActiveRef.current = false;
     setCommWatchdogState("clear");
     setCommWatchdogTx(null);
