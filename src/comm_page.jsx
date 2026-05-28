@@ -1256,14 +1256,79 @@ function ArchiveLog({ txLog = [], onClearLog }) {
 }
 
 // ─── NEAREST FREQS ────────────────────────────────────────────────────────────
-// 2-column grid of up to 6 frequency tiles, drawn from the offline airport DB.
-// Uses Phoenix Sky Harbor as the default reference point.
+// Continuously updated frequency list driven by the device GPS.
+// Uses watchPosition — no user input required. Recomputes nearest airports
+// on every position update so the list stays current throughout the flight.
+// Guard 121.500 is always pinned as the last tile.
 function NearestFreqs() {
-  const DEFAULT_LAT = 33.4373;
-  const DEFAULT_LON = -112.0078;
+  const [pos,    setPos]    = useState(null);  // { lat, lon, accuracy }
+  const [fixing, setFixing] = useState(true);  // waiting for first fix
+  const [gpsErr, setGpsErr] = useState(null);  // human-readable error string
 
-  // Pull nearby airports and flatten into a prioritised frequency list
-  const airports = getNearestAirports(DEFAULT_LAT, DEFAULT_LON, 5, 100);
+  useEffect(() => {
+    if (!navigator?.geolocation) {
+      setGpsErr("Geolocation is not supported on this device.");
+      setFixing(false);
+      return;
+    }
+
+    const onSuccess = ({ coords }) => {
+      setPos({
+        lat:      coords.latitude,
+        lon:      coords.longitude,
+        accuracy: Math.round(coords.accuracy),
+      });
+      setFixing(false);
+      setGpsErr(null);
+    };
+
+    const onError = (err) => {
+      setGpsErr(
+        err.code === 1 ? "Location access denied — enable in device Settings." :
+        err.code === 2 ? "GPS signal unavailable. Check antenna / sky view." :
+                         "GPS timed out. Retrying…"
+      );
+      setFixing(false);
+    };
+
+    const watchId = navigator.geolocation.watchPosition(onSuccess, onError, {
+      enableHighAccuracy: true,
+      maximumAge:  10000,  // accept a cached fix up to 10 s old on first render
+      timeout:     20000,  // surface an error if no fix within 20 s
+    });
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
+
+  // ── Waiting for first fix ──────────────────────────────────────────────────
+  if (fixing) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, padding: "52px 24px" }}>
+        <span style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--accent)", boxShadow: "0 0 8px var(--accent)", animation: "lgd-flash 1s step-end infinite", display: "block" }}/>
+        <span style={{ fontFamily: "var(--f-mono)", fontSize: 12, color: "var(--t-secondary)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+          Acquiring GPS fix…
+        </span>
+        <span style={{ fontFamily: "var(--f-mono)", fontSize: 10, color: "var(--t-tertiary)", letterSpacing: "0.06em" }}>
+          Ensure Location Services are enabled
+        </span>
+      </div>
+    );
+  }
+
+  // ── GPS error ─────────────────────────────────────────────────────────────
+  if (gpsErr) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "52px 24px" }}>
+        <Icon name="alert" size={22} stroke={1.5}/>
+        <span style={{ fontFamily: "var(--f-mono)", fontSize: 12, color: "var(--warn)", letterSpacing: "0.06em", textAlign: "center", lineHeight: 1.6 }}>
+          {gpsErr}
+        </span>
+      </div>
+    );
+  }
+
+  // ── Live — compute tiles from real position ────────────────────────────────
+  const airports = getNearestAirports(pos.lat, pos.lon, 5, 100);
 
   const tiles = [];
   for (const ap of airports) {
@@ -1273,24 +1338,54 @@ function NearestFreqs() {
     );
     for (const f of sorted) {
       if (tiles.length >= 5) break;
-      const dist = ap.distNm < 1 ? "0 NM" : `${Math.round(ap.distNm)} NM`;
-      tiles.push({ name: f.name, freq: f.freq, apt: ap.id, dist });
+      tiles.push({
+        name: f.name,
+        freq: f.freq,
+        apt:  ap.id,
+        dist: ap.distNm < 1 ? "<1 NM" : `${Math.round(ap.distNm)} NM`,
+      });
     }
   }
-  // Guard is always last
-  tiles.push({ name: "Guard", freq: "121.500", apt: "—", dist: "—" });
+  tiles.push({ name: "Guard", freq: "121.500", apt: "EMRG", dist: "—" });
 
   return (
-    <div className="freq-grid">
-      {tiles.slice(0, 6).map((f, i) => (
-        <div key={i} className="freq-tile">
-          <div>
-            <div className="freq-name">{f.name}</div>
-            <div className="freq-apt">{f.apt} · {f.dist}</div>
-          </div>
-          <div className="freq-hz">{f.freq}</div>
+    <div>
+      {/* GPS status strip */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "6px 10px", marginBottom: 12,
+        background: "var(--bg-inset)", border: "1px solid var(--line)",
+        borderRadius: "var(--r-sm)",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+          <span style={{
+            width: 7, height: 7, borderRadius: "50%", flexShrink: 0,
+            background: "var(--ok)", boxShadow: "0 0 6px rgba(61,190,108,0.8)",
+          }}/>
+          <span style={{ fontFamily: "var(--f-mono)", fontSize: 10, color: "var(--ok)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+            GPS Live
+          </span>
         </div>
-      ))}
+        <span style={{ fontFamily: "var(--f-mono)", fontSize: 10, color: "var(--t-tertiary)", letterSpacing: "0.04em" }}>
+          {pos.lat.toFixed(4)}°&nbsp;&nbsp;{pos.lon.toFixed(4)}°
+          {pos.accuracy != null && (
+            <span style={{ marginLeft: 10, color: "var(--t-quiet)" }}>±{pos.accuracy} m</span>
+          )}
+        </span>
+      </div>
+
+      {/* Frequency tiles */}
+      <div className="freq-grid">
+        {tiles.slice(0, 6).map((f, i) => (
+          <div key={i} className="freq-tile">
+            <div>
+              <div className="freq-name">{f.name}</div>
+              <div className="freq-apt">{f.apt} · {f.dist}</div>
+            </div>
+            <div className="freq-hz">{f.freq}</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
