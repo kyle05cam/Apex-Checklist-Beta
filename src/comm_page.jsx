@@ -1136,9 +1136,11 @@ function fmtType(type) {
 }
 
 // ─── TRANSMISSION FEED ────────────────────────────────────────────────────────
-// Renders the most recent `limit` entries from txLog in archive-entry format.
-function TransmissionFeed({ txLog = [], limit = 5 }) {
-  const entries = [...txLog].reverse().slice(0, limit);
+// Renders entries from txLog in archive-entry format.
+// txLog is expected newest-first (index 0 = most recent transmission).
+// Pass `limit` to cap the number shown (active feed uses 5). Omit to show all.
+function TransmissionFeed({ txLog = [], limit }) {
+  const entries = limit !== undefined ? txLog.slice(0, limit) : txLog;
   return (
     <>
       {entries.map((e, i) => (
@@ -1163,19 +1165,31 @@ function TransmissionFeed({ txLog = [], limit = 5 }) {
 }
 
 // ─── ARCHIVE LOG ──────────────────────────────────────────────────────────────
-// Full log — up to 12 live entries, or placeholder rows when empty.
+// Full scrollable log — all transmissions, newest first.
+// Falls back to placeholder rows when the log is empty.
 const ARCHIVE_PLACEHOLDER = [
-  { id: "p1", ts: null, type: "tower",    text: "Skyhawk 12345, cleared for takeoff runway 12 center, fly heading 130." },
-  { id: "p2", ts: null, type: "ground",   text: "Skyhawk 12345, taxi to runway 12 center via Yankee, hold short Bravo." },
-  { id: "p3", ts: null, type: "clnc_del", text: "Cleared to KOAK via JANIC, climb maintain 4000, expect 8000 in 10, squawk 4271." },
   { id: "p4", ts: null, type: "atis",     text: "Information Charlie, wind 270 at 12, altimeter 29.92, runway 12 center in use." },
+  { id: "p3", ts: null, type: "clnc_del", text: "Cleared to KOAK via JANIC, climb maintain 4000, expect 8000 in 10, squawk 4271." },
+  { id: "p2", ts: null, type: "ground",   text: "Skyhawk 12345, taxi to runway 12 center via Yankee, hold short Bravo." },
+  { id: "p1", ts: null, type: "tower",    text: "Skyhawk 12345, cleared for takeoff runway 12 center, fly heading 130." },
 ];
 
 function ArchiveLog({ txLog = [] }) {
   const source = txLog.length > 0 ? txLog : ARCHIVE_PLACEHOLDER;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <TransmissionFeed txLog={source} limit={12}/>
+      {source.length === 0 ? (
+        <div style={{
+          fontFamily: "var(--f-mono)", fontSize: 11,
+          color: "var(--t-tertiary)", textAlign: "center",
+          padding: "32px 0", letterSpacing: "0.06em",
+        }}>
+          No transmissions recorded yet
+        </div>
+      ) : (
+        /* No limit — all entries scroll */
+        <TransmissionFeed txLog={source}/>
+      )}
     </div>
   );
 }
