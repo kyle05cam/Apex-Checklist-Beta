@@ -1525,53 +1525,113 @@ function NearestFreqs() {
 }
 
 // ─── NRST HEADER WIDGET ───────────────────────────────────────────────────────
-// Compact nearest-airport readout for embedding in the global radio strip header.
-// Runs its own GPS watchPosition so it stays current throughout the flight.
-// Accepts an onNavigate callback — called when the user taps the widget — so the
-// parent can jump to the Comm page with the Nearest Freqs tab already open.
+// Compact nearest-airport readout. Shows up to 5 airports — swipe left/right
+// (or tap ‹ ›) to cycle through them. Tapping the body navigates to Smart Coms.
 export function NrstWidget({ onNavigate }) {
-  const [nearest, setNearest] = useState(null);
-  const [ready,   setReady]   = useState(false);
+  const [airports,  setAirports]  = useState([]);
+  const [ready,     setReady]     = useState(false);
+  const [idx,       setIdx]       = useState(0);
+  const touchStartX = useRef(null);
+  const didSwipe    = useRef(false);
 
   useEffect(() => {
     if (!navigator?.geolocation) { setReady(true); return; }
-    const id = navigator.geolocation.watchPosition(
+    const wid = navigator.geolocation.watchPosition(
       ({ coords }) => {
-        const aps = getNearestAirports(coords.latitude, coords.longitude, 1, 500);
-        setNearest(aps[0] ?? null);
+        const aps = getNearestAirports(coords.latitude, coords.longitude, 5, 500);
+        setAirports(aps);
+        setIdx(prev => Math.min(prev, Math.max(0, aps.length - 1)));
         setReady(true);
       },
       () => setReady(true),
       { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 },
     );
-    return () => navigator.geolocation.clearWatch(id);
+    return () => navigator.geolocation.clearWatch(wid);
   }, []);
 
-  // Top 3 frequencies sorted by priority (Guard excluded — it's on every radio)
-  const topFreqs = nearest
-    ? [...nearest.freqs]
+  const airport  = airports[idx] ?? null;
+  const topFreqs = airport
+    ? [...airport.freqs]
         .filter(f => f.type !== "EMRG")
         .sort((a, b) => (FREQ_META[a.type]?.priority ?? 99) - (FREQ_META[b.type]?.priority ?? 99))
         .slice(0, 3)
     : [];
 
+  // ── Swipe handling ─────────────────────────────────────────────────────────
+  const onTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+    didSwipe.current = false;
+  };
+  const onTouchMove = (e) => {
+    if (touchStartX.current === null) return;
+    const dx = e.touches[0].clientX - touchStartX.current;
+    if (Math.abs(dx) > 8) e.stopPropagation(); // prevent parent scroll stealing
+  };
+  const onTouchEnd = (e) => {
+    if (touchStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(dx) < 30) return;             // below threshold — treat as tap
+    didSwipe.current = true;
+    if (dx < 0) setIdx(i => Math.min(i + 1, airports.length - 1)); // swipe left  → next
+    else         setIdx(i => Math.max(i - 1, 0));                    // swipe right → prev
+  };
+  const onBodyClick = () => {
+    if (didSwipe.current) { didSwipe.current = false; return; }
+    onNavigate?.();
+  };
+
+  const canPrev = idx > 0;
+  const canNext = idx < airports.length - 1;
+
   return (
-    <button className="nrst-widget" onClick={onNavigate}>
+    <div
+      className="nrst-widget"
+      onClick={onBodyClick}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      style={{ touchAction: "pan-y", cursor: "pointer" }}
+    >
+      {/* ── Header row: badge · airport ID · dist · pagination ── */}
       <div className="nrst-widget-header">
         <span className="nrst-widget-badge">NRST</span>
+
         {!ready ? (
           <span className="nrst-widget-status">Acquiring GPS…</span>
-        ) : !nearest ? (
+        ) : !airport ? (
           <span className="nrst-widget-status">No airports nearby</span>
         ) : (
           <>
-            <span className="nrst-widget-id">{nearest.id}</span>
+            <span className="nrst-widget-id">{airport.id}</span>
             <span className="nrst-widget-dist">
-              {nearest.distNm < 1 ? "<1" : Math.round(nearest.distNm)} NM
+              {airport.distNm < 1 ? "<1" : Math.round(airport.distNm)} NM
             </span>
           </>
         )}
+
+        {/* Prev / counter / next — stop propagation so body click isn't also fired */}
+        {airports.length > 1 && (
+          <div
+            className="nrst-widget-pager"
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              className="nrst-pager-btn"
+              disabled={!canPrev}
+              onClick={e => { e.stopPropagation(); setIdx(i => i - 1); }}
+            >‹</button>
+            <span className="nrst-pager-count">{idx + 1}/{airports.length}</span>
+            <button
+              className="nrst-pager-btn"
+              disabled={!canNext}
+              onClick={e => { e.stopPropagation(); setIdx(i => i + 1); }}
+            >›</button>
+          </div>
+        )}
       </div>
+
+      {/* ── Frequency rows ── */}
       {topFreqs.length > 0 && (
         <div className="nrst-widget-freqs">
           {topFreqs.map((f, i) => (
@@ -1582,6 +1642,6 @@ export function NrstWidget({ onNavigate }) {
           ))}
         </div>
       )}
-    </button>
+    </div>
   );
 }
