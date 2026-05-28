@@ -5,6 +5,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState, useEffect, useRef, useCallback } from "react";
 import { CommPage, NrstWidget } from "./comm_page.jsx";
+import { getNearestAirports } from "./nearest_freqs_data.js";
 import { Icon } from "./icons.jsx";
 
 export const PAGES = [
@@ -1046,6 +1047,194 @@ function DrawingNotepad({ title, footer, onClose, storageKey, initialImage, onSa
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// DENSITY ALTITUDE HEADER — performance block shown on T/O and Approach pages
+// Fully offline: pure ISA math + GPS-nearest airport elevation from local DB.
+// Formula: PA = elev + (29.92 − altimeter) × 1000
+//          ISA = 15 − (PA / 1000) × 2
+//          DA  = PA + 120 × (OAT − ISA)
+// ─────────────────────────────────────────────────────────────────────────────
+function DensityAltitudeHeader({ altimeter, temperature }) {
+  const [nearest,       setNearest]       = useState(null);
+  const [gpsReady,      setGpsReady]      = useState(false);
+  const [elevOverride,  setElevOverride]  = useState(null);
+  const [showOverride,  setShowOverride]  = useState(false);
+  const [overrideInput, setOverrideInput] = useState("");
+
+  useEffect(() => {
+    if (!navigator?.geolocation) { setGpsReady(true); return; }
+    const wid = navigator.geolocation.watchPosition(
+      ({ coords }) => {
+        const aps = getNearestAirports(coords.latitude, coords.longitude, 1, 500);
+        setNearest(aps[0] ?? null);
+        setGpsReady(true);
+      },
+      () => setGpsReady(true),
+      { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 }
+    );
+    return () => navigator.geolocation.clearWatch(wid);
+  }, []);
+
+  const elev    = elevOverride !== null ? elevOverride : (nearest?.elev ?? null);
+  const altNum  = parseFloat(altimeter);
+  const tempNum = parseFloat(temperature);
+  const hasData = !isNaN(altNum) && !isNaN(tempNum) && elev !== null;
+
+  let da = null;
+  if (hasData) {
+    const pressureAlt = elev + (29.92 - altNum) * 1000;
+    const isaTemp     = 15 - (pressureAlt / 1000) * 2;
+    da = Math.round(pressureAlt + 120 * (tempNum - isaTemp));
+  }
+
+  const isCaution = da !== null && elev !== null && (da - elev) >= 2000;
+  const tempF     = !isNaN(tempNum) ? Math.round(tempNum * 9 / 5 + 32) : null;
+
+  const borderColor = isCaution ? "var(--caution-line)" : "var(--line-strong)";
+  const bgColor     = isCaution ? "var(--caution-bg)"   : "var(--bg-2)";
+  const daColor     = isCaution ? "var(--caution)"       : "var(--t-primary)";
+
+  const confirmOverride = () => {
+    const v = parseInt(overrideInput.replace(/\D/g, ""), 10);
+    if (!isNaN(v) && v >= 0 && v < 30000) setElevOverride(v);
+    setShowOverride(false);
+    setOverrideInput("");
+  };
+
+  const mono = { fontFamily: "var(--f-mono)" };
+
+  return (
+    <div style={{
+      border: `1px solid ${borderColor}`,
+      borderLeft: isCaution ? "3px solid var(--caution)" : `1px solid ${borderColor}`,
+      background: bgColor,
+      borderRadius: "var(--r-md)",
+      marginBottom: 12,
+      overflow: "hidden",
+    }}>
+
+      {/* Header row: label + DA value */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "8px 12px", borderBottom: "1px solid var(--line-faint)",
+      }}>
+        <span style={{ ...mono, fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase",
+          color: isCaution ? "var(--caution)" : "var(--t-tertiary)" }}>
+          {isCaution ? "▲ DENSITY ALTITUDE — HIGH DA WARNING" : "DENSITY ALTITUDE"}
+        </span>
+        <span style={{ ...mono, fontSize: 22, fontWeight: 700, letterSpacing: "0.04em",
+          fontFeatureSettings: "var(--num-feat)", color: daColor }}>
+          {hasData
+            ? `${isCaution ? "▲ " : ""}${da.toLocaleString()} FT`
+            : "-- --- FT"
+          }
+        </span>
+      </div>
+
+      {/* Data row: airport · altimeter · OAT */}
+      <div style={{
+        display: "flex", alignItems: "center", flexWrap: "wrap",
+        padding: "7px 12px", gap: 14,
+      }}>
+
+        {/* Airport + elevation */}
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{ ...mono, fontSize: 9, color: "var(--t-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>ELEV</span>
+          {!gpsReady ? (
+            <span style={{ ...mono, fontSize: 11, color: "var(--t-quiet)" }}>GPS…</span>
+          ) : elev !== null ? (
+            <>
+              {nearest && elevOverride === null && (
+                <span style={{ ...mono, fontSize: 12, fontWeight: 700, color: "var(--accent)", letterSpacing: "0.06em" }}>
+                  {nearest.id}
+                </span>
+              )}
+              {elevOverride !== null && (
+                <span style={{ ...mono, fontSize: 9, color: "var(--caution)", letterSpacing: "0.06em" }}>OVERRIDE</span>
+              )}
+              <span style={{ ...mono, fontSize: 12, fontWeight: 600, color: "var(--t-primary)", fontFeatureSettings: "var(--num-feat)" }}>
+                {elev.toLocaleString()} ft
+              </span>
+              {elevOverride !== null && (
+                <button onClick={() => setElevOverride(null)} style={{
+                  ...mono, fontSize: 10, color: "var(--warn)",
+                  background: "transparent", border: "none", cursor: "pointer", padding: "0 2px",
+                }}>×</button>
+              )}
+            </>
+          ) : (
+            <span style={{ ...mono, fontSize: 11, color: "var(--t-quiet)" }}>—</span>
+          )}
+          {!showOverride && (
+            <button onClick={() => { setShowOverride(true); setOverrideInput(elev !== null ? String(elev) : ""); }} style={{
+              ...mono, fontSize: 9, color: "var(--t-quiet)",
+              background: "transparent", border: "none", cursor: "pointer", padding: "0 2px", lineHeight: 1,
+            }} title="Override elevation">↻</button>
+          )}
+        </div>
+
+        {/* Altimeter */}
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{ ...mono, fontSize: 9, color: "var(--t-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>ALT</span>
+          <span style={{ ...mono, fontSize: 12, fontWeight: 600, color: altimeter ? "var(--t-primary)" : "var(--t-quiet)" }}>
+            {altimeter || "—"}
+          </span>
+        </div>
+
+        {/* OAT */}
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{ ...mono, fontSize: 9, color: "var(--t-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>OAT</span>
+          <span style={{ ...mono, fontSize: 12, fontWeight: 600, color: !isNaN(tempNum) ? "var(--t-primary)" : "var(--t-quiet)" }}>
+            {!isNaN(tempNum) ? `${tempNum}°C / ${tempF}°F` : "—"}
+          </span>
+        </div>
+
+        {/* Missing-data nudge */}
+        {!hasData && (
+          <span style={{ marginLeft: "auto", ...mono, fontSize: 9, color: "var(--accent)", letterSpacing: "0.06em", opacity: 0.8 }}>
+            Capture ATIS to calculate ›
+          </span>
+        )}
+      </div>
+
+      {/* Elevation override input */}
+      {showOverride && (
+        <div style={{
+          padding: "8px 12px", borderTop: "1px solid var(--line-faint)",
+          display: "flex", alignItems: "center", gap: 8, background: "var(--bg-inset)",
+        }}>
+          <span style={{ ...mono, fontSize: 9, color: "var(--t-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            Override Elev (ft MSL)
+          </span>
+          <input
+            value={overrideInput}
+            onChange={e => setOverrideInput(e.target.value.replace(/\D/g, ""))}
+            inputMode="numeric"
+            autoFocus
+            onKeyDown={e => { if (e.key === "Enter") confirmOverride(); if (e.key === "Escape") { setShowOverride(false); setOverrideInput(""); } }}
+            style={{
+              flex: 1, background: "var(--bg-1)", border: "1px solid var(--accent-line)",
+              borderRadius: "var(--r-sm)", color: "var(--t-primary)",
+              fontFamily: "var(--f-mono)", fontSize: 14, fontWeight: 600,
+              padding: "5px 8px", outline: "none", textAlign: "center",
+            }}
+          />
+          <button onClick={confirmOverride} style={{
+            ...mono, fontSize: 10, fontWeight: 700,
+            background: "var(--accent-bg)", border: "1px solid var(--accent-line)",
+            color: "var(--accent)", borderRadius: "var(--r-sm)", cursor: "pointer", padding: "5px 10px",
+          }}>SET</button>
+          <button onClick={() => { setShowOverride(false); setOverrideInput(""); }} style={{
+            ...mono, fontSize: 10,
+            background: "transparent", border: "1px solid var(--line)",
+            color: "var(--t-tertiary)", borderRadius: "var(--r-sm)", cursor: "pointer", padding: "5px 10px",
+          }}>CANCEL</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // CHECKLIST APP — the full interactive kneeboard for a single aircraft
 // Import this into apex_kneeboard.jsx
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1112,7 +1301,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   const [commFreqTabTrigger, setCommFreqTabTrigger] = useState(0);
   const [commForceIfr,      setCommForceIfr]      = useState(false);
   const [commIfrData,       setCommIfrData]       = useState({ C:"",R:"",A:"",F:"",T:"" });
-  const [commAtisData,      setCommAtisData]      = useState({ info:"",wind:"",altimeter:"",visibility:"",sky:"",caution:"" });
+  const [commAtisData,      setCommAtisData]      = useState({ info:"",wind:"",altimeter:"",temperature:"",visibility:"",sky:"",caution:"" });
   const [commGndData,       setCommGndData]        = useState({ clearedTo:"",route:"",altitude:"",frequency:"",taxi:"",squawk:"" });
   const [commTaxiData,      setCommTaxiData]      = useState({ runway:"",route:"",holdShort:"",instructions:"" });
   const commWorkerRef       = useRef(null);
@@ -1674,7 +1863,7 @@ const commParseTaxi = (text) => {
   };
 
 const commParseAtis = (text) => {
-    const r = { info:"", wind:"", altimeter:"", visibility:"", sky:"", caution:"" };
+    const r = { info:"", wind:"", altimeter:"", temperature:"", visibility:"", sky:"", caution:"" };
     const t = normalizePhonetic(text);
 
     // Information identifier — broadcast: "information B" or pilot readback:
@@ -1737,6 +1926,11 @@ const commParseAtis = (text) => {
         ? `${raw.slice(0,2)}.${raw.slice(2)}`
         : bestAltm;
     }
+
+    // Temperature — ATIS broadcasts in °C: "temperature 28 dewpoint 14"
+    // normalizePhonetic already converted digit words to numerals above
+    const tempCMatch = t.match(/temperature\s+(-?\d{1,3})/i);
+    if (tempCMatch) r.temperature = tempCMatch[1];
 
     // Visibility — after normalizeAtcSpeech homophones are already corrected
     const vis = t.match(/visibility\s+(\d+(?:\.\d+)?)/i);
@@ -2506,6 +2700,13 @@ const commParseGround = (text) => {
           </div>
         </div>
 
+        {(pg.id === "takeoff" || pg.id === "approach") && (
+          <DensityAltitudeHeader
+            altimeter={commAtisData.altimeter}
+            temperature={commAtisData.temperature}
+          />
+        )}
+
         {pg.sections.map((section, si) => {
           const sectionKey = getSectionKey(pg.id, section.title);
           const custom = getSectionCustom(pg.id, section.title);
@@ -2991,7 +3192,7 @@ const commParseGround = (text) => {
                   atisArmState={atisArmState}
                   atisRawText={atisRawText}
                   onArmAtis={handleArmAtis}
-                  onClearAtisRaw={() => { setAtisRawText(""); atisArmStateRef.current = "idle"; setAtisArmState("idle"); setCommAtisData({ info:"",wind:"",altimeter:"",visibility:"",sky:"",caution:"" }); clearTimeout(atisSilenceRef.current); }}
+                  onClearAtisRaw={() => { setAtisRawText(""); atisArmStateRef.current = "idle"; setAtisArmState("idle"); setCommAtisData({ info:"",wind:"",altimeter:"",temperature:"",visibility:"",sky:"",caution:"" }); clearTimeout(atisSilenceRef.current); }}
                   taxiData={commTaxiData}
                   onSetTaxiData={setCommTaxiData}
                   taxiArmState={taxiArmState}

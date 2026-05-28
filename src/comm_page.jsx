@@ -92,6 +92,7 @@ const CLEARANCES = [
       { id: "ident", label: "Information", placeholder: "Ident letter" },
       { id: "wind",  label: "Wind",        placeholder: "Dir/speed (e.g. 270° at 12kt)" },
       { id: "alt",   label: "Altimeter",   placeholder: "e.g. 29.92",  inputMode: "decimal" },
+      { id: "temp",  label: "Temperature", placeholder: "e.g. 28°C",  inputMode: "numeric" },
       { id: "vis",   label: "Visibility",  placeholder: "e.g. 10SM" },
       { id: "sky",   label: "Sky",         placeholder: "e.g. FEW 3500" },
       { id: "caut",  label: "Caution",     placeholder: "NOTAMs / hazards / advisories" },
@@ -177,8 +178,9 @@ export function CommPage({
   const getFieldValue = (id) => {
     const map = {
       ident: atisData?.info,        wind:  atisData?.wind,
-      alt:   atisData?.altimeter,   vis:   atisData?.visibility,
-      sky:   atisData?.sky,         caut:  atisData?.caution,
+      alt:   atisData?.altimeter,   temp:  atisData?.temperature,
+      vis:   atisData?.visibility,  sky:   atisData?.sky,
+      caut:  atisData?.caution,
       rwy:   taxiData?.runway,      via:   taxiData?.route,
       hold:  taxiData?.holdShort,   instr: taxiData?.instructions,
       to:    gndData?.clearedTo,    route: gndData?.route,
@@ -190,7 +192,7 @@ export function CommPage({
 
   // ── Map design field IDs → parent set callbacks ──
   const setField = (id, value) => {
-    const atisMap = { ident: "info", wind: "wind", alt: "altimeter", vis: "visibility", sky: "sky", caut: "caution" };
+    const atisMap = { ident: "info", wind: "wind", alt: "altimeter", temp: "temperature", vis: "visibility", sky: "sky", caut: "caution" };
     const taxiMap = { rwy: "runway", via: "route", hold: "holdShort", instr: "instructions" };
     const gndMap  = { to: "clearedTo", route: "route", alt2: "altitude", freq: "frequency", sq: "squawk" };
     if (id in atisMap)      onSetAtisData?.({ ...atisData, [atisMap[id]]: value });
@@ -540,6 +542,7 @@ function EditPopover({ fieldId, label, initialValue, inputMode = "text", onConfi
              fieldId === "vis"   ? "Enter visibility — SM will be appended" :
              fieldId === "sky"   ? "Select condition, then enter altitude if required" :
              fieldId === "alt"   ? "Type 4 digits — decimal placed automatically (e.g. 2994 → 29.94)" :
+             fieldId === "temp"  ? "Enter temperature in °C as broadcast in ATIS (e.g. 28 for 28°C)" :
              fieldId === "via"   ? "Type taxiways without spaces — arrows added automatically (e.g. YBA → Y > B > A)" :
              fieldId === "route" ? "Tap As Filed or enter a custom route — all caps" :
              fieldId === "alt2"  ? "Enter maintain altitude, expected altitude, and minutes" :
@@ -593,6 +596,9 @@ function DefaultEditor({ fieldId, initialValue, inputMode = "text", onConfirm, o
     } else if (fieldId === "freq") {
       const digits = raw.replace(/\D/g, "").slice(0, 4);
       setVal(digits.length > 3 ? `${digits.slice(0, 3)}.${digits.slice(3)}` : digits);
+    } else if (fieldId === "temp") {
+      // Allow negative integers for sub-zero temperatures
+      setVal(raw.replace(/[^\d-]/g, "").replace(/(-?\d*).*/, "$1"));
     } else if (fieldId === "ident" || fieldId === "rwy" || fieldId === "hold" || fieldId === "to") {
       setVal(raw.toUpperCase());
     } else if (fieldId === "via") {
