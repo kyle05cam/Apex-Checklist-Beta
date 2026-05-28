@@ -1321,66 +1321,66 @@ function DensityAltitudeHeader({ altimeter, temperature, windDir, windSpeed, win
       {/* ── Input data row: ELEV · ALT · OAT · override · nudge ─────────────── */}
       <div style={{
         display: "flex", alignItems: "center", flexWrap: "wrap",
-        padding: "6px 12px", gap: 14,
+        padding: "7px 12px", gap: 16,
         borderTop: "1px solid var(--line-faint)",
         background: "rgba(0,0,0,0.12)",
       }}>
 
         {/* Airport + elevation */}
-        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <span style={{ ...mono, fontSize: 8, color: "var(--t-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>ELEV</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ ...mono, fontSize: 9, color: "var(--t-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>ELEV</span>
           {!gpsReady ? (
-            <span style={{ ...mono, fontSize: 11, color: "var(--t-quiet)" }}>GPS…</span>
+            <span style={{ ...mono, fontSize: 14, color: "var(--t-quiet)" }}>GPS…</span>
           ) : elev !== null ? (
             <>
               {nearest && elevOverride === null && (
-                <span style={{ ...mono, fontSize: 11, fontWeight: 700, color: "var(--accent)", letterSpacing: "0.06em" }}>
+                <span style={{ ...mono, fontSize: 14, fontWeight: 700, color: "var(--accent)", letterSpacing: "0.06em" }}>
                   {nearest.id}
                 </span>
               )}
               {elevOverride !== null && (
-                <span style={{ ...mono, fontSize: 8, color: "var(--caution)", letterSpacing: "0.06em" }}>OVERRIDE</span>
+                <span style={{ ...mono, fontSize: 9, color: "var(--caution)", letterSpacing: "0.06em" }}>OVERRIDE</span>
               )}
-              <span style={{ ...mono, fontSize: 11, fontWeight: 600, color: "var(--t-primary)", fontFeatureSettings: "var(--num-feat)" }}>
+              <span style={{ ...mono, fontSize: 14, fontWeight: 600, color: "var(--t-primary)", fontFeatureSettings: "var(--num-feat)" }}>
                 {elev.toLocaleString()} ft
               </span>
               {elevOverride !== null && (
                 <button onClick={e => { e.stopPropagation(); setElevOverride(null); }} style={{
-                  ...mono, fontSize: 10, color: "var(--warn)",
+                  ...mono, fontSize: 11, color: "var(--warn)",
                   background: "transparent", border: "none", cursor: "pointer", padding: "0 2px",
                 }}>×</button>
               )}
             </>
           ) : (
-            <span style={{ ...mono, fontSize: 11, color: "var(--t-quiet)" }}>—</span>
+            <span style={{ ...mono, fontSize: 14, color: "var(--t-quiet)" }}>—</span>
           )}
           {!showOverride && (
             <button onClick={e => { e.stopPropagation(); setShowOverride(true); setOverrideInput(elev !== null ? String(elev) : ""); }} style={{
-              ...mono, fontSize: 8, color: "var(--t-quiet)",
+              ...mono, fontSize: 10, color: "var(--t-quiet)",
               background: "transparent", border: "none", cursor: "pointer", padding: "0 2px", lineHeight: 1,
             }} title="Override elevation">↻</button>
           )}
         </div>
 
         {/* Altimeter */}
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <span style={{ ...mono, fontSize: 8, color: "var(--t-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>ALT</span>
-          <span style={{ ...mono, fontSize: 11, fontWeight: 600, color: altimeter ? "var(--t-primary)" : "var(--t-quiet)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{ ...mono, fontSize: 9, color: "var(--t-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>ALT</span>
+          <span style={{ ...mono, fontSize: 14, fontWeight: 600, color: altimeter ? "var(--t-primary)" : "var(--t-quiet)" }}>
             {altimeter || "—"}
           </span>
         </div>
 
         {/* OAT */}
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <span style={{ ...mono, fontSize: 8, color: "var(--t-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>OAT</span>
-          <span style={{ ...mono, fontSize: 11, fontWeight: 600, color: !isNaN(tempNum) ? "var(--t-primary)" : "var(--t-quiet)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{ ...mono, fontSize: 9, color: "var(--t-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>OAT</span>
+          <span style={{ ...mono, fontSize: 14, fontWeight: 600, color: !isNaN(tempNum) ? "var(--t-primary)" : "var(--t-quiet)" }}>
             {!isNaN(tempNum) ? `${tempNum}°C / ${tempF}°F` : "—"}
           </span>
         </div>
 
         {/* Missing-data nudge */}
         {!hasData && (
-          <span style={{ marginLeft: "auto", ...mono, fontSize: 8, color: "var(--accent)", letterSpacing: "0.06em", opacity: 0.75 }}>
+          <span style={{ marginLeft: "auto", ...mono, fontSize: 9, color: "var(--accent)", letterSpacing: "0.06em", opacity: 0.75 }}>
             {!altimeter && !temperature ? "Capture ATIS ›" : !altimeter ? "Need altimeter ›" : "Need temperature ›"}
           </span>
         )}
@@ -1445,14 +1445,14 @@ function DensityAltitudeHeader({ altimeter, temperature, windDir, windSpeed, win
                   fontFeatureSettings: "var(--num-feat)", color: resolvedRunway ? "var(--t-primary)" : "var(--t-quiet)", lineHeight: 1 }}>
                   {resolvedRunway || "—"}
                 </div>
-                {/* Source badge inline with number */}
-                {rwySource && (
+                {/* Only show badge when manually overridden — ATIS source is implied */}
+                {rwySource === "MANUAL" && (
                   <span style={{
                     ...mono, fontSize: 7, letterSpacing: "0.06em",
-                    color: rwySource === "MANUAL" ? "var(--caution)" : "var(--t-quiet)",
-                    border: `1px solid ${rwySource === "MANUAL" ? "var(--caution-line)" : "var(--line-faint)"}`,
+                    color: "var(--caution)",
+                    border: "1px solid var(--caution-line)",
                     borderRadius: "var(--r-sm)", padding: "1px 4px",
-                  }}>{rwySource}</span>
+                  }}>MANUAL</span>
                 )}
               </div>
               {/* Sub-row: edit / clear */}
