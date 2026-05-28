@@ -149,6 +149,7 @@ export function CommPage({
   onStartListen,
   onStopListen,
   onReplay,
+  onClearLog,
   atisData,  onSetAtisData,  atisArmState,  onArmAtis,  onClearAtisRaw,
   taxiData,  onSetTaxiData,  taxiArmState,  onArmTaxi,  onClearTaxiRaw,
   gndData,   onSetGndData,   gndArmState,   onArmGnd,   onClearGndRaw,
@@ -390,7 +391,7 @@ export function CommPage({
           </>
         )}
 
-        {tab === "archive" && <ArchiveLog txLog={txLog}/>}
+        {tab === "archive" && <ArchiveLog txLog={txLog} onClearLog={onClearLog}/>}
         {tab === "freq"    && <NearestFreqs/>}
 
       </div>
@@ -1165,8 +1166,11 @@ function TransmissionFeed({ txLog = [], limit }) {
 }
 
 // ─── ARCHIVE LOG ──────────────────────────────────────────────────────────────
-// Full scrollable log — all transmissions, newest first.
+// Full scrollable log — all transmissions, newest first, paginated in batches
+// of PAGE_SIZE so the list stays fast even with thousands of entries.
 // Falls back to placeholder rows when the log is empty.
+const PAGE_SIZE = 20;
+
 const ARCHIVE_PLACEHOLDER = [
   { id: "p4", ts: null, type: "atis",     text: "Information Charlie, wind 270 at 12, altimeter 29.92, runway 12 center in use." },
   { id: "p3", ts: null, type: "clnc_del", text: "Cleared to KOAK via JANIC, climb maintain 4000, expect 8000 in 10, squawk 4271." },
@@ -1174,22 +1178,87 @@ const ARCHIVE_PLACEHOLDER = [
   { id: "p1", ts: null, type: "tower",    text: "Skyhawk 12345, cleared for takeoff runway 12 center, fly heading 130." },
 ];
 
-function ArchiveLog({ txLog = [] }) {
-  const source = txLog.length > 0 ? txLog : ARCHIVE_PLACEHOLDER;
+function ArchiveLog({ txLog = [], onClearLog }) {
+  const [shown,        setShown]        = useState(PAGE_SIZE);
+  const [confirmClear, setConfirmClear] = useState(false);
+
+  const isPlaceholder = txLog.length === 0;
+  const source  = isPlaceholder ? ARCHIVE_PLACEHOLDER : txLog;
+  const visible = source.slice(0, shown);
+  const remaining = source.length - shown;
+
+  // Reset pagination when the log changes (e.g. after clear)
+  useEffect(() => { setShown(PAGE_SIZE); setConfirmClear(false); }, [txLog]);
+
+  const handleClear = () => {
+    onClearLog?.();
+    setConfirmClear(false);
+  };
+
+  const mono = { fontFamily: "var(--f-mono)" };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+
+      {/* Header bar — count + clear control */}
+      {!isPlaceholder && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+          <span style={{ ...mono, fontSize: 10, color: "var(--t-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            {txLog.length} transmission{txLog.length !== 1 ? "s" : ""} stored
+          </span>
+
+          {!confirmClear ? (
+            <button
+              className="btn btn-sm btn-ghost"
+              onClick={() => setConfirmClear(true)}
+              style={{ fontSize: 11, color: "var(--warn)" }}
+            >
+              Clear Log
+            </button>
+          ) : (
+            <div style={{ display: "flex", gap: 6 }}>
+              <button
+                className="btn btn-sm btn-ghost"
+                onClick={() => setConfirmClear(false)}
+                style={{ fontSize: 11 }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-sm btn-warn"
+                onClick={handleClear}
+                style={{ fontSize: 11, fontWeight: 700 }}
+              >
+                Confirm Clear
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Entries */}
       {source.length === 0 ? (
-        <div style={{
-          fontFamily: "var(--f-mono)", fontSize: 11,
-          color: "var(--t-tertiary)", textAlign: "center",
-          padding: "32px 0", letterSpacing: "0.06em",
-        }}>
+        <div style={{ ...mono, fontSize: 11, color: "var(--t-tertiary)", textAlign: "center", padding: "32px 0", letterSpacing: "0.06em" }}>
           No transmissions recorded yet
         </div>
       ) : (
-        /* No limit — all entries scroll */
-        <TransmissionFeed txLog={source}/>
+        <TransmissionFeed txLog={visible}/>
       )}
+
+      {/* Load more */}
+      {remaining > 0 && (
+        <button
+          className="btn btn-sm btn-ghost"
+          onClick={() => setShown(s => s + PAGE_SIZE)}
+          style={{ width: "100%", marginTop: 4, fontSize: 12, letterSpacing: "0.04em" }}
+        >
+          Show {Math.min(PAGE_SIZE, remaining)} more
+          <span style={{ ...mono, fontSize: 10, color: "var(--t-tertiary)", marginLeft: 8 }}>
+            {remaining} remaining
+          </span>
+        </button>
+      )}
+
     </div>
   );
 }

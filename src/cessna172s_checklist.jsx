@@ -1949,7 +1949,7 @@ const commParseGround = (text) => {
     const tokens = (type==="landing"||type==="pattern") ? commParseLanding(corrected) : null;
     const nwkraft= (type==="ifr_departure"||type==="ifr_approach"||commForceIfr) ? commParseCraft(corrected) : null;
     const entry  = { id:++commTxIdRef.current, text:corrected, ts:new Date(), type, tokens, nwkraft };
-    setCommTxLog(prev=>[entry,...prev].slice(0,40));
+    setCommTxLog(prev => { const next = [entry, ...prev]; saveCommTxLog(next); return next; });
     if (nwkraft) setCommIfrData(nwkraft);
     if (commCallsignRxRef.current && commCallsignRxRef.current.test(corrected)) commTriggerWatchdog(entry);
     // Final text arrived — start silence confirmation window for watchdog
@@ -2242,6 +2242,16 @@ const commParseGround = (text) => {
         
         const sp = localStorage.getItem("scratchpad-text");
         if (sp) setScratchpadText(sp);
+
+        const tl = localStorage.getItem("apex-tx-log");
+        if (tl) {
+          const parsed = JSON.parse(tl);
+          setCommTxLog(parsed);
+          // Restore ID counter so new entries don't collide with stored IDs
+          if (parsed.length > 0) {
+            commTxIdRef.current = Math.max(...parsed.map(e => (typeof e.id === "number" ? e.id : 0)));
+          }
+        }
       } catch {}
     };
     if (typeof window !== "undefined") load();
@@ -2263,10 +2273,16 @@ const commParseGround = (text) => {
     } catch {}
   };
 
-  const saveVspeeds = (next) => { try { localStorage.setItem("kneeboard-vspeeds", JSON.stringify(next)); } catch {} };
-  const savePerfData = (next) => { try { localStorage.setItem("kneeboard-perfdata", JSON.stringify(next)); } catch {} };
+  const saveVspeeds   = (next) => { try { localStorage.setItem("kneeboard-vspeeds",  JSON.stringify(next)); } catch {} };
+  const savePerfData  = (next) => { try { localStorage.setItem("kneeboard-perfdata",  JSON.stringify(next)); } catch {} };
   const saveClimbData = (next) => { try { localStorage.setItem("kneeboard-climbdata", JSON.stringify(next)); } catch {} };
-  const saveCruiseData = (next) => { try { localStorage.setItem("kneeboard-cruisedata", JSON.stringify(next)); } catch {} };
+  const saveCruiseData= (next) => { try { localStorage.setItem("kneeboard-cruisedata",JSON.stringify(next)); } catch {} };
+  const saveCommTxLog = (next) => { try { localStorage.setItem("apex-tx-log",         JSON.stringify(next)); } catch {} };
+
+  const commClearTxLog = () => {
+    setCommTxLog([]);
+    try { localStorage.removeItem("apex-tx-log"); } catch {}
+  };
 
   const updateVspeed = (gi, ii, field, val) => {
     setVspeeds(prev => { const next = prev.map((g, gIdx) => gIdx !== gi ? g : { ...g, items: g.items.map((item, iIdx) => iIdx !== ii ? item : { ...item, [field]: val }) }); saveVspeeds(next); return next; });
@@ -2932,6 +2948,7 @@ const commParseGround = (text) => {
                   rmsLevel={commRmsLevel}
                   transcript={commTranscript}
                   txLog={commTxLog}
+                  onClearLog={commClearTxLog}
                   watchdogState={commWatchdogState}
                   watchdogTx={commWatchdogTx}
                   ackCountdown={commAckCountdown}
