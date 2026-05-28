@@ -1261,9 +1261,10 @@ function ArchiveLog({ txLog = [], onClearLog }) {
 // on every position update so the list stays current throughout the flight.
 // Guard 121.500 is always pinned as the last tile.
 function NearestFreqs() {
-  const [pos,    setPos]    = useState(null);  // { lat, lon, accuracy }
-  const [fixing, setFixing] = useState(true);  // waiting for first fix
-  const [gpsErr, setGpsErr] = useState(null);  // human-readable error string
+  const [pos,          setPos]          = useState(null);  // { lat, lon, accuracy }
+  const [fixing,       setFixing]       = useState(true);  // waiting for first fix
+  const [gpsErr,       setGpsErr]       = useState(null);  // human-readable error string
+  const [visibleCount, setVisibleCount] = useState(7);     // airports shown
 
   useEffect(() => {
     if (!navigator?.geolocation) {
@@ -1327,26 +1328,11 @@ function NearestFreqs() {
     );
   }
 
-  // ── Live — compute tiles from real position ────────────────────────────────
-  const airports = getNearestAirports(pos.lat, pos.lon, 5, 100);
-
-  const tiles = [];
-  for (const ap of airports) {
-    if (tiles.length >= 5) break;
-    const sorted = [...ap.freqs].sort(
-      (a, b) => (FREQ_META[a.type]?.priority ?? 99) - (FREQ_META[b.type]?.priority ?? 99)
-    );
-    for (const f of sorted) {
-      if (tiles.length >= 5) break;
-      tiles.push({
-        name: f.name,
-        freq: f.freq,
-        apt:  ap.id,
-        dist: ap.distNm < 1 ? "<1 NM" : `${Math.round(ap.distNm)} NM`,
-      });
-    }
-  }
-  tiles.push({ name: "Guard", freq: "121.500", apt: "EMRG", dist: "—" });
+  // ── Live — compute groups from real position ──────────────────────────────
+  // Pull up to 50 airports within 100 nm, sorted nearest-first
+  const airports = getNearestAirports(pos.lat, pos.lon, 50, 100);
+  const visible   = airports.slice(0, visibleCount);
+  const remaining = airports.length - visibleCount;
 
   return (
     <div>
@@ -1374,17 +1360,56 @@ function NearestFreqs() {
         </span>
       </div>
 
-      {/* Frequency tiles */}
-      <div className="freq-grid">
-        {tiles.slice(0, 6).map((f, i) => (
-          <div key={i} className="freq-tile">
-            <div>
-              <div className="freq-name">{f.name}</div>
-              <div className="freq-apt">{f.apt} · {f.dist}</div>
+      {/* Airport groups */}
+      <div className="freq-list">
+        {visible.map(ap => {
+          const freqs = [...ap.freqs]
+            .filter(f => f.type !== "EMRG")
+            .sort((a, b) => (FREQ_META[a.type]?.priority ?? 99) - (FREQ_META[b.type]?.priority ?? 99));
+          return (
+            <div key={ap.id} className="freq-airport">
+              <div className="freq-airport-head">
+                <div style={{ display: "flex", alignItems: "baseline", minWidth: 0 }}>
+                  <span className="freq-airport-id">{ap.id}</span>
+                  <span className="freq-airport-name">{ap.name}</span>
+                </div>
+                <span className="freq-airport-dist">
+                  {ap.distNm < 1 ? "<1 NM" : `${Math.round(ap.distNm)} NM`}
+                </span>
+              </div>
+              {freqs.map((f, i) => (
+                <div key={i} className="freq-row">
+                  <span className="freq-type">{f.type}</span>
+                  <span className="freq-row-name">{f.name}</span>
+                  <span className="freq-hz">{f.freq}</span>
+                </div>
+              ))}
             </div>
-            <div className="freq-hz">{f.freq}</div>
+          );
+        })}
+
+        {/* Load more */}
+        {remaining > 0 && (
+          <button
+            className="btn btn-sm btn-ghost"
+            onClick={() => setVisibleCount(c => c + 7)}
+            style={{ width: "100%", fontFamily: "var(--f-mono)", fontSize: 12, letterSpacing: "0.04em" }}
+          >
+            Load 7 more
+            <span style={{ fontFamily: "var(--f-mono)", fontSize: 10, color: "var(--t-tertiary)", marginLeft: 10 }}>
+              {remaining} airport{remaining !== 1 ? "s" : ""} remaining
+            </span>
+          </button>
+        )}
+
+        {/* Guard — always pinned */}
+        <div className="freq-guard">
+          <div className="freq-guard-label">
+            <span className="freq-guard-type">EMRG</span>
+            <span className="freq-guard-name">Guard</span>
           </div>
-        ))}
+          <span className="freq-hz">121.500</span>
+        </div>
       </div>
     </div>
   );
