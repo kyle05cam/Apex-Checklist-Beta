@@ -1554,7 +1554,6 @@ export function NrstWidget({ onNavigate }) {
     ? [...airport.freqs]
         .filter(f => f.type !== "EMRG")
         .sort((a, b) => (FREQ_META[a.type]?.priority ?? 99) - (FREQ_META[b.type]?.priority ?? 99))
-        .slice(0, 3)
     : [];
 
   const selectAirport = (i) => {
