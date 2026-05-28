@@ -90,6 +90,7 @@ const CLEARANCES = [
     sub: "Tap ARM to capture",
     fields: [
       { id: "ident", label: "Information", placeholder: "Ident letter" },
+      { id: "arwy",  label: "Active RWY",  placeholder: "e.g. 22 or 04L", inputMode: "numeric" },
       { id: "wind",  label: "Wind",        placeholder: "Dir/speed (e.g. 270° at 12kt)" },
       { id: "alt",   label: "Altimeter",   placeholder: "e.g. 29.92",  inputMode: "decimal" },
       { id: "temp",  label: "Temperature", placeholder: "e.g. 28°C",  inputMode: "numeric" },
@@ -177,10 +178,10 @@ export function CommPage({
   // ── Map design field IDs → parent data values ──
   const getFieldValue = (id) => {
     const map = {
-      ident: atisData?.info,        wind:  atisData?.wind,
-      alt:   atisData?.altimeter,   temp:  atisData?.temperature,
-      vis:   atisData?.visibility,  sky:   atisData?.sky,
-      caut:  atisData?.caution,
+      ident: atisData?.info,        arwy:  atisData?.activeRunway,
+      wind:  atisData?.wind,        alt:   atisData?.altimeter,
+      temp:  atisData?.temperature, vis:   atisData?.visibility,
+      sky:   atisData?.sky,         caut:  atisData?.caution,
       rwy:   taxiData?.runway,      via:   taxiData?.route,
       hold:  taxiData?.holdShort,   instr: taxiData?.instructions,
       to:    gndData?.clearedTo,    route: gndData?.route,
@@ -192,7 +193,7 @@ export function CommPage({
 
   // ── Map design field IDs → parent set callbacks ──
   const setField = (id, value) => {
-    const atisMap = { ident: "info", wind: "wind", alt: "altimeter", temp: "temperature", vis: "visibility", sky: "sky", caut: "caution" };
+    const atisMap = { ident: "info", arwy: "activeRunway", wind: "wind", alt: "altimeter", temp: "temperature", vis: "visibility", sky: "sky", caut: "caution" };
     const taxiMap = { rwy: "runway", via: "route", hold: "holdShort", instr: "instructions" };
     const gndMap  = { to: "clearedTo", route: "route", alt2: "altitude", freq: "frequency", sq: "squawk" };
     if (id in atisMap)      onSetAtisData?.({ ...atisData, [atisMap[id]]: value });
@@ -538,7 +539,8 @@ function EditPopover({ fieldId, label, initialValue, inputMode = "text", onConfi
             fontFamily: "var(--f-mono)", fontSize: 11,
             color: "var(--t-tertiary)", letterSpacing: "0.06em",
           }}>
-            {fieldId === "wind"  ? "Enter speed, direction, and optional gust" :
+            {fieldId === "arwy"  ? "Active runway from ATIS — runway number × 10 = heading (e.g. 22 → 220°). Drives HW/XW in the performance banner." :
+             fieldId === "wind"  ? "Enter speed, direction, and optional gust" :
              fieldId === "vis"   ? "Enter visibility — SM will be appended" :
              fieldId === "sky"   ? "Select condition, then enter altitude if required" :
              fieldId === "alt"   ? "Type 4 digits — decimal placed automatically (e.g. 2994 → 29.94)" :
@@ -599,6 +601,9 @@ function DefaultEditor({ fieldId, initialValue, inputMode = "text", onConfirm, o
     } else if (fieldId === "temp") {
       // Allow negative integers for sub-zero temperatures
       setVal(raw.replace(/[^\d-]/g, "").replace(/(-?\d*).*/, "$1"));
+    } else if (fieldId === "arwy") {
+      // Runway number 01–36 with optional L/R/C suffix — e.g. "22", "04L"
+      setVal(raw.toUpperCase().replace(/[^0-9LRC]/g, "").slice(0, 3));
     } else if (fieldId === "ident" || fieldId === "rwy" || fieldId === "hold" || fieldId === "to") {
       setVal(raw.toUpperCase());
     } else if (fieldId === "via") {

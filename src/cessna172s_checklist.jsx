@@ -1055,16 +1055,29 @@ function DrawingNotepad({ title, footer, onClose, storageKey, initialImage, onSa
 //          DA  = PA + 120 × (OAT − ISA)
 // ─────────────────────────────────────────────────────────────────────────────
 
-// C172S POH performance breakpoints [pressure_alt_ft, distance_ft]
-const DA_PERF_TO = {
-  label:    "TAKEOFF · NORMAL · FLAPS 0°",
-  gndRoll:  [[0, 960],  [2000, 1125], [4000, 1325], [6000, 1580]],
-  over50ft: [[0, 1630], [2000, 1920], [4000, 2270], [6000, 2720]],
-};
-const DA_PERF_LDG = {
-  label:    "LANDING · NORMAL · FLAPS 30°",
-  gndRoll:  [[0, 550],  [2000, 620],  [4000, 700],  [6000, 800]],
-  over50ft: [[0, 1335], [2000, 1480], [4000, 1640], [6000, 1830]],
+// ── POH Performance Schema ────────────────────────────────────────────────────
+// Default C172S values (POH Section 5). source:"DEFAULT" will flip to
+// "UPLOADED" once the POH-upload feature is built and data is parsed.
+// Tables: [density_altitude_ft, distance_ft] breakpoints from published charts.
+const C172S_POH_DEFAULT = {
+  source:         "DEFAULT",   // "DEFAULT" | "UPLOADED" | "MANUAL"
+  aircraft:       "Cessna 172S",
+  maxGrossWeight: 2550,        // lbs
+  maxCrosswind:   15,          // KIAS — max demonstrated crosswind (C172S POH §2)
+  takeoff: {
+    label:      "TAKEOFF · NORMAL · FLAPS 0°",
+    conditions: "2,550 LB · PAVED · DRY · CALM",
+    gndRoll:    [[0, 960],  [2000, 1125], [4000, 1325], [6000, 1580]],
+    over50ft:   [[0, 1630], [2000, 1920], [4000, 2270], [6000, 2720]],
+    vr:         55,  // KIAS — fixed rotation speed (C172S POH §4)
+  },
+  landing: {
+    label:      "LANDING · NORMAL · FLAPS 30°",
+    conditions: "2,550 LB · PAVED · DRY · CALM",
+    gndRoll:    [[0, 550],  [2000, 620],  [4000, 700],  [6000, 800]],
+    over50ft:   [[0, 1335], [2000, 1480], [4000, 1640], [6000, 1830]],
+    vapp:       65,  // KIAS — normal approach/threshold speed (C172S POH §5)
+  },
 };
 
 // Linear interpolation / extrapolation through POH breakpoints
@@ -1082,16 +1095,28 @@ function lerpPerf(da, pts) {
   return Math.round(pts[n - 1][1] + slope * (da - pts[n - 1][0]));
 }
 
-function DensityAltitudeHeader({ altimeter, temperature, nearestAirport, gpsReady, pageId, onNavigate }) {
+function DensityAltitudeHeader({ altimeter, temperature, windDir, windSpeed, windGust, activeRunway, nearestAirport, gpsReady, pageId, pohData, onNavigate }) {
   const [elevOverride,  setElevOverride]  = useState(null);
   const [showOverride,  setShowOverride]  = useState(false);
   const [overrideInput, setOverrideInput] = useState("");
+  const [rwyOverride,   setRwyOverride]   = useState("");
+  const [showRwyInput,  setShowRwyInput]  = useState(false);
+  const [rwyInput,      setRwyInput]      = useState("");
 
-  const nearest  = nearestAirport;
-  const elev     = elevOverride !== null ? elevOverride : (nearest?.elev ?? null);
-  const altNum   = parseFloat(altimeter);
-  const tempNum  = parseFloat(temperature);
-  const hasData  = !isNaN(altNum) && !isNaN(tempNum) && elev !== null;
+  // ── Resolve POH section for this page ──────────────────────────────────────
+  const poh         = pohData ?? C172S_POH_DEFAULT;
+  const isApproach  = pageId === "approach";
+  const perfSection = isApproach ? poh.landing : poh.takeoff;
+  // Vr (takeoff rotation) or Vapp (approach threshold) from schema
+  const vrKias      = isApproach ? (perfSection.vapp ?? null) : (perfSection.vr ?? null);
+  const vrLabel     = isApproach ? "VAPP" : "Vr";
+
+  // ── Core DA calculation ────────────────────────────────────────────────────
+  const nearest = nearestAirport;
+  const elev    = elevOverride !== null ? elevOverride : (nearest?.elev ?? null);
+  const altNum  = parseFloat(altimeter);
+  const tempNum = parseFloat(temperature);
+  const hasData = !isNaN(altNum) && !isNaN(tempNum) && elev !== null;
 
   let da = null;
   if (hasData) {
@@ -1100,19 +1125,73 @@ function DensityAltitudeHeader({ altimeter, temperature, nearestAirport, gpsRead
     da = Math.round(pressureAlt + 120 * (tempNum - isaTemp));
   }
 
-  const isApproach   = pageId === "approach";
-  const perfTable    = isApproach ? DA_PERF_LDG : DA_PERF_TO;
+  // ── Performance interpolation ──────────────────────────────────────────────
   const isExtrapolated = da !== null && da > 6000;
+  const gndRoll        = da !== null ? lerpPerf(da, perfSection.gndRoll)  : null;
+  const over50ft       = da !== null ? lerpPerf(da, perfSection.over50ft) : null;
 
-  const gndRoll  = da !== null ? lerpPerf(da, perfTable.gndRoll)  : null;
-  const over50ft = da !== null ? lerpPerf(da, perfTable.over50ft) : null;
+  // Vr TAS equivalent — ~2% per 1,000 ft DA (ICAO rule of thumb, ±2% accurate to 8,000 ft)
+  // Tells the pilot how fast they're actually moving across the ground at rotation.
+  const tasAtVr = (da !== null && vrKias != null)
+    ? Math.round(vrKias * (1 + da / 50000))
+    : null;
 
-  const isCaution  = da !== null && elev !== null && (da - elev) >= 2000;
-  const tempF      = !isNaN(tempNum) ? Math.round(tempNum * 9 / 5 + 32) : null;
+  // ── Wind / Runway / Crosswind ──────────────────────────────────────────────
+  // Runway resolution: manual override wins over ATIS-parsed
+  const resolvedRunway = rwyOverride || activeRunway || "";
+  const rwyNum         = resolvedRunway ? parseInt(resolvedRunway) : NaN;
+  // Runway number × 10 = magnetic heading (e.g. RWY 22 → 220°, RWY 04 → 040°)
+  const rwyHeading     = (!isNaN(rwyNum) && rwyNum >= 1 && rwyNum <= 36) ? rwyNum * 10 : null;
+  const rwySource      = rwyOverride ? "MANUAL" : (activeRunway ? "ATIS" : "");
 
-  const borderColor  = isCaution ? "var(--caution-line)" : "var(--line-strong)";
-  const bgColor      = isCaution ? "var(--caution-bg)"   : "var(--bg-2)";
-  const numColor     = da !== null ? (isCaution ? "var(--caution)" : "var(--t-primary)") : "var(--t-quiet)";
+  const windDirNum   = parseInt(windDir);
+  const windSpeedNum = parseInt(windSpeed);
+  const windGustNum  = parseInt(windGust);
+  const hasWind      = !isNaN(windDirNum) && !isNaN(windSpeedNum) && windSpeedNum > 0;
+  const hasXwCalc    = hasWind && rwyHeading !== null;
+
+  let hwKt = null, xwKt = null, hwGust = null, xwGust = null, isTailwind = false;
+  if (hasXwCalc) {
+    const angleDeg = ((windDirNum - rwyHeading) + 360) % 360;
+    const rad      = angleDeg * Math.PI / 180;
+    const rawHw    = Math.round(windSpeedNum * Math.cos(rad));
+    xwKt      = Math.round(Math.abs(windSpeedNum * Math.sin(rad)));
+    isTailwind = rawHw < 0;
+    hwKt      = Math.abs(rawHw);
+    if (!isNaN(windGustNum) && windGustNum > windSpeedNum) {
+      const rawHwG = Math.round(windGustNum * Math.cos(rad));
+      xwGust  = Math.round(Math.abs(windGustNum * Math.sin(rad)));
+      hwGust  = Math.abs(rawHwG);
+    }
+  }
+
+  const maxXw       = poh.maxCrosswind ?? 15;
+  const xwPct       = xwKt !== null ? xwKt / maxXw : 0;
+  const xwIsWarn    = xwPct >= 0.8;   // ≥80% of max — caution amber
+  const xwIsExceed  = xwPct >= 1.0;   // ≥100% of max — warn red
+
+  const confirmRwy = (e) => {
+    e.stopPropagation();
+    const raw    = rwyInput.trim().toUpperCase().replace(/[^0-9LRC]/g, "").slice(0, 3);
+    const numStr = raw.replace(/[^0-9]/g, "");
+    const suffix = raw.replace(/[0-9]/g, "").slice(0, 1);
+    const n      = parseInt(numStr);
+    if (!isNaN(n) && n >= 1 && n <= 36) setRwyOverride(numStr.padStart(2, "0") + suffix);
+    setShowRwyInput(false);
+    setRwyInput("");
+  };
+
+  // ── Caution + styling ──────────────────────────────────────────────────────
+  const isCaution = da !== null && elev !== null && (da - elev) >= 2000;
+  const tempF     = !isNaN(tempNum) ? Math.round(tempNum * 9 / 5 + 32) : null;
+
+  const borderColor = isCaution ? "var(--caution-line)" : "var(--line-strong)";
+  const bgColor     = isCaution ? "var(--caution-bg)"   : "var(--bg-2)";
+  const numColor    = da !== null ? (isCaution ? "var(--caution)" : "var(--t-primary)") : "var(--t-quiet)";
+  const labelColor  = isCaution ? "var(--caution)" : "var(--t-tertiary)";
+
+  // POH source — shown as a small badge so pilots know if using default vs. uploaded data
+  const pohIsDefault = poh.source === "DEFAULT";
 
   const confirmOverride = (e) => {
     e.stopPropagation();
@@ -1138,11 +1217,12 @@ function DensityAltitudeHeader({ altimeter, temperature, nearestAirport, gpsRead
       }}
     >
 
-      {/* ── Strip header: section label + perf type + caution badge + caret ── */}
+      {/* ── Strip header ─────────────────────────────────────────────────────── */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "5px 12px", borderBottom: "1px solid var(--line-faint)",
       }}>
+        {/* Left: title + caution badge */}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ ...mono, fontSize: 8, letterSpacing: "0.14em", textTransform: "uppercase",
             color: isCaution ? "var(--caution)" : "var(--t-tertiary)" }}>
@@ -1157,11 +1237,21 @@ function DensityAltitudeHeader({ altimeter, temperature, nearestAirport, gpsRead
             </span>
           )}
         </div>
+        {/* Right: perf table label + POH source badge + caret */}
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ ...mono, fontSize: 8, letterSpacing: "0.1em", textTransform: "uppercase",
-            color: "var(--t-quiet)" }}>
-            {perfTable.label}
+          <span style={{ ...mono, fontSize: 8, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--t-quiet)" }}>
+            {perfSection.label}
             {isExtrapolated && <span style={{ color: "var(--caution)", marginLeft: 4 }}>†EXTRAP</span>}
+          </span>
+          {/* POH source badge */}
+          <span style={{
+            ...mono, fontSize: 7, letterSpacing: "0.08em", textTransform: "uppercase",
+            padding: "1px 4px", borderRadius: "var(--r-sm)",
+            border: `1px solid ${pohIsDefault ? "var(--line)" : "var(--ok)"}`,
+            color: pohIsDefault ? "var(--t-quiet)" : "var(--ok)",
+            opacity: pohIsDefault ? 0.6 : 1,
+          }}>
+            {pohIsDefault ? "DEFAULT POH" : "YOUR POH"}
           </span>
           {!showOverride && (
             <span style={{ ...mono, fontSize: 12, color: "var(--t-quiet)", opacity: 0.5 }}>›</span>
@@ -1169,16 +1259,13 @@ function DensityAltitudeHeader({ altimeter, temperature, nearestAirport, gpsRead
         </div>
       </div>
 
-      {/* ── Three-column performance metrics ── */}
+      {/* ── Four-column performance metrics ──────────────────────────────────── */}
       <div style={{ display: "flex" }}>
 
-        {/* DA */}
-        <div style={{
-          flex: 1, padding: "10px 12px",
-          borderRight: "1px solid var(--line-faint)",
-        }}>
+        {/* 1 — Density Altitude */}
+        <div style={{ flex: 1, padding: "10px 10px", borderRight: "1px solid var(--line-faint)" }}>
           <div style={{ ...mono, fontSize: 8, letterSpacing: "0.12em", textTransform: "uppercase",
-            color: isCaution ? "var(--caution)" : "var(--t-tertiary)", marginBottom: 5 }}>
+            color: labelColor, marginBottom: 5 }}>
             DENSITY ALT
           </div>
           <div style={{ ...mono, fontSize: 20, fontWeight: 700, letterSpacing: "0.02em",
@@ -1187,13 +1274,10 @@ function DensityAltitudeHeader({ altimeter, temperature, nearestAirport, gpsRead
           </div>
         </div>
 
-        {/* Ground Roll */}
-        <div style={{
-          flex: 1, padding: "10px 12px",
-          borderRight: "1px solid var(--line-faint)",
-        }}>
+        {/* 2 — Ground Roll */}
+        <div style={{ flex: 1, padding: "10px 10px", borderRight: "1px solid var(--line-faint)" }}>
           <div style={{ ...mono, fontSize: 8, letterSpacing: "0.12em", textTransform: "uppercase",
-            color: isCaution ? "var(--caution)" : "var(--t-tertiary)", marginBottom: 5 }}>
+            color: labelColor, marginBottom: 5 }}>
             GND ROLL
           </div>
           <div style={{ ...mono, fontSize: 20, fontWeight: 700, letterSpacing: "0.02em",
@@ -1202,10 +1286,10 @@ function DensityAltitudeHeader({ altimeter, temperature, nearestAirport, gpsRead
           </div>
         </div>
 
-        {/* Over 50ft */}
-        <div style={{ flex: 1, padding: "10px 12px" }}>
+        {/* 3 — Over 50ft */}
+        <div style={{ flex: 1, padding: "10px 10px", borderRight: "1px solid var(--line-faint)" }}>
           <div style={{ ...mono, fontSize: 8, letterSpacing: "0.12em", textTransform: "uppercase",
-            color: isCaution ? "var(--caution)" : "var(--t-tertiary)", marginBottom: 5 }}>
+            color: labelColor, marginBottom: 5 }}>
             OVER 50FT
           </div>
           <div style={{ ...mono, fontSize: 20, fontWeight: 700, letterSpacing: "0.02em",
@@ -1214,9 +1298,27 @@ function DensityAltitudeHeader({ altimeter, temperature, nearestAirport, gpsRead
           </div>
         </div>
 
+        {/* 4 — Vr / Vapp with TAS sub-label */}
+        <div style={{ flex: 1, padding: "10px 10px" }}>
+          <div style={{ ...mono, fontSize: 8, letterSpacing: "0.12em", textTransform: "uppercase",
+            color: labelColor, marginBottom: 5 }}>
+            {vrLabel}
+          </div>
+          <div style={{ ...mono, fontSize: 20, fontWeight: 700, letterSpacing: "0.02em",
+            fontFeatureSettings: "var(--num-feat)", color: vrKias != null ? numColor : "var(--t-quiet)", lineHeight: 1 }}>
+            {vrKias != null ? `${vrKias} KT` : "— KT"}
+          </div>
+          {/* TAS at Vr — how fast you're moving across the ground at rotation */}
+          {tasAtVr !== null && (
+            <div style={{ ...mono, fontSize: 9, color: "var(--t-quiet)", marginTop: 4, letterSpacing: "0.04em" }}>
+              ~{tasAtVr} KT TAS
+            </div>
+          )}
+        </div>
+
       </div>
 
-      {/* ── Input data row: ELEV · ALT · OAT · override · nudge ── */}
+      {/* ── Input data row: ELEV · ALT · OAT · override · nudge ─────────────── */}
       <div style={{
         display: "flex", alignItems: "center", flexWrap: "wrap",
         padding: "6px 12px", gap: 14,
@@ -1284,7 +1386,7 @@ function DensityAltitudeHeader({ altimeter, temperature, nearestAirport, gpsRead
         )}
       </div>
 
-      {/* ── Elevation override input ── */}
+      {/* ── Elevation override input ──────────────────────────────────────────── */}
       {showOverride && (
         <div
           onClick={e => e.stopPropagation()}
@@ -1321,6 +1423,154 @@ function DensityAltitudeHeader({ altimeter, temperature, nearestAirport, gpsRead
           }}>CANCEL</button>
         </div>
       )}
+
+      {/* ── Wind · Runway · Headwind · Crosswind row ─────────────────────────── */}
+      {!showRwyInput && (
+        <div style={{
+          display: "flex", alignItems: "center", flexWrap: "wrap",
+          padding: "6px 12px", gap: 12,
+          borderTop: "1px solid var(--line-faint)",
+          background: "rgba(0,0,0,0.16)",
+        }}>
+
+          {/* Runway chip */}
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <span style={{ ...mono, fontSize: 8, color: "var(--t-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>RWY</span>
+            {resolvedRunway ? (
+              <>
+                <span style={{ ...mono, fontSize: 13, fontWeight: 700, color: "var(--t-primary)", letterSpacing: "0.06em" }}>
+                  {resolvedRunway}
+                </span>
+                <span style={{
+                  ...mono, fontSize: 7, color: rwySource === "MANUAL" ? "var(--caution)" : "var(--t-quiet)",
+                  border: `1px solid ${rwySource === "MANUAL" ? "var(--caution-line)" : "var(--line-faint)"}`,
+                  borderRadius: "var(--r-sm)", padding: "1px 4px", letterSpacing: "0.06em",
+                }}>
+                  {rwySource}
+                </span>
+                {rwyOverride && (
+                  <button onClick={e => { e.stopPropagation(); setRwyOverride(""); }} style={{
+                    ...mono, fontSize: 10, color: "var(--warn)",
+                    background: "transparent", border: "none", cursor: "pointer", padding: "0 2px",
+                  }}>×</button>
+                )}
+              </>
+            ) : (
+              <span style={{ ...mono, fontSize: 11, color: "var(--accent)", opacity: 0.75 }}>
+                Tap to set
+              </span>
+            )}
+            <button
+              onClick={e => { e.stopPropagation(); setShowRwyInput(true); setRwyInput(resolvedRunway); }}
+              style={{ ...mono, fontSize: 9, color: "var(--t-quiet)", background: "transparent", border: "none", cursor: "pointer", padding: "0 3px", lineHeight: 1 }}
+              title="Set runway">✎</button>
+          </div>
+
+          {/* Headwind / Tailwind */}
+          {hwKt !== null && (
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ ...mono, fontSize: 8, letterSpacing: "0.08em", textTransform: "uppercase",
+                color: isTailwind ? "var(--warn)" : "var(--t-tertiary)" }}>
+                {isTailwind ? "TAIL" : "HEAD"}
+              </span>
+              <span style={{ ...mono, fontSize: 13, fontWeight: 700,
+                color: isTailwind ? "var(--warn)" : "var(--t-primary)" }}>
+                {hwKt} KT
+              </span>
+              {hwGust !== null && (
+                <span style={{ ...mono, fontSize: 9, color: isTailwind ? "var(--warn)" : "var(--t-secondary)" }}>
+                  G{hwGust}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Crosswind with max reference bar */}
+          {xwKt !== null && (
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span style={{ ...mono, fontSize: 8, letterSpacing: "0.08em", textTransform: "uppercase",
+                color: xwIsExceed ? "var(--warn)" : xwIsWarn ? "var(--caution)" : "var(--t-tertiary)" }}>
+                CROSS
+              </span>
+              <span style={{ ...mono, fontSize: 13, fontWeight: 700,
+                color: xwIsExceed ? "var(--warn)" : xwIsWarn ? "var(--caution)" : "var(--t-primary)" }}>
+                {xwKt} KT
+              </span>
+              {xwGust !== null && (
+                <span style={{ ...mono, fontSize: 9,
+                  color: (xwGust / maxXw) >= 1 ? "var(--warn)" : (xwGust / maxXw) >= 0.8 ? "var(--caution)" : "var(--t-secondary)" }}>
+                  G{xwGust}
+                </span>
+              )}
+              {/* Proportion bar */}
+              <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                <div style={{ width: 36, height: 4, borderRadius: 2, background: "var(--bg-inset)", overflow: "hidden" }}>
+                  <div style={{
+                    height: "100%", borderRadius: 2,
+                    width: `${Math.min(xwPct * 100, 100)}%`,
+                    background: xwIsExceed ? "var(--warn)" : xwIsWarn ? "var(--caution)" : "var(--ok)",
+                    transition: "width 0.3s ease",
+                  }}/>
+                </div>
+                <span style={{ ...mono, fontSize: 7, color: "var(--t-quiet)" }}>{maxXw} MAX</span>
+              </div>
+            </div>
+          )}
+
+          {/* Nudges */}
+          {!hasWind && (
+            <span style={{ ...mono, fontSize: 8, color: "var(--t-quiet)", opacity: 0.6 }}>
+              Wind from ATIS for XW calc
+            </span>
+          )}
+          {hasWind && !resolvedRunway && (
+            <span style={{ ...mono, fontSize: 8, color: "var(--accent)", opacity: 0.7 }}>
+              Set runway for HW/XW ›
+            </span>
+          )}
+
+        </div>
+      )}
+
+      {/* ── Runway manual-input panel ─────────────────────────────────────────── */}
+      {showRwyInput && (
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            padding: "7px 12px", borderTop: "1px solid var(--line-faint)",
+            display: "flex", alignItems: "center", gap: 8, background: "var(--bg-inset)",
+          }}
+        >
+          <span style={{ ...mono, fontSize: 8, color: "var(--t-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            Active Runway (01–36)
+          </span>
+          <input
+            value={rwyInput}
+            onChange={e => setRwyInput(e.target.value.toUpperCase().replace(/[^0-9LRC]/g, "").slice(0, 3))}
+            inputMode="numeric"
+            autoFocus
+            placeholder="e.g. 22 or 04L"
+            onKeyDown={e => { if (e.key === "Enter") confirmRwy(e); if (e.key === "Escape") { setShowRwyInput(false); setRwyInput(""); } }}
+            style={{
+              flex: 1, background: "var(--bg-1)", border: "1px solid var(--accent-line)",
+              borderRadius: "var(--r-sm)", color: "var(--t-primary)",
+              fontFamily: "var(--f-mono)", fontSize: 13, fontWeight: 600,
+              padding: "4px 8px", outline: "none", textAlign: "center",
+            }}
+          />
+          <button onClick={confirmRwy} style={{
+            ...mono, fontSize: 9, fontWeight: 700,
+            background: "var(--accent-bg)", border: "1px solid var(--accent-line)",
+            color: "var(--accent)", borderRadius: "var(--r-sm)", cursor: "pointer", padding: "4px 10px",
+          }}>SET</button>
+          <button onClick={e => { e.stopPropagation(); setShowRwyInput(false); setRwyInput(""); }} style={{
+            ...mono, fontSize: 9,
+            background: "transparent", border: "1px solid var(--line)",
+            color: "var(--t-tertiary)", borderRadius: "var(--r-sm)", cursor: "pointer", padding: "4px 10px",
+          }}>CANCEL</button>
+        </div>
+      )}
+
     </div>
   );
 }
@@ -1392,7 +1642,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   const [commFreqTabTrigger, setCommFreqTabTrigger] = useState(0);
   const [commForceIfr,      setCommForceIfr]      = useState(false);
   const [commIfrData,       setCommIfrData]       = useState({ C:"",R:"",A:"",F:"",T:"" });
-  const [commAtisData,      setCommAtisData]      = useState({ info:"",wind:"",altimeter:"",temperature:"",visibility:"",sky:"",caution:"" });
+  const [commAtisData,      setCommAtisData]      = useState({ info:"",wind:"",windDir:"",windSpeed:"",windGust:"",activeRunway:"",altimeter:"",temperature:"",visibility:"",sky:"",caution:"" });
   const [commGndData,       setCommGndData]        = useState({ clearedTo:"",route:"",altitude:"",frequency:"",taxi:"",squawk:"" });
   const [commTaxiData,      setCommTaxiData]      = useState({ runway:"",route:"",holdShort:"",instructions:"" });
   // ── GPS nearest airport — single watcher at app level, persists across page changes ──
@@ -1411,6 +1661,11 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
     );
     return () => navigator.geolocation.clearWatch(wid);
   }, []);
+
+  // ── POH performance data — starts at built-in C172S defaults.
+  // When the POH-upload feature is built, swap this in with parsed data
+  // (source:"UPLOADED") and all DA calculations update automatically.
+  const [pohData, setPohData] = useState(C172S_POH_DEFAULT); // eslint-disable-line no-unused-vars
 
   const commWorkerRef       = useRef(null);
   const commWorkerBlobUrl   = useRef(null);
@@ -1971,7 +2226,7 @@ const commParseTaxi = (text) => {
   };
 
 const commParseAtis = (text) => {
-    const r = { info:"", wind:"", altimeter:"", temperature:"", visibility:"", sky:"", caution:"" };
+    const r = { info:"", wind:"", windDir:"", windSpeed:"", windGust:"", activeRunway:"", altimeter:"", temperature:"", visibility:"", sky:"", caution:"" };
     const t = normalizePhonetic(text);
 
     // Information identifier — broadcast: "information B" or pilot readback:
@@ -1988,9 +2243,29 @@ const commParseAtis = (text) => {
     const tWind = t.replace(/\b(\d+):(\d{2})\b/g, (_, h, m) => m === "00" ? h : h + m);
     if (/wind\s+calm/i.test(tWind)) {
       r.wind = "CALM";
+      r.windSpeed = "0";
     } else {
       const wind = tWind.match(/wind\s+(\d{1,3})\s+(?:at\s+)?(\d{1,3})(?:\s+(?:gusts?|gusting|gust)\s+(\d{1,3}))?/i);
-      if (wind) r.wind = wind[3] ? `${wind[1]}° AT ${wind[2]} GUSTING ${wind[3]}` : `${wind[1]}° AT ${wind[2]}KT`;
+      if (wind) {
+        r.wind     = wind[3] ? `${wind[1]}° AT ${wind[2]} GUSTING ${wind[3]}` : `${wind[1]}° AT ${wind[2]}KT`;
+        r.windDir  = wind[1];   // degrees magnetic (string)
+        r.windSpeed = wind[2];  // knots (string)
+        if (wind[3]) r.windGust = wind[3]; // gust knots (string, omitted if none)
+      }
+    }
+
+    // Active runway — auto-parse from ATIS ("runway 22 in use", "landing runway 04 left")
+    // Runway number × 10 = magnetic heading (e.g. RWY 22 → 220°)
+    const rwyMatch = t.match(
+      /(?:landing|departing|departure|active|expect(?:ed)?)\s+runway\s+(\d{1,2})\s*(left|right|center|l|r|c)?\b/i
+    ) || t.match(
+      /runway\s+(\d{1,2})\s*(left|right|center|l|r|c|south|north)?\s*(?:in\s+use|is\s+in\s+use|is\s+active)?/i
+    );
+    if (rwyMatch) {
+      const num = rwyMatch[1].padStart(2, "0");
+      const sfx = (rwyMatch[2] || "").toLowerCase();
+      const suffix = sfx.startsWith("l") ? "L" : sfx.startsWith("r") ? "R" : sfx.startsWith("c") ? "C" : "";
+      r.activeRunway = num + suffix;
     }
 
     // Altimeter — find ALL matches and score them, prefer the cleanest 4-digit value.
@@ -2813,9 +3088,14 @@ const commParseGround = (text) => {
             <DensityAltitudeHeader
               altimeter={commAtisData.altimeter}
               temperature={commAtisData.temperature}
+              windDir={commAtisData.windDir}
+              windSpeed={commAtisData.windSpeed}
+              windGust={commAtisData.windGust}
+              activeRunway={commAtisData.activeRunway}
               nearestAirport={nearestAirport}
               gpsReady={nearestReady}
               pageId={pg.id}
+              pohData={pohData}
               onNavigate={() => setCurrentPage("comm")}
             />
           )}
@@ -3306,7 +3586,7 @@ const commParseGround = (text) => {
                   atisArmState={atisArmState}
                   atisRawText={atisRawText}
                   onArmAtis={handleArmAtis}
-                  onClearAtisRaw={() => { setAtisRawText(""); atisArmStateRef.current = "idle"; setAtisArmState("idle"); setCommAtisData({ info:"",wind:"",altimeter:"",temperature:"",visibility:"",sky:"",caution:"" }); clearTimeout(atisSilenceRef.current); }}
+                  onClearAtisRaw={() => { setAtisRawText(""); atisArmStateRef.current = "idle"; setAtisArmState("idle"); setCommAtisData({ info:"",wind:"",windDir:"",windSpeed:"",windGust:"",activeRunway:"",altimeter:"",temperature:"",visibility:"",sky:"",caution:"" }); clearTimeout(atisSilenceRef.current); }}
                   taxiData={commTaxiData}
                   onSetTaxiData={setCommTaxiData}
                   taxiArmState={taxiArmState}
