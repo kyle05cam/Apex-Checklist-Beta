@@ -1424,152 +1424,163 @@ function DensityAltitudeHeader({ altimeter, temperature, windDir, windSpeed, win
         </div>
       )}
 
-      {/* ── Wind · Runway · Headwind · Crosswind row ─────────────────────────── */}
-      {!showRwyInput && (
-        <div style={{
-          display: "flex", alignItems: "center", flexWrap: "wrap",
-          padding: "6px 12px", gap: 12,
-          borderTop: "1px solid var(--line-faint)",
-          background: "rgba(0,0,0,0.16)",
-        }}>
+      {/* ── Wind · Runway · Headwind · Crosswind — same column weight as perf row ── */}
+      <div style={{
+        borderTop: "1px solid var(--line-faint)",
+        background: "rgba(0,0,0,0.10)",
+      }}>
 
-          {/* Runway chip */}
-          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-            <span style={{ ...mono, fontSize: 8, color: "var(--t-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>RWY</span>
-            {resolvedRunway ? (
-              <>
-                <span style={{ ...mono, fontSize: 13, fontWeight: 700, color: "var(--t-primary)", letterSpacing: "0.06em" }}>
-                  {resolvedRunway}
-                </span>
-                <span style={{
-                  ...mono, fontSize: 7, color: rwySource === "MANUAL" ? "var(--caution)" : "var(--t-quiet)",
-                  border: `1px solid ${rwySource === "MANUAL" ? "var(--caution-line)" : "var(--line-faint)"}`,
-                  borderRadius: "var(--r-sm)", padding: "1px 4px", letterSpacing: "0.06em",
-                }}>
-                  {rwySource}
-                </span>
+        {/* Column row — always visible; shows dashes when data missing */}
+        {!showRwyInput && (
+          <div style={{ display: "flex" }}>
+
+            {/* Col 1 — Active Runway */}
+            <div style={{ flex: 1, padding: "10px 10px", borderRight: "1px solid var(--line-faint)" }}>
+              <div style={{ ...mono, fontSize: 8, letterSpacing: "0.12em", textTransform: "uppercase",
+                color: "var(--t-tertiary)", marginBottom: 5 }}>
+                ACTIVE RWY
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+                <div style={{ ...mono, fontSize: 20, fontWeight: 700, letterSpacing: "0.02em",
+                  fontFeatureSettings: "var(--num-feat)", color: resolvedRunway ? "var(--t-primary)" : "var(--t-quiet)", lineHeight: 1 }}>
+                  {resolvedRunway || "—"}
+                </div>
+                {/* Source badge inline with number */}
+                {rwySource && (
+                  <span style={{
+                    ...mono, fontSize: 7, letterSpacing: "0.06em",
+                    color: rwySource === "MANUAL" ? "var(--caution)" : "var(--t-quiet)",
+                    border: `1px solid ${rwySource === "MANUAL" ? "var(--caution-line)" : "var(--line-faint)"}`,
+                    borderRadius: "var(--r-sm)", padding: "1px 4px",
+                  }}>{rwySource}</span>
+                )}
+              </div>
+              {/* Sub-row: edit / clear */}
+              <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
+                {!resolvedRunway && (
+                  <span style={{ ...mono, fontSize: 8, color: "var(--accent)", opacity: 0.75 }}>Tap ✎ to set</span>
+                )}
                 {rwyOverride && (
                   <button onClick={e => { e.stopPropagation(); setRwyOverride(""); }} style={{
-                    ...mono, fontSize: 10, color: "var(--warn)",
-                    background: "transparent", border: "none", cursor: "pointer", padding: "0 2px",
-                  }}>×</button>
+                    ...mono, fontSize: 8, color: "var(--warn)",
+                    background: "transparent", border: "none", cursor: "pointer", padding: 0,
+                  }}>× clear</button>
                 )}
-              </>
-            ) : (
-              <span style={{ ...mono, fontSize: 11, color: "var(--accent)", opacity: 0.75 }}>
-                Tap to set
-              </span>
-            )}
-            <button
-              onClick={e => { e.stopPropagation(); setShowRwyInput(true); setRwyInput(resolvedRunway); }}
-              style={{ ...mono, fontSize: 9, color: "var(--t-quiet)", background: "transparent", border: "none", cursor: "pointer", padding: "0 3px", lineHeight: 1 }}
-              title="Set runway">✎</button>
-          </div>
-
-          {/* Headwind / Tailwind */}
-          {hwKt !== null && (
-            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <span style={{ ...mono, fontSize: 8, letterSpacing: "0.08em", textTransform: "uppercase",
-                color: isTailwind ? "var(--warn)" : "var(--t-tertiary)" }}>
-                {isTailwind ? "TAIL" : "HEAD"}
-              </span>
-              <span style={{ ...mono, fontSize: 13, fontWeight: 700,
-                color: isTailwind ? "var(--warn)" : "var(--t-primary)" }}>
-                {hwKt} KT
-              </span>
-              {hwGust !== null && (
-                <span style={{ ...mono, fontSize: 9, color: isTailwind ? "var(--warn)" : "var(--t-secondary)" }}>
-                  G{hwGust}
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Crosswind with max reference bar */}
-          {xwKt !== null && (
-            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-              <span style={{ ...mono, fontSize: 8, letterSpacing: "0.08em", textTransform: "uppercase",
-                color: xwIsExceed ? "var(--warn)" : xwIsWarn ? "var(--caution)" : "var(--t-tertiary)" }}>
-                CROSS
-              </span>
-              <span style={{ ...mono, fontSize: 13, fontWeight: 700,
-                color: xwIsExceed ? "var(--warn)" : xwIsWarn ? "var(--caution)" : "var(--t-primary)" }}>
-                {xwKt} KT
-              </span>
-              {xwGust !== null && (
-                <span style={{ ...mono, fontSize: 9,
-                  color: (xwGust / maxXw) >= 1 ? "var(--warn)" : (xwGust / maxXw) >= 0.8 ? "var(--caution)" : "var(--t-secondary)" }}>
-                  G{xwGust}
-                </span>
-              )}
-              {/* Proportion bar */}
-              <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                <div style={{ width: 36, height: 4, borderRadius: 2, background: "var(--bg-inset)", overflow: "hidden" }}>
-                  <div style={{
-                    height: "100%", borderRadius: 2,
-                    width: `${Math.min(xwPct * 100, 100)}%`,
-                    background: xwIsExceed ? "var(--warn)" : xwIsWarn ? "var(--caution)" : "var(--ok)",
-                    transition: "width 0.3s ease",
-                  }}/>
-                </div>
-                <span style={{ ...mono, fontSize: 7, color: "var(--t-quiet)" }}>{maxXw} MAX</span>
+                <button
+                  onClick={e => { e.stopPropagation(); setShowRwyInput(true); setRwyInput(resolvedRunway); }}
+                  style={{ ...mono, fontSize: 9, color: "var(--t-quiet)", background: "transparent", border: "none", cursor: "pointer", padding: 0, marginLeft: rwyOverride ? 0 : "auto" }}
+                  title="Set runway">✎</button>
               </div>
             </div>
-          )}
 
-          {/* Nudges */}
-          {!hasWind && (
-            <span style={{ ...mono, fontSize: 8, color: "var(--t-quiet)", opacity: 0.6 }}>
-              Wind from ATIS for XW calc
-            </span>
-          )}
-          {hasWind && !resolvedRunway && (
-            <span style={{ ...mono, fontSize: 8, color: "var(--accent)", opacity: 0.7 }}>
-              Set runway for HW/XW ›
-            </span>
-          )}
+            {/* Col 2 — Headwind / Tailwind */}
+            <div style={{ flex: 1, padding: "10px 10px", borderRight: "1px solid var(--line-faint)" }}>
+              <div style={{ ...mono, fontSize: 8, letterSpacing: "0.12em", textTransform: "uppercase",
+                color: (isTailwind && hwKt !== null) ? "var(--warn)" : "var(--t-tertiary)", marginBottom: 5 }}>
+                {(isTailwind && hwKt !== null) ? "TAILWIND" : "HEADWIND"}
+              </div>
+              <div style={{ ...mono, fontSize: 20, fontWeight: 700, letterSpacing: "0.02em",
+                fontFeatureSettings: "var(--num-feat)", lineHeight: 1,
+                color: hwKt !== null ? (isTailwind ? "var(--warn)" : "var(--t-primary)") : "var(--t-quiet)" }}>
+                {hwKt !== null ? `${hwKt} KT` : "— KT"}
+              </div>
+              {hwGust !== null && (
+                <div style={{ ...mono, fontSize: 9, color: isTailwind ? "var(--warn)" : "var(--t-secondary)", marginTop: 4 }}>
+                  GUST {hwGust} KT
+                </div>
+              )}
+              {!hasWind && (
+                <div style={{ ...mono, fontSize: 8, color: "var(--t-quiet)", marginTop: 4, opacity: 0.6 }}>
+                  Need ATIS wind
+                </div>
+              )}
+              {hasWind && !resolvedRunway && (
+                <div style={{ ...mono, fontSize: 8, color: "var(--accent)", marginTop: 4, opacity: 0.75 }}>
+                  Set runway ›
+                </div>
+              )}
+            </div>
 
-        </div>
-      )}
+            {/* Col 3 — Crosswind with fill bar */}
+            <div style={{ flex: 1, padding: "10px 10px" }}>
+              <div style={{ ...mono, fontSize: 8, letterSpacing: "0.12em", textTransform: "uppercase",
+                color: xwIsExceed ? "var(--warn)" : xwIsWarn ? "var(--caution)" : "var(--t-tertiary)", marginBottom: 5 }}>
+                CROSSWIND
+              </div>
+              <div style={{ ...mono, fontSize: 20, fontWeight: 700, letterSpacing: "0.02em",
+                fontFeatureSettings: "var(--num-feat)", lineHeight: 1,
+                color: xwKt !== null
+                  ? (xwIsExceed ? "var(--warn)" : xwIsWarn ? "var(--caution)" : "var(--t-primary)")
+                  : "var(--t-quiet)" }}>
+                {xwKt !== null ? `${xwKt} KT` : "— KT"}
+              </div>
+              {xwGust !== null && (
+                <div style={{ ...mono, fontSize: 9, marginTop: 4,
+                  color: (xwGust / maxXw) >= 1 ? "var(--warn)" : (xwGust / maxXw) >= 0.8 ? "var(--caution)" : "var(--t-secondary)" }}>
+                  GUST {xwGust} KT
+                </div>
+              )}
+              {/* Fill bar + max label — only when we have a value */}
+              {xwKt !== null && (
+                <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 5 }}>
+                  <div style={{ flex: 1, height: 4, borderRadius: 2, background: "var(--bg-inset)", overflow: "hidden" }}>
+                    <div style={{
+                      height: "100%", borderRadius: 2,
+                      width: `${Math.min(xwPct * 100, 100)}%`,
+                      background: xwIsExceed ? "var(--warn)" : xwIsWarn ? "var(--caution)" : "var(--ok)",
+                      transition: "width 0.3s ease",
+                    }}/>
+                  </div>
+                  <span style={{ ...mono, fontSize: 7, color: "var(--t-quiet)", whiteSpace: "nowrap" }}>
+                    {maxXw} KT MAX
+                  </span>
+                </div>
+              )}
+            </div>
 
-      {/* ── Runway manual-input panel ─────────────────────────────────────────── */}
-      {showRwyInput && (
-        <div
-          onClick={e => e.stopPropagation()}
-          style={{
-            padding: "7px 12px", borderTop: "1px solid var(--line-faint)",
-            display: "flex", alignItems: "center", gap: 8, background: "var(--bg-inset)",
-          }}
-        >
-          <span style={{ ...mono, fontSize: 8, color: "var(--t-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-            Active Runway (01–36)
-          </span>
-          <input
-            value={rwyInput}
-            onChange={e => setRwyInput(e.target.value.toUpperCase().replace(/[^0-9LRC]/g, "").slice(0, 3))}
-            inputMode="numeric"
-            autoFocus
-            placeholder="e.g. 22 or 04L"
-            onKeyDown={e => { if (e.key === "Enter") confirmRwy(e); if (e.key === "Escape") { setShowRwyInput(false); setRwyInput(""); } }}
+          </div>
+        )}
+
+        {/* ── Runway manual-input panel ──────────────────────────────────────── */}
+        {showRwyInput && (
+          <div
+            onClick={e => e.stopPropagation()}
             style={{
-              flex: 1, background: "var(--bg-1)", border: "1px solid var(--accent-line)",
-              borderRadius: "var(--r-sm)", color: "var(--t-primary)",
-              fontFamily: "var(--f-mono)", fontSize: 13, fontWeight: 600,
-              padding: "4px 8px", outline: "none", textAlign: "center",
+              padding: "10px 12px",
+              display: "flex", alignItems: "center", gap: 8,
             }}
-          />
-          <button onClick={confirmRwy} style={{
-            ...mono, fontSize: 9, fontWeight: 700,
-            background: "var(--accent-bg)", border: "1px solid var(--accent-line)",
-            color: "var(--accent)", borderRadius: "var(--r-sm)", cursor: "pointer", padding: "4px 10px",
-          }}>SET</button>
-          <button onClick={e => { e.stopPropagation(); setShowRwyInput(false); setRwyInput(""); }} style={{
-            ...mono, fontSize: 9,
-            background: "transparent", border: "1px solid var(--line)",
-            color: "var(--t-tertiary)", borderRadius: "var(--r-sm)", cursor: "pointer", padding: "4px 10px",
-          }}>CANCEL</button>
-        </div>
-      )}
+          >
+            <span style={{ ...mono, fontSize: 8, color: "var(--t-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+              Active Runway
+            </span>
+            <input
+              value={rwyInput}
+              onChange={e => setRwyInput(e.target.value.toUpperCase().replace(/[^0-9LRC]/g, "").slice(0, 3))}
+              inputMode="numeric"
+              autoFocus
+              placeholder="22 or 04L"
+              onKeyDown={e => { if (e.key === "Enter") confirmRwy(e); if (e.key === "Escape") { setShowRwyInput(false); setRwyInput(""); } }}
+              style={{
+                flex: 1, background: "var(--bg-1)", border: "1px solid var(--accent-line)",
+                borderRadius: "var(--r-sm)", color: "var(--t-primary)",
+                fontFamily: "var(--f-mono)", fontSize: 18, fontWeight: 700,
+                padding: "6px 8px", outline: "none", textAlign: "center",
+              }}
+            />
+            <button onClick={confirmRwy} style={{
+              ...mono, fontSize: 9, fontWeight: 700,
+              background: "var(--accent-bg)", border: "1px solid var(--accent-line)",
+              color: "var(--accent)", borderRadius: "var(--r-sm)", cursor: "pointer", padding: "6px 14px",
+            }}>SET</button>
+            <button onClick={e => { e.stopPropagation(); setShowRwyInput(false); setRwyInput(""); }} style={{
+              ...mono, fontSize: 9,
+              background: "transparent", border: "1px solid var(--line)",
+              color: "var(--t-tertiary)", borderRadius: "var(--r-sm)", cursor: "pointer", padding: "6px 10px",
+            }}>CANCEL</button>
+          </div>
+        )}
+
+      </div>
 
     </div>
   );
