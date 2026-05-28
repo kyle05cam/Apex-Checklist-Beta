@@ -314,6 +314,7 @@ ul, li { list-style: none; padding: 0; margin: 0; }
   flex: 1;
   min-width: 0;
   cursor: pointer;
+  border-right: 1px solid var(--line);
   transition: background 0.12s;
 }
 .efb-rx-transcript:hover { background: rgba(255,255,255,0.018); }
@@ -322,22 +323,21 @@ ul, li { list-style: none; padding: 0; margin: 0; }
 .nrst-widget {
   width: 220px;
   flex-shrink: 0;
-  border-left: 1px solid var(--line);
+  align-self: flex-start;
   background: var(--bg-2);
   padding: 9px 13px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 5px;
   cursor: pointer;
   text-align: left;
-  transition: background 0.12s, border-color 0.12s;
+  transition: background 0.12s;
 }
 .nrst-widget:hover {
   background: rgba(77,163,255,0.07);
-  border-left-color: var(--accent-line);
 }
-.nrst-widget:focus-visible { outline: none; border-left-color: var(--accent); }
+.nrst-widget:focus-visible { outline: none; }
 
 .nrst-widget-header {
   display: flex;
