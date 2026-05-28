@@ -2771,8 +2771,8 @@ const commParseGround = (text) => {
       {currentPage !== "comm" && (
         <div className="efb-rx-wrap">
 
-          {/* ── WATCHDOG BANNER: only visible when an unanswered ATC call exists ── */}
-          {commWatchdogState !== "clear" && (
+          {/* ── WATCHDOG BANNER: "alert" = countdown running, "unanswered" = escalated ── */}
+          {(commWatchdogState === "alert" || commWatchdogState === "unanswered") && (
             <div className="efb-rx-watchdog" data-state={commWatchdogState}>
               <span className="efb-status-dot warn"/>
               <Icon name="antenna" size={13}/>
