@@ -2787,83 +2787,81 @@ const commParseGround = (text) => {
             >
             {(commTranscript || commTxLog.length > 0) ? (
               /* ── ACTIVE / LIVE state ── */
-              <div
-                className="efb-rx-live"
-                data-watchdog={commWatchdogState !== "clear" ? commWatchdogState : undefined}
-              >
+              <div className="efb-rx-live">
 
-                {/* Info header: timestamp · type · freq · spacer · ●LIVE · [watchdog] · LISTEN */}
-                <div className="efb-rx-live-header">
-                  {commTxLog[0] && (
-                    <>
-                      <span className="efb-rx-live-ts">{fmtRxTs(commTxLog[0].ts)}</span>
-                      {commTxLog[0].type && (
-                        <span
-                          className="efb-rx-live-type"
-                          style={{
-                            color:       rxTypeColor(commTxLog[0].type),
-                            borderColor: `${rxTypeColor(commTxLog[0].type)}55`,
-                            background:  `${rxTypeColor(commTxLog[0].type)}18`,
-                          }}
-                        >
-                          {commTxLog[0].type.toUpperCase()}
-                        </span>
-                      )}
-                      {commTxLog[0].tokens?.freq && (
-                        <span className="efb-rx-live-freq">{commTxLog[0].tokens.freq}</span>
-                      )}
-                      {commTxLog[0].tokens?.conf != null && (
-                        <span className="efb-rx-live-conf">
-                          CONF {Math.round(commTxLog[0].tokens.conf * 100)}%
-                        </span>
-                      )}
-                    </>
-                  )}
-                  {/* Spacer pushes right-side controls to edge */}
-                  <span style={{ flex: 1 }}/>
-                  {commTranscript && (
-                    <span className="efb-rx-live-pill">
-                      <span className="efb-status-dot ok"/>
-                      LIVE
-                    </span>
-                  )}
-                  {/* Watchdog: amber countdown badge (alert) or red ACK button (unanswered) */}
-                  {commWatchdogState === "alert" && (
+                {/* ── Featured message only — watchdog highlight stays within this wrapper ── */}
+                <div
+                  className="efb-rx-featured"
+                  data-watchdog={commWatchdogState !== "clear" ? commWatchdogState : undefined}
+                >
+                  {/* Info header: timestamp · type · freq · spacer · ●LIVE · LISTEN */}
+                  <div className="efb-rx-live-header">
+                    {commTxLog[0] && (
+                      <>
+                        <span className="efb-rx-live-ts">{fmtRxTs(commTxLog[0].ts)}</span>
+                        {commTxLog[0].type && (
+                          <span
+                            className="efb-rx-live-type"
+                            style={{
+                              color:       rxTypeColor(commTxLog[0].type),
+                              borderColor: `${rxTypeColor(commTxLog[0].type)}55`,
+                              background:  `${rxTypeColor(commTxLog[0].type)}18`,
+                            }}
+                          >
+                            {commTxLog[0].type.toUpperCase()}
+                          </span>
+                        )}
+                        {commTxLog[0].tokens?.freq && (
+                          <span className="efb-rx-live-freq">{commTxLog[0].tokens.freq}</span>
+                        )}
+                        {commTxLog[0].tokens?.conf != null && (
+                          <span className="efb-rx-live-conf">
+                            CONF {Math.round(commTxLog[0].tokens.conf * 100)}%
+                          </span>
+                        )}
+                      </>
+                    )}
+                    <span style={{ flex: 1 }}/>
+                    {commTranscript && (
+                      <span className="efb-rx-live-pill">
+                        <span className="efb-status-dot ok"/>
+                        LIVE
+                      </span>
+                    )}
+                    {/* LISTEN / STOP — ACK is NOT here, it's in the footer below */}
                     <button
-                      className="efb-rx-wd-badge"
+                      className={`efb-rb-listen-btn${commListening ? " active" : ""}`}
+                      onClick={e => {
+                        e.stopPropagation();
+                        if (commListening) { commStopListening(); }
+                        else { commStopListening(); setTimeout(() => commStartListening(), 50); }
+                      }}
+                    >
+                      <Icon name={commListening ? "stop" : "play"} size={11}/>
+                      <span>{commListening ? "STOP" : "LISTEN"}</span>
+                    </button>
+                  </div>
+
+                  {/* Main transcript text — large and legible */}
+                  <div className="efb-rx-live-main">
+                    &ldquo;{commTranscript || commTxLog[0]?.text || ""}&rdquo;
+                  </div>
+
+                  {/* ── Watchdog footer — full-width tap target, well clear of LISTEN ── */}
+                  {(commWatchdogState === "alert" || commWatchdogState === "unanswered") && (
+                    <button
+                      className="efb-rx-wd-footer"
+                      data-state={commWatchdogState}
                       onClick={e => { e.stopPropagation(); commAckCall(); }}
                     >
-                      ACK [{commAckCountdown}s]
+                      {commWatchdogState === "alert"
+                        ? `ATC call — tap to acknowledge  ·  ${commAckCountdown}s`
+                        : "ATC call unanswered — tap to acknowledge"}
                     </button>
                   )}
-                  {commWatchdogState === "unanswered" && (
-                    <button
-                      className="efb-rx-wd-ack"
-                      onClick={e => { e.stopPropagation(); commAckCall(); }}
-                    >
-                      ACK
-                    </button>
-                  )}
-                  {/* LISTEN / STOP button */}
-                  <button
-                    className={`efb-rb-listen-btn${commListening ? " active" : ""}`}
-                    onClick={e => {
-                      e.stopPropagation();
-                      if (commListening) { commStopListening(); }
-                      else { commStopListening(); setTimeout(() => commStartListening(), 50); }
-                    }}
-                  >
-                    <Icon name={commListening ? "stop" : "play"} size={11}/>
-                    <span>{commListening ? "STOP" : "LISTEN"}</span>
-                  </button>
-                </div>
+                </div>{/* end efb-rx-featured */}
 
-                {/* Main transcript text — large and legible */}
-                <div className="efb-rx-live-main">
-                  &ldquo;{commTranscript || commTxLog[0]?.text || ""}&rdquo;
-                </div>
-
-                {/* Previous transmissions log — up to 3 rows */}
+                {/* Previous transmissions log — outside featured, no watchdog highlight */}
                 {commTxLog
                   .slice(commTranscript ? 0 : 1, commTranscript ? 3 : 4)
                   .map(entry => (

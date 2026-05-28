@@ -213,70 +213,67 @@ ul, li { list-style: none; padding: 0; margin: 0; }
   flex-direction: column;
 }
 
-/* ── WATCHDOG — inline on transmission block ──────────────────────────────────
-   Applied via data-watchdog attribute on .efb-rx-live:
+/* ── WATCHDOG — inline on featured transmission block only ───────────────────
+   Applied via data-watchdog attribute on .efb-rx-featured (wraps header + main
+   text only — log history rows are OUTSIDE this element and stay unaffected).
      pending    — amber left accent: callsign heard, tx still flowing
      alert      — amber left accent + tint: countdown running
      unanswered — red left accent + tint + pulse: must ACK
    ──────────────────────────────────────────────────────────────────────────── */
-.efb-rx-live[data-watchdog="pending"] {
+.efb-rx-featured { display: flex; flex-direction: column; }
+
+.efb-rx-featured[data-watchdog="pending"] {
   border-left: 3px solid var(--caution);
   background: rgba(245,181,68,0.04);
 }
-.efb-rx-live[data-watchdog="alert"] {
+.efb-rx-featured[data-watchdog="alert"] {
   border-left: 3px solid var(--caution);
   background: rgba(245,181,68,0.06);
 }
-.efb-rx-live[data-watchdog="unanswered"] {
+.efb-rx-featured[data-watchdog="unanswered"] {
   border-left: 3px solid var(--warn);
   background: rgba(255,107,107,0.06);
   animation: efb-warn-flash 0.5s ease infinite alternate;
 }
 
-/* ACK countdown badge — amber pill in the header row during alert */
-.efb-rx-wd-badge {
-  display: inline-flex;
-  align-items: center;
-  height: 22px;
-  padding: 0 var(--s-2);
-  background: var(--caution-bg);
-  border: 1px solid var(--caution-line);
-  border-radius: var(--r-sm);
-  color: var(--caution);
-  font-family: var(--f-mono);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: all 0.12s ease;
-}
-.efb-rx-wd-badge:hover { background: rgba(245,181,68,0.18); border-color: var(--caution); }
-
 /* Flash class for CommPage featured card when unanswered */
 .comm-wd-flash { animation: efb-warn-flash 0.5s ease infinite alternate; }
 
-/* ACK button — red, shown when unanswered */
-.efb-rx-wd-ack {
-  display: inline-flex;
+/* ── Watchdog footer — full-width tap target below transcript text ────────────
+   Appears as a distinct bar at the bottom of the featured message.
+   Intentionally large and well separated from the LISTEN/STOP button.        */
+.efb-rx-wd-footer {
+  display: flex;
   align-items: center;
-  height: 22px;
-  padding: 0 var(--s-2);
-  background: var(--warn-bg);
-  border: 1px solid var(--warn-line);
-  border-radius: var(--r-sm);
-  color: var(--warn);
+  justify-content: center;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  border-top: 1px solid;
   font-family: var(--f-mono);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   cursor: pointer;
-  flex-shrink: 0;
   transition: all 0.12s ease;
 }
-.efb-rx-wd-ack:hover { background: rgba(255,107,107,0.18); border-color: var(--warn); }
+.efb-rx-wd-footer[data-state="alert"] {
+  background: rgba(245,181,68,0.12);
+  border-top-color: var(--caution-line);
+  color: var(--caution);
+}
+.efb-rx-wd-footer[data-state="alert"]:hover {
+  background: rgba(245,181,68,0.22);
+}
+.efb-rx-wd-footer[data-state="unanswered"] {
+  background: rgba(255,107,107,0.14);
+  border-top-color: var(--warn-line);
+  color: var(--warn);
+}
+.efb-rx-wd-footer[data-state="unanswered"]:hover {
+  background: rgba(255,107,107,0.24);
+}
 
 /* Blue LISTEN / red STOP button — used in transcript area */
 .efb-rb-listen-btn {

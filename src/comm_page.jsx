@@ -341,32 +341,10 @@ export function CommPage({
                             {txLog[0].tokens.freq}
                           </span>
                         )}
-                        <span style={{ flex: 1 }}/>
-                        {/* Watchdog badge / ACK button */}
-                        {wdAlert && (
-                          <button
-                            className="efb-rx-wd-badge"
-                            onClick={onAckCall}
-                          >
-                            ACK [{ackCountdown}s]
-                          </button>
-                        )}
-                        {wdUnanswered && (
-                          <button
-                            className="efb-rx-wd-ack"
-                            onClick={onAckCall}
-                          >
-                            ACK
-                          </button>
-                        )}
-                        {!isWd && (
-                          <span style={{
-                            fontSize: 9, letterSpacing: "0.1em",
-                            textTransform: "uppercase", color: "var(--t-quiet)",
-                          }}>
-                            Most Recent
-                          </span>
-                        )}
+                        <span style={{ marginLeft: "auto", fontSize: 9, letterSpacing: "0.1em",
+                          textTransform: "uppercase", color: isWd ? "transparent" : "var(--t-quiet)" }}>
+                          Most Recent
+                        </span>
                       </div>
                       {/* Large transcript text */}
                       <div style={{
@@ -377,6 +355,18 @@ export function CommPage({
                       }}>
                         &ldquo;{txLog[0].text}&rdquo;
                       </div>
+                      {/* Watchdog footer — full-width tap target inside card */}
+                      {isWd && (wdAlert || wdUnanswered) && (
+                        <button
+                          className="efb-rx-wd-footer"
+                          data-state={watchdogState}
+                          onClick={e => { e.stopPropagation(); onAckCall?.(); }}
+                        >
+                          {wdAlert
+                            ? `ATC call — tap to acknowledge  ·  ${ackCountdown}s`
+                            : "ATC call unanswered — tap to acknowledge"}
+                        </button>
+                      )}
                     </div>
                   );
                 })()}
