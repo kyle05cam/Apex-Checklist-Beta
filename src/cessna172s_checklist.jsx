@@ -1053,7 +1053,7 @@ function DrawingNotepad({ title, footer, onClose, storageKey, initialImage, onSa
 //          ISA = 15 − (PA / 1000) × 2
 //          DA  = PA + 120 × (OAT − ISA)
 // ─────────────────────────────────────────────────────────────────────────────
-function DensityAltitudeHeader({ altimeter, temperature }) {
+function DensityAltitudeHeader({ altimeter, temperature, onNavigate }) {
   const [nearest,       setNearest]       = useState(null);
   const [gpsReady,      setGpsReady]      = useState(false);
   const [elevOverride,  setElevOverride]  = useState(null);
@@ -1091,9 +1091,10 @@ function DensityAltitudeHeader({ altimeter, temperature }) {
 
   const borderColor = isCaution ? "var(--caution-line)" : "var(--line-strong)";
   const bgColor     = isCaution ? "var(--caution-bg)"   : "var(--bg-2)";
-  const daColor     = isCaution ? "var(--caution)"       : "var(--t-primary)";
+  const daColor     = hasData ? (isCaution ? "var(--caution)" : "var(--t-primary)") : "var(--t-quiet)";
 
-  const confirmOverride = () => {
+  const confirmOverride = (e) => {
+    e.stopPropagation();
     const v = parseInt(overrideInput.replace(/\D/g, ""), 10);
     if (!isNaN(v) && v >= 0 && v < 30000) setElevOverride(v);
     setShowOverride(false);
@@ -1103,40 +1104,60 @@ function DensityAltitudeHeader({ altimeter, temperature }) {
   const mono = { fontFamily: "var(--f-mono)" };
 
   return (
-    <div style={{
-      border: `1px solid ${borderColor}`,
-      borderLeft: isCaution ? "3px solid var(--caution)" : `1px solid ${borderColor}`,
-      background: bgColor,
-      borderRadius: "var(--r-md)",
-      marginBottom: 12,
-      overflow: "hidden",
-    }}>
+    <div
+      onClick={!showOverride ? onNavigate : undefined}
+      style={{
+        border: `1px solid ${borderColor}`,
+        borderLeft: isCaution ? "3px solid var(--caution)" : `1px solid ${borderColor}`,
+        background: bgColor,
+        borderRadius: "var(--r-md)",
+        marginBottom: 10,
+        overflow: "hidden",
+        cursor: !showOverride ? "pointer" : "default",
+      }}
+    >
 
       {/* Header row: label + DA value */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "8px 12px", borderBottom: "1px solid var(--line-faint)",
       }}>
-        <span style={{ ...mono, fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase",
-          color: isCaution ? "var(--caution)" : "var(--t-tertiary)" }}>
-          {isCaution ? "▲ DENSITY ALTITUDE — HIGH DA WARNING" : "DENSITY ALTITUDE"}
-        </span>
-        <span style={{ ...mono, fontSize: 22, fontWeight: 700, letterSpacing: "0.04em",
-          fontFeatureSettings: "var(--num-feat)", color: daColor }}>
-          {hasData
-            ? `${isCaution ? "▲ " : ""}${da.toLocaleString()} FT`
-            : "-- --- FT"
-          }
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ ...mono, fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase",
+            color: isCaution ? "var(--caution)" : "var(--t-tertiary)" }}>
+            {isCaution ? "▲ DENSITY ALTITUDE" : "DENSITY ALTITUDE"}
+          </span>
+          {isCaution && (
+            <span style={{ ...mono, fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase",
+              color: "var(--caution)", background: "rgba(245,181,68,0.15)",
+              border: "1px solid var(--caution-line)", borderRadius: "var(--r-sm)",
+              padding: "1px 6px" }}>
+              HIGH DA WARNING
+            </span>
+          )}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ ...mono, fontSize: 22, fontWeight: 700, letterSpacing: "0.04em",
+            fontFeatureSettings: "var(--num-feat)", color: daColor }}>
+            {hasData
+              ? `${isCaution ? "▲ " : ""}${da.toLocaleString()} FT`
+              : "— — —  FT"
+            }
+          </span>
+          {/* Tap-to-navigate caret */}
+          {!showOverride && (
+            <span style={{ ...mono, fontSize: 14, color: "var(--t-quiet)", opacity: 0.5 }}>›</span>
+          )}
+        </div>
       </div>
 
-      {/* Data row: airport · altimeter · OAT */}
+      {/* Data row: airport · altimeter · OAT · nudge */}
       <div style={{
         display: "flex", alignItems: "center", flexWrap: "wrap",
         padding: "7px 12px", gap: 14,
       }}>
 
-        {/* Airport + elevation */}
+        {/* Airport + elevation — always shown when GPS ready */}
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
           <span style={{ ...mono, fontSize: 9, color: "var(--t-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>ELEV</span>
           {!gpsReady ? (
@@ -1155,7 +1176,7 @@ function DensityAltitudeHeader({ altimeter, temperature }) {
                 {elev.toLocaleString()} ft
               </span>
               {elevOverride !== null && (
-                <button onClick={() => setElevOverride(null)} style={{
+                <button onClick={e => { e.stopPropagation(); setElevOverride(null); }} style={{
                   ...mono, fontSize: 10, color: "var(--warn)",
                   background: "transparent", border: "none", cursor: "pointer", padding: "0 2px",
                 }}>×</button>
@@ -1165,7 +1186,7 @@ function DensityAltitudeHeader({ altimeter, temperature }) {
             <span style={{ ...mono, fontSize: 11, color: "var(--t-quiet)" }}>—</span>
           )}
           {!showOverride && (
-            <button onClick={() => { setShowOverride(true); setOverrideInput(elev !== null ? String(elev) : ""); }} style={{
+            <button onClick={e => { e.stopPropagation(); setShowOverride(true); setOverrideInput(elev !== null ? String(elev) : ""); }} style={{
               ...mono, fontSize: 9, color: "var(--t-quiet)",
               background: "transparent", border: "none", cursor: "pointer", padding: "0 2px", lineHeight: 1,
             }} title="Override elevation">↻</button>
@@ -1188,20 +1209,23 @@ function DensityAltitudeHeader({ altimeter, temperature }) {
           </span>
         </div>
 
-        {/* Missing-data nudge */}
+        {/* Missing-data nudge — shows what's still needed */}
         {!hasData && (
-          <span style={{ marginLeft: "auto", ...mono, fontSize: 9, color: "var(--accent)", letterSpacing: "0.06em", opacity: 0.8 }}>
-            Capture ATIS to calculate ›
+          <span style={{ marginLeft: "auto", ...mono, fontSize: 9, color: "var(--accent)", letterSpacing: "0.06em", opacity: 0.75 }}>
+            {(!altimeter && !temperature) ? "Capture ATIS ›" : !altimeter ? "Need altimeter ›" : "Need temperature ›"}
           </span>
         )}
       </div>
 
-      {/* Elevation override input */}
+      {/* Elevation override input — stopPropagation so clicks don't trigger navigation */}
       {showOverride && (
-        <div style={{
-          padding: "8px 12px", borderTop: "1px solid var(--line-faint)",
-          display: "flex", alignItems: "center", gap: 8, background: "var(--bg-inset)",
-        }}>
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            padding: "8px 12px", borderTop: "1px solid var(--line-faint)",
+            display: "flex", alignItems: "center", gap: 8, background: "var(--bg-inset)",
+          }}
+        >
           <span style={{ ...mono, fontSize: 9, color: "var(--t-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
             Override Elev (ft MSL)
           </span>
@@ -1210,7 +1234,7 @@ function DensityAltitudeHeader({ altimeter, temperature }) {
             onChange={e => setOverrideInput(e.target.value.replace(/\D/g, ""))}
             inputMode="numeric"
             autoFocus
-            onKeyDown={e => { if (e.key === "Enter") confirmOverride(); if (e.key === "Escape") { setShowOverride(false); setOverrideInput(""); } }}
+            onKeyDown={e => { if (e.key === "Enter") confirmOverride(e); if (e.key === "Escape") { setShowOverride(false); setOverrideInput(""); } }}
             style={{
               flex: 1, background: "var(--bg-1)", border: "1px solid var(--accent-line)",
               borderRadius: "var(--r-sm)", color: "var(--t-primary)",
@@ -1223,7 +1247,7 @@ function DensityAltitudeHeader({ altimeter, temperature }) {
             background: "var(--accent-bg)", border: "1px solid var(--accent-line)",
             color: "var(--accent)", borderRadius: "var(--r-sm)", cursor: "pointer", padding: "5px 10px",
           }}>SET</button>
-          <button onClick={() => { setShowOverride(false); setOverrideInput(""); }} style={{
+          <button onClick={e => { e.stopPropagation(); setShowOverride(false); setOverrideInput(""); }} style={{
             ...mono, fontSize: 10,
             background: "transparent", border: "1px solid var(--line)",
             color: "var(--t-tertiary)", borderRadius: "var(--r-sm)", cursor: "pointer", padding: "5px 10px",
@@ -2653,59 +2677,62 @@ const commParseGround = (text) => {
 
     return (
       <div key={pg.id} style={{ animation: "efb-fade-in 0.15s ease", padding: "12px 12px 88px" }}>
-        {/* Sticky page header */}
-        <div className="efb-page-header" style={{ position: "sticky", top: 0, zIndex: 10, background: "var(--bg-0)" }}>
-          <div>
-            <h1 className="efb-page-title" style={isEmg ? { color: accentColor } : {}}>
-              {pg.id === "approach"     ? "APPROACH & LANDING"
-               : pg.id === "engine_fail" ? "ENGINE FAILURES"
-               : pg.id === "spin"        ? "SPIN RECOVERY"
-               : pg.id === "fires"       ? "FIRES"
-               : pg.id === "icing"       ? "ICING"
-               : pg.id === "electrical"  ? "ELECTRICAL FAILURE"
-               : pg.label || pg.id.toUpperCase()}
-            </h1>
-            <div className="efb-page-subtitle">
-              {isEmg
-                ? "CESSNA 172S · MEMORY ITEMS FIRST"
-                : `CESSNA 172S SKYHAWK · ${
-                    pg.id === "preflight" ? "EXTERNAL & COCKPIT WALK-AROUND"
-                  : pg.id === "startup"   ? "ENGINE START SEQUENCE"
-                  : pg.id === "taxi"      ? "TAXI & RUN-UP"
-                  : pg.id === "takeoff"   ? "TAKEOFF & CLIMB"
-                  : pg.id === "cruise"    ? "CRUISE CHECKLIST"
-                  : pg.id === "approach"  ? "APPROACH & LANDING"
-                  : pg.id === "shutdown"  ? "SHUTDOWN & SECURING"
-                  : "CHECKLIST"
-                }`
-              }
+        {/* Sticky block: page title header + optional DA performance header */}
+        <div style={{ position: "sticky", top: 0, zIndex: 10, background: "var(--bg-0)" }}>
+          <div className="efb-page-header">
+            <div>
+              <h1 className="efb-page-title" style={isEmg ? { color: accentColor } : {}}>
+                {pg.id === "approach"     ? "APPROACH & LANDING"
+                 : pg.id === "engine_fail" ? "ENGINE FAILURES"
+                 : pg.id === "spin"        ? "SPIN RECOVERY"
+                 : pg.id === "fires"       ? "FIRES"
+                 : pg.id === "icing"       ? "ICING"
+                 : pg.id === "electrical"  ? "ELECTRICAL FAILURE"
+                 : pg.label || pg.id.toUpperCase()}
+              </h1>
+              <div className="efb-page-subtitle">
+                {isEmg
+                  ? "CESSNA 172S · MEMORY ITEMS FIRST"
+                  : `CESSNA 172S SKYHAWK · ${
+                      pg.id === "preflight" ? "EXTERNAL & COCKPIT WALK-AROUND"
+                    : pg.id === "startup"   ? "ENGINE START SEQUENCE"
+                    : pg.id === "taxi"      ? "TAXI & RUN-UP"
+                    : pg.id === "takeoff"   ? "TAKEOFF & CLIMB"
+                    : pg.id === "cruise"    ? "CRUISE CHECKLIST"
+                    : pg.id === "approach"  ? "APPROACH & LANDING"
+                    : pg.id === "shutdown"  ? "SHUTDOWN & SECURING"
+                    : "CHECKLIST"
+                  }`
+                }
+              </div>
+            </div>
+            <div className="efb-page-meta">
+              <div className={`efb-chip${
+                isComplete           ? " done"
+                : pageCount.done > 0 ? " progress"
+                : ""
+              }`}>
+                {isComplete
+                  ? <><span>✓ COMPLETE</span><span className="efb-chip-num"> · {pageCount.done}/{pageCount.total}</span></>
+                  : pageCount.done > 0
+                    ? <><span>IN PROGRESS</span><span className="efb-chip-num"> · {pageCount.done}/{pageCount.total}</span></>
+                    : <span className="efb-chip-num">{pageCount.total} ITEMS</span>
+                }
+              </div>
+              <button className="efb-btn sm ghost" onClick={() => resetPage(pg.id)}>
+                <Icon name="reset" size={12}/>
+              </button>
             </div>
           </div>
-          <div className="efb-page-meta">
-            <div className={`efb-chip${
-              isComplete           ? " done"
-              : pageCount.done > 0 ? " progress"
-              : ""
-            }`}>
-              {isComplete
-                ? <><span>✓ COMPLETE</span><span className="efb-chip-num"> · {pageCount.done}/{pageCount.total}</span></>
-                : pageCount.done > 0
-                  ? <><span>IN PROGRESS</span><span className="efb-chip-num"> · {pageCount.done}/{pageCount.total}</span></>
-                  : <span className="efb-chip-num">{pageCount.total} ITEMS</span>
-              }
-            </div>
-            <button className="efb-btn sm ghost" onClick={() => resetPage(pg.id)}>
-              <Icon name="reset" size={12}/>
-            </button>
-          </div>
-        </div>
 
-        {(pg.id === "takeoff" || pg.id === "approach") && (
-          <DensityAltitudeHeader
-            altimeter={commAtisData.altimeter}
-            temperature={commAtisData.temperature}
-          />
-        )}
+          {(pg.id === "takeoff" || pg.id === "approach") && (
+            <DensityAltitudeHeader
+              altimeter={commAtisData.altimeter}
+              temperature={commAtisData.temperature}
+              onNavigate={() => setCurrentPage("comm")}
+            />
+          )}
+        </div>
 
         {pg.sections.map((section, si) => {
           const sectionKey = getSectionKey(pg.id, section.title);
