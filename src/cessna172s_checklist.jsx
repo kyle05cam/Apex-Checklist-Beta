@@ -1047,22 +1047,51 @@ function DrawingNotepad({ title, footer, onClose, storageKey, initialImage, onSa
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DENSITY ALTITUDE HEADER — performance block shown on T/O and Approach pages
-// Fully offline: pure ISA math + GPS-nearest airport elevation from local DB.
+// DENSITY ALTITUDE + PERFORMANCE HEADER
+// Fully offline: ISA math + linear interpolation of C172S POH tables.
+// Uses density altitude as the table lookup value (standard aviation method).
 // Formula: PA = elev + (29.92 − altimeter) × 1000
 //          ISA = 15 − (PA / 1000) × 2
 //          DA  = PA + 120 × (OAT − ISA)
 // ─────────────────────────────────────────────────────────────────────────────
-function DensityAltitudeHeader({ altimeter, temperature, nearestAirport, gpsReady, onNavigate }) {
+
+// C172S POH performance breakpoints [pressure_alt_ft, distance_ft]
+const DA_PERF_TO = {
+  label:    "TAKEOFF · NORMAL · FLAPS 0°",
+  gndRoll:  [[0, 960],  [2000, 1125], [4000, 1325], [6000, 1580]],
+  over50ft: [[0, 1630], [2000, 1920], [4000, 2270], [6000, 2720]],
+};
+const DA_PERF_LDG = {
+  label:    "LANDING · NORMAL · FLAPS 30°",
+  gndRoll:  [[0, 550],  [2000, 620],  [4000, 700],  [6000, 800]],
+  over50ft: [[0, 1335], [2000, 1480], [4000, 1640], [6000, 1830]],
+};
+
+// Linear interpolation / extrapolation through POH breakpoints
+function lerpPerf(da, pts) {
+  if (da <= pts[0][0]) return pts[0][1];
+  for (let i = 0; i < pts.length - 1; i++) {
+    if (da <= pts[i + 1][0]) {
+      const t = (da - pts[i][0]) / (pts[i + 1][0] - pts[i][0]);
+      return Math.round(pts[i][1] + t * (pts[i + 1][1] - pts[i][1]));
+    }
+  }
+  // Extrapolate beyond 6,000 ft using last-segment slope
+  const n = pts.length;
+  const slope = (pts[n - 1][1] - pts[n - 2][1]) / (pts[n - 1][0] - pts[n - 2][0]);
+  return Math.round(pts[n - 1][1] + slope * (da - pts[n - 1][0]));
+}
+
+function DensityAltitudeHeader({ altimeter, temperature, nearestAirport, gpsReady, pageId, onNavigate }) {
   const [elevOverride,  setElevOverride]  = useState(null);
   const [showOverride,  setShowOverride]  = useState(false);
   const [overrideInput, setOverrideInput] = useState("");
 
-  const nearest = nearestAirport;
-  const elev    = elevOverride !== null ? elevOverride : (nearest?.elev ?? null);
-  const altNum  = parseFloat(altimeter);
-  const tempNum = parseFloat(temperature);
-  const hasData = !isNaN(altNum) && !isNaN(tempNum) && elev !== null;
+  const nearest  = nearestAirport;
+  const elev     = elevOverride !== null ? elevOverride : (nearest?.elev ?? null);
+  const altNum   = parseFloat(altimeter);
+  const tempNum  = parseFloat(temperature);
+  const hasData  = !isNaN(altNum) && !isNaN(tempNum) && elev !== null;
 
   let da = null;
   if (hasData) {
@@ -1071,12 +1100,19 @@ function DensityAltitudeHeader({ altimeter, temperature, nearestAirport, gpsRead
     da = Math.round(pressureAlt + 120 * (tempNum - isaTemp));
   }
 
-  const isCaution = da !== null && elev !== null && (da - elev) >= 2000;
-  const tempF     = !isNaN(tempNum) ? Math.round(tempNum * 9 / 5 + 32) : null;
+  const isApproach   = pageId === "approach";
+  const perfTable    = isApproach ? DA_PERF_LDG : DA_PERF_TO;
+  const isExtrapolated = da !== null && da > 6000;
 
-  const borderColor = isCaution ? "var(--caution-line)" : "var(--line-strong)";
-  const bgColor     = isCaution ? "var(--caution-bg)"   : "var(--bg-2)";
-  const daColor     = hasData ? (isCaution ? "var(--caution)" : "var(--t-primary)") : "var(--t-quiet)";
+  const gndRoll  = da !== null ? lerpPerf(da, perfTable.gndRoll)  : null;
+  const over50ft = da !== null ? lerpPerf(da, perfTable.over50ft) : null;
+
+  const isCaution  = da !== null && elev !== null && (da - elev) >= 2000;
+  const tempF      = !isNaN(tempNum) ? Math.round(tempNum * 9 / 5 + 32) : null;
+
+  const borderColor  = isCaution ? "var(--caution-line)" : "var(--line-strong)";
+  const bgColor      = isCaution ? "var(--caution-bg)"   : "var(--bg-2)";
+  const numColor     = da !== null ? (isCaution ? "var(--caution)" : "var(--t-primary)") : "var(--t-quiet)";
 
   const confirmOverride = (e) => {
     e.stopPropagation();
@@ -1102,62 +1138,108 @@ function DensityAltitudeHeader({ altimeter, temperature, nearestAirport, gpsRead
       }}
     >
 
-      {/* Header row: label + DA value */}
+      {/* ── Strip header: section label + perf type + caution badge + caret ── */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "8px 12px", borderBottom: "1px solid var(--line-faint)",
+        padding: "5px 12px", borderBottom: "1px solid var(--line-faint)",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ ...mono, fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase",
+          <span style={{ ...mono, fontSize: 8, letterSpacing: "0.14em", textTransform: "uppercase",
             color: isCaution ? "var(--caution)" : "var(--t-tertiary)" }}>
-            {isCaution ? "▲ DENSITY ALTITUDE" : "DENSITY ALTITUDE"}
+            {isCaution ? "▲ " : ""}DENSITY ALTITUDE · PERFORMANCE
           </span>
           {isCaution && (
-            <span style={{ ...mono, fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase",
+            <span style={{ ...mono, fontSize: 8, letterSpacing: "0.1em", textTransform: "uppercase",
               color: "var(--caution)", background: "rgba(245,181,68,0.15)",
               border: "1px solid var(--caution-line)", borderRadius: "var(--r-sm)",
-              padding: "1px 6px" }}>
+              padding: "1px 5px" }}>
               HIGH DA WARNING
             </span>
           )}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ ...mono, fontSize: 22, fontWeight: 700, letterSpacing: "0.04em",
-            fontFeatureSettings: "var(--num-feat)", color: daColor }}>
-            {hasData
-              ? `${isCaution ? "▲ " : ""}${da.toLocaleString()} FT`
-              : "— — —  FT"
-            }
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ ...mono, fontSize: 8, letterSpacing: "0.1em", textTransform: "uppercase",
+            color: "var(--t-quiet)" }}>
+            {perfTable.label}
+            {isExtrapolated && <span style={{ color: "var(--caution)", marginLeft: 4 }}>†EXTRAP</span>}
           </span>
-          {/* Tap-to-navigate caret */}
           {!showOverride && (
-            <span style={{ ...mono, fontSize: 14, color: "var(--t-quiet)", opacity: 0.5 }}>›</span>
+            <span style={{ ...mono, fontSize: 12, color: "var(--t-quiet)", opacity: 0.5 }}>›</span>
           )}
         </div>
       </div>
 
-      {/* Data row: airport · altimeter · OAT · nudge */}
+      {/* ── Three-column performance metrics ── */}
+      <div style={{ display: "flex" }}>
+
+        {/* DA */}
+        <div style={{
+          flex: 1, padding: "10px 12px",
+          borderRight: "1px solid var(--line-faint)",
+        }}>
+          <div style={{ ...mono, fontSize: 8, letterSpacing: "0.12em", textTransform: "uppercase",
+            color: isCaution ? "var(--caution)" : "var(--t-tertiary)", marginBottom: 5 }}>
+            DENSITY ALT
+          </div>
+          <div style={{ ...mono, fontSize: 20, fontWeight: 700, letterSpacing: "0.02em",
+            fontFeatureSettings: "var(--num-feat)", color: numColor, lineHeight: 1 }}>
+            {da !== null ? `${da.toLocaleString()} FT` : "— FT"}
+          </div>
+        </div>
+
+        {/* Ground Roll */}
+        <div style={{
+          flex: 1, padding: "10px 12px",
+          borderRight: "1px solid var(--line-faint)",
+        }}>
+          <div style={{ ...mono, fontSize: 8, letterSpacing: "0.12em", textTransform: "uppercase",
+            color: isCaution ? "var(--caution)" : "var(--t-tertiary)", marginBottom: 5 }}>
+            GND ROLL
+          </div>
+          <div style={{ ...mono, fontSize: 20, fontWeight: 700, letterSpacing: "0.02em",
+            fontFeatureSettings: "var(--num-feat)", color: numColor, lineHeight: 1 }}>
+            {gndRoll !== null ? `${gndRoll.toLocaleString()} FT` : "— FT"}
+          </div>
+        </div>
+
+        {/* Over 50ft */}
+        <div style={{ flex: 1, padding: "10px 12px" }}>
+          <div style={{ ...mono, fontSize: 8, letterSpacing: "0.12em", textTransform: "uppercase",
+            color: isCaution ? "var(--caution)" : "var(--t-tertiary)", marginBottom: 5 }}>
+            OVER 50FT
+          </div>
+          <div style={{ ...mono, fontSize: 20, fontWeight: 700, letterSpacing: "0.02em",
+            fontFeatureSettings: "var(--num-feat)", color: numColor, lineHeight: 1 }}>
+            {over50ft !== null ? `${over50ft.toLocaleString()} FT` : "— FT"}
+          </div>
+        </div>
+
+      </div>
+
+      {/* ── Input data row: ELEV · ALT · OAT · override · nudge ── */}
       <div style={{
         display: "flex", alignItems: "center", flexWrap: "wrap",
-        padding: "7px 12px", gap: 14,
+        padding: "6px 12px", gap: 14,
+        borderTop: "1px solid var(--line-faint)",
+        background: "rgba(0,0,0,0.12)",
       }}>
 
-        {/* Airport + elevation — always shown when GPS ready */}
+        {/* Airport + elevation */}
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <span style={{ ...mono, fontSize: 9, color: "var(--t-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>ELEV</span>
+          <span style={{ ...mono, fontSize: 8, color: "var(--t-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>ELEV</span>
           {!gpsReady ? (
             <span style={{ ...mono, fontSize: 11, color: "var(--t-quiet)" }}>GPS…</span>
           ) : elev !== null ? (
             <>
               {nearest && elevOverride === null && (
-                <span style={{ ...mono, fontSize: 12, fontWeight: 700, color: "var(--accent)", letterSpacing: "0.06em" }}>
+                <span style={{ ...mono, fontSize: 11, fontWeight: 700, color: "var(--accent)", letterSpacing: "0.06em" }}>
                   {nearest.id}
                 </span>
               )}
               {elevOverride !== null && (
-                <span style={{ ...mono, fontSize: 9, color: "var(--caution)", letterSpacing: "0.06em" }}>OVERRIDE</span>
+                <span style={{ ...mono, fontSize: 8, color: "var(--caution)", letterSpacing: "0.06em" }}>OVERRIDE</span>
               )}
-              <span style={{ ...mono, fontSize: 12, fontWeight: 600, color: "var(--t-primary)", fontFeatureSettings: "var(--num-feat)" }}>
+              <span style={{ ...mono, fontSize: 11, fontWeight: 600, color: "var(--t-primary)", fontFeatureSettings: "var(--num-feat)" }}>
                 {elev.toLocaleString()} ft
               </span>
               {elevOverride !== null && (
@@ -1172,46 +1254,46 @@ function DensityAltitudeHeader({ altimeter, temperature, nearestAirport, gpsRead
           )}
           {!showOverride && (
             <button onClick={e => { e.stopPropagation(); setShowOverride(true); setOverrideInput(elev !== null ? String(elev) : ""); }} style={{
-              ...mono, fontSize: 9, color: "var(--t-quiet)",
+              ...mono, fontSize: 8, color: "var(--t-quiet)",
               background: "transparent", border: "none", cursor: "pointer", padding: "0 2px", lineHeight: 1,
             }} title="Override elevation">↻</button>
           )}
         </div>
 
         {/* Altimeter */}
-        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <span style={{ ...mono, fontSize: 9, color: "var(--t-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>ALT</span>
-          <span style={{ ...mono, fontSize: 12, fontWeight: 600, color: altimeter ? "var(--t-primary)" : "var(--t-quiet)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <span style={{ ...mono, fontSize: 8, color: "var(--t-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>ALT</span>
+          <span style={{ ...mono, fontSize: 11, fontWeight: 600, color: altimeter ? "var(--t-primary)" : "var(--t-quiet)" }}>
             {altimeter || "—"}
           </span>
         </div>
 
         {/* OAT */}
-        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <span style={{ ...mono, fontSize: 9, color: "var(--t-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>OAT</span>
-          <span style={{ ...mono, fontSize: 12, fontWeight: 600, color: !isNaN(tempNum) ? "var(--t-primary)" : "var(--t-quiet)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <span style={{ ...mono, fontSize: 8, color: "var(--t-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>OAT</span>
+          <span style={{ ...mono, fontSize: 11, fontWeight: 600, color: !isNaN(tempNum) ? "var(--t-primary)" : "var(--t-quiet)" }}>
             {!isNaN(tempNum) ? `${tempNum}°C / ${tempF}°F` : "—"}
           </span>
         </div>
 
-        {/* Missing-data nudge — shows what's still needed */}
+        {/* Missing-data nudge */}
         {!hasData && (
-          <span style={{ marginLeft: "auto", ...mono, fontSize: 9, color: "var(--accent)", letterSpacing: "0.06em", opacity: 0.75 }}>
-            {(!altimeter && !temperature) ? "Capture ATIS ›" : !altimeter ? "Need altimeter ›" : "Need temperature ›"}
+          <span style={{ marginLeft: "auto", ...mono, fontSize: 8, color: "var(--accent)", letterSpacing: "0.06em", opacity: 0.75 }}>
+            {!altimeter && !temperature ? "Capture ATIS ›" : !altimeter ? "Need altimeter ›" : "Need temperature ›"}
           </span>
         )}
       </div>
 
-      {/* Elevation override input — stopPropagation so clicks don't trigger navigation */}
+      {/* ── Elevation override input ── */}
       {showOverride && (
         <div
           onClick={e => e.stopPropagation()}
           style={{
-            padding: "8px 12px", borderTop: "1px solid var(--line-faint)",
+            padding: "7px 12px", borderTop: "1px solid var(--line-faint)",
             display: "flex", alignItems: "center", gap: 8, background: "var(--bg-inset)",
           }}
         >
-          <span style={{ ...mono, fontSize: 9, color: "var(--t-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+          <span style={{ ...mono, fontSize: 8, color: "var(--t-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
             Override Elev (ft MSL)
           </span>
           <input
@@ -1223,19 +1305,19 @@ function DensityAltitudeHeader({ altimeter, temperature, nearestAirport, gpsRead
             style={{
               flex: 1, background: "var(--bg-1)", border: "1px solid var(--accent-line)",
               borderRadius: "var(--r-sm)", color: "var(--t-primary)",
-              fontFamily: "var(--f-mono)", fontSize: 14, fontWeight: 600,
-              padding: "5px 8px", outline: "none", textAlign: "center",
+              fontFamily: "var(--f-mono)", fontSize: 13, fontWeight: 600,
+              padding: "4px 8px", outline: "none", textAlign: "center",
             }}
           />
           <button onClick={confirmOverride} style={{
-            ...mono, fontSize: 10, fontWeight: 700,
+            ...mono, fontSize: 9, fontWeight: 700,
             background: "var(--accent-bg)", border: "1px solid var(--accent-line)",
-            color: "var(--accent)", borderRadius: "var(--r-sm)", cursor: "pointer", padding: "5px 10px",
+            color: "var(--accent)", borderRadius: "var(--r-sm)", cursor: "pointer", padding: "4px 10px",
           }}>SET</button>
           <button onClick={e => { e.stopPropagation(); setShowOverride(false); setOverrideInput(""); }} style={{
-            ...mono, fontSize: 10,
+            ...mono, fontSize: 9,
             background: "transparent", border: "1px solid var(--line)",
-            color: "var(--t-tertiary)", borderRadius: "var(--r-sm)", cursor: "pointer", padding: "5px 10px",
+            color: "var(--t-tertiary)", borderRadius: "var(--r-sm)", cursor: "pointer", padding: "4px 10px",
           }}>CANCEL</button>
         </div>
       )}
@@ -2733,6 +2815,7 @@ const commParseGround = (text) => {
               temperature={commAtisData.temperature}
               nearestAirport={nearestAirport}
               gpsReady={nearestReady}
+              pageId={pg.id}
               onNavigate={() => setCurrentPage("comm")}
             />
           )}
