@@ -3688,32 +3688,3 @@ ul, li { list-style: none; padding: 0; margin: 0; }
   font-feature-settings: var(--num-feat);
 }
 
-/* Guard — always-pinned emergency tile */
-.freq-guard {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 9px 12px;
-  background: var(--bg-1);
-  border: 1px solid var(--warn-line);
-  border-radius: var(--r-md);
-}
-.freq-guard-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.freq-guard-type {
-  font-family: var(--f-mono);
-  font-size: 9px;
-  font-weight: 700;
-  color: var(--warn);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.freq-guard-name {
-  font-family: var(--f-ui);
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--t-primary);
-}

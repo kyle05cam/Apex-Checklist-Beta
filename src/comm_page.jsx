@@ -1390,25 +1390,21 @@ function NearestFreqs() {
         {/* Load more */}
         {remaining > 0 && (
           <button
-            className="btn btn-sm btn-ghost"
+            className="btn btn-primary"
             onClick={() => setVisibleCount(c => c + 7)}
-            style={{ width: "100%", fontFamily: "var(--f-mono)", fontSize: 12, letterSpacing: "0.04em" }}
+            style={{
+              width: "100%", height: 48,
+              fontFamily: "var(--f-mono)", fontSize: 14, fontWeight: 700,
+              letterSpacing: "0.06em", textTransform: "uppercase",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+            }}
           >
-            Load 7 more
-            <span style={{ fontFamily: "var(--f-mono)", fontSize: 10, color: "var(--t-tertiary)", marginLeft: 10 }}>
-              {remaining} airport{remaining !== 1 ? "s" : ""} remaining
+            Load 7 More Airports
+            <span style={{ fontFamily: "var(--f-mono)", fontSize: 11, fontWeight: 400, color: "var(--accent-dim)", letterSpacing: "0.04em" }}>
+              {remaining} remaining
             </span>
           </button>
         )}
-
-        {/* Guard — always pinned */}
-        <div className="freq-guard">
-          <div className="freq-guard-label">
-            <span className="freq-guard-type">EMRG</span>
-            <span className="freq-guard-name">Guard</span>
-          </div>
-          <span className="freq-hz">121.500</span>
-        </div>
       </div>
     </div>
   );
