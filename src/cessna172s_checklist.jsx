@@ -1833,17 +1833,16 @@ const commParseGround = (text) => {
   // ── WATCHDOG PENDING STATE ─────────────────────────────────────────────────
   // Refs that track the smart gated alert system.
   // When callsign is detected we enter "pending" — we do NOT start the countdown.
-  // Two gates must both clear before countdown begins:
-  //   Gate A: speech engine interim text has stopped (isFinal confirmed)
-  //   Gate B: RMS has been below silence threshold for SILENCE_CONFIRM_MS
-  // If new voice activity is detected during the 5s countdown, auto-standdown.
+  // The countdown begins once speech recognition goes silent:
+  //   • Every interim result calls commWatchdogOnInterim() → resets the silence timer
+  //   • Once no interim/final text arrives for SILENCE_CONFIRM_MS → countdown starts
+  // If pilot transmits (high RMS) during the 5s countdown → auto-standdown back to pending.
   const watchdogPendingEntryRef  = useRef(null);  // the tx entry that triggered pending
   const watchdogSilenceTimerRef  = useRef(null);  // timer waiting for confirmed silence
   const watchdogInterimActiveRef = useRef(false); // true while interim text is flowing
   const watchdogCountdownRef     = useRef(false); // true while 5s countdown is actively running
   const watchdogUnansweredRef    = useRef(false); // true once countdown expired — blocks RMS standdown
-  const SILENCE_CONFIRM_MS       = 1800;          // ms of RMS silence before countdown starts
-  const RMS_SILENCE_THRESHOLD    = 0.04;          // RMS below this = radio silence
+  const SILENCE_CONFIRM_MS       = 1800;          // ms of speech-recognition silence before countdown starts
 
   // Called from the VU animation loop on every audio frame when watchdog is pending
   // or counting down. Exported via ref so it's accessible inside requestAnimationFrame.
@@ -1910,21 +1909,22 @@ const commParseGround = (text) => {
     }
   }, [commStartWatchdogCountdown]);
 
-  // Wire RMS check into the watchdog — called from VU meter animation frame
+  // Wire RMS check into the watchdog — called from VU meter animation frame.
+  // IMPORTANT: RMS is used ONLY for countdown standdown (pilot transmitting during alert).
+  // The silence gate (pending → alert) is driven purely by speech recognition going quiet
+  // (commWatchdogOnInterim is called on every interim result). This avoids false-blocking
+  // caused by ambient noise which routinely keeps frequency-domain RMS above any low threshold.
   watchdogRmsCheckRef.current = (rmsLevel) => {
     if (!watchdogPendingEntryRef.current) return;
-    if (watchdogUnansweredRef.current) return; // unanswered — only ACK button clears this
-    if (rmsLevel > RMS_SILENCE_THRESHOLD) {
-      // Audio detected — reset the silence confirmation timer
-      clearTimeout(watchdogSilenceTimerRef.current);
-      watchdogInterimActiveRef.current = true;
-      // If countdown is actively running and audio spikes, pilot is transmitting — standdown
-      if (watchdogCountdownRef.current) {
-        commClearTimers();
-        watchdogCountdownRef.current = false;
-        setCommWatchdogState("pending");
-        setCommAckCountdown(0);
-      }
+    if (watchdogUnansweredRef.current) return; // unanswered — only ACK clears this
+    // Only act if the 5-second countdown is actively running
+    if (!watchdogCountdownRef.current) return;
+    // Threshold of 0.15 catches real speech without triggering on room noise
+    if (rmsLevel > 0.15) {
+      commClearTimers();
+      watchdogCountdownRef.current = false;
+      setCommWatchdogState("pending");
+      setCommAckCountdown(0);
     }
   };
 
@@ -2126,8 +2126,11 @@ const commParseGround = (text) => {
             if (r.isFinal) f += r[0].transcript + " ";
             else p += r[0].transcript;
           }
-          // Interim: update live display directly
-          if (p) setCommTranscript(p);
+          // Interim: update live display + reset watchdog silence gate
+          if (p) {
+            setCommTranscript(p);
+            commWatchdogOnInterim(); // keeps silence timer from firing while speech flows
+          }
           // Final: call handler via stable ref — always the latest closure,
           // zero worker round-trip, guaranteed to see current arm state
           if (f.trim()) commHandleTranscriptRef.current?.(f.trim(), true);
