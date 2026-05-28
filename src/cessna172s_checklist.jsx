@@ -1678,6 +1678,24 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   // (source:"UPLOADED") and all DA calculations update automatically.
   const [pohData, setPohData] = useState(C172S_POH_DEFAULT); // eslint-disable-line no-unused-vars
 
+  // ── ATIS setter — enriches windDir/windSpeed/windGust whenever the wind
+  // string is changed manually (manual edits bypass commParseAtis, so we
+  // parse the formatted string back to numbers here to keep the DA banner fed).
+  const handleSetAtisData = (newData) => {
+    let out = { ...newData };
+    if (newData.wind !== commAtisData.wind) {
+      const w = (newData.wind || "").trim();
+      if (/^calm$/i.test(w)) {
+        out = { ...out, windDir: "", windSpeed: "0", windGust: "" };
+      } else {
+        // Match "270° AT 15KT" or "270 AT 15 GUSTING 23" — the two formats commParseAtis writes
+        const m = w.match(/(\d{1,3})[°\s]+(?:at\s+)?(\d{1,3})\s*(?:kt)?(?:[,\s]+(?:gusting|gust)\s+(\d{1,3}))?/i);
+        if (m) out = { ...out, windDir: m[1], windSpeed: m[2], windGust: m[3] || "" };
+      }
+    }
+    setCommAtisData(out);
+  };
+
   const commWorkerRef       = useRef(null);
   const commWorkerBlobUrl   = useRef(null);
   const commRecognitionRef  = useRef(null);
@@ -3593,7 +3611,7 @@ const commParseGround = (text) => {
                   ifrData={commIfrData}
                   onSetIfrData={setCommIfrData}
                  atisData={commAtisData}
-                  onSetAtisData={setCommAtisData}
+                  onSetAtisData={handleSetAtisData}
                   atisArmState={atisArmState}
                   atisRawText={atisRawText}
                   onArmAtis={handleArmAtis}
