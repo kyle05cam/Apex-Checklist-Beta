@@ -2778,37 +2778,6 @@ const commParseGround = (text) => {
       {currentPage !== "comm" && (
         <div className="efb-rx-wrap">
 
-          {/* ── WATCHDOG BANNER ─────────────────────────────────────────────────────
-               pending    → amber, no ACK button: callsign heard, tx still in progress
-               alert      → amber + countdown: tx ended, 5s for pilot to respond
-               unanswered → red + pulse + ACK: countdown expired, needs acknowledgment
-          ────────────────────────────────────────────────────────────────────── */}
-          {commWatchdogState !== "clear" && (
-            <div className="efb-rx-watchdog" data-state={commWatchdogState}>
-              <span className={`efb-status-dot ${commWatchdogState === "unanswered" ? "warn" : "caution"}`}/>
-              <Icon name="antenna" size={13}/>
-              <span className="efb-rx-watchdog-msg">
-                {commWatchdogState === "pending"
-                  ? "ATC calling — monitoring for pilot response"
-                  : commWatchdogState === "alert"
-                  ? "ATC call detected — respond or press ACK"
-                  : "ATC call unanswered — acknowledgment required"}
-              </span>
-              {commWatchdogState !== "pending" && (
-                <div className="efb-rx-watchdog-actions" onClick={e => e.stopPropagation()}>
-                  <button
-                    className={`efb-btn sm ${commWatchdogState === "unanswered" ? "warn" : "caution"}`}
-                    onClick={commAckCall}
-                  >
-                    {commWatchdogState === "unanswered"
-                      ? "ACK CALL"
-                      : `ACK [${commAckCountdown}s]`}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
           {/* ── TRANSCRIPT + NRST area ── */}
           <div className="efb-rx-area">
             {/* Transcript side — clicking goes to Active Feed */}
@@ -2818,9 +2787,12 @@ const commParseGround = (text) => {
             >
             {(commTranscript || commTxLog.length > 0) ? (
               /* ── ACTIVE / LIVE state ── */
-              <div className="efb-rx-live">
+              <div
+                className="efb-rx-live"
+                data-watchdog={commWatchdogState !== "clear" ? commWatchdogState : undefined}
+              >
 
-                {/* Info header: timestamp · type badge · freq · confidence · ●LIVE · LISTEN btn */}
+                {/* Info header: timestamp · type · freq · spacer · ●LIVE · [watchdog] · LISTEN */}
                 <div className="efb-rx-live-header">
                   {commTxLog[0] && (
                     <>
@@ -2847,16 +2819,34 @@ const commParseGround = (text) => {
                       )}
                     </>
                   )}
+                  {/* Spacer pushes right-side controls to edge */}
+                  <span style={{ flex: 1 }}/>
                   {commTranscript && (
                     <span className="efb-rx-live-pill">
                       <span className="efb-status-dot ok"/>
                       LIVE
                     </span>
                   )}
-                  {/* LISTEN / STOP button — right-aligned */}
+                  {/* Watchdog: amber countdown badge (alert) or red ACK button (unanswered) */}
+                  {commWatchdogState === "alert" && (
+                    <button
+                      className="efb-rx-wd-badge"
+                      onClick={e => { e.stopPropagation(); commAckCall(); }}
+                    >
+                      ACK [{commAckCountdown}s]
+                    </button>
+                  )}
+                  {commWatchdogState === "unanswered" && (
+                    <button
+                      className="efb-rx-wd-ack"
+                      onClick={e => { e.stopPropagation(); commAckCall(); }}
+                    >
+                      ACK
+                    </button>
+                  )}
+                  {/* LISTEN / STOP button */}
                   <button
                     className={`efb-rb-listen-btn${commListening ? " active" : ""}`}
-                    style={{ marginLeft: "auto" }}
                     onClick={e => {
                       e.stopPropagation();
                       if (commListening) { commStopListening(); }

@@ -152,6 +152,10 @@ export function CommPage({
   onReplay,
   onClearLog,
   forceFreqTab,
+  watchdogState = "clear",
+  watchdogTx    = null,
+  ackCountdown  = 0,
+  onAckCall,
   atisData,  onSetAtisData,  atisArmState,  onArmAtis,  onClearAtisRaw,
   taxiData,  onSetTaxiData,  taxiArmState,  onArmTaxi,  onClearTaxiRaw,
   gndData,   onSetGndData,   gndArmState,   onArmGnd,   onClearGndRaw,
@@ -291,55 +295,91 @@ export function CommPage({
               <div style={{ marginBottom: 16 }}>
 
                 {/* ── Most recent — large featured card ── */}
-                <div style={{
-                  background: "var(--bg-1)",
-                  border: "1px solid var(--line)",
-                  borderLeft: "3px solid var(--accent)",
-                  borderRadius: "var(--r-md)",
-                  overflow: "hidden",
-                  marginBottom: txLog.length > 1 ? 10 : 0,
-                }}>
-                  {/* Meta row: timestamp · type badge · "Most Recent" label */}
-                  <div style={{
-                    display: "flex", alignItems: "center", gap: 10,
-                    padding: "7px 14px",
-                    borderBottom: "1px solid var(--line-faint)",
-                    fontFamily: "var(--f-mono)", fontSize: 10,
-                  }}>
-                    <span style={{ color: "var(--t-tertiary)", letterSpacing: "0.06em" }}>
-                      {fmtTs(txLog[0].ts)}
-                    </span>
-                    <span style={{
-                      fontSize: 9, fontWeight: 700, letterSpacing: "0.1em",
-                      textTransform: "uppercase", color: "var(--accent)",
-                      border: "1px solid rgba(77,163,255,0.30)",
-                      borderRadius: "3px", padding: "1px 6px",
-                      background: "rgba(77,163,255,0.10)",
-                    }}>
-                      {fmtType(txLog[0].type)}
-                    </span>
-                    {txLog[0].tokens?.freq && (
-                      <span style={{ color: "var(--t-secondary)", letterSpacing: "0.04em" }}>
-                        {txLog[0].tokens.freq}
-                      </span>
-                    )}
-                    <span style={{
-                      marginLeft: "auto", fontSize: 9, letterSpacing: "0.1em",
-                      textTransform: "uppercase", color: "var(--t-quiet)",
-                    }}>
-                      Most Recent
-                    </span>
-                  </div>
-                  {/* Large transcript text */}
-                  <div style={{
-                    padding: "11px 14px 13px",
-                    fontFamily: "var(--f-ui)", fontSize: 18, fontWeight: 500,
-                    color: "var(--t-primary)", lineHeight: 1.5,
-                    letterSpacing: "-0.005em",
-                  }}>
-                    &ldquo;{txLog[0].text}&rdquo;
-                  </div>
-                </div>
+                {(() => {
+                  const isWd = watchdogState !== "clear" && txLog[0]?.id === watchdogTx?.id;
+                  const wdAlert      = isWd && watchdogState === "alert";
+                  const wdUnanswered = isWd && watchdogState === "unanswered";
+                  const borderLeft   = wdUnanswered ? "3px solid var(--warn)"
+                                     : isWd        ? "3px solid var(--caution)"
+                                     :               "3px solid var(--accent)";
+                  const cardBg       = wdUnanswered ? "rgba(255,107,107,0.06)"
+                                     : isWd        ? "rgba(245,181,68,0.05)"
+                                     :               "var(--bg-1)";
+                  return (
+                    <div
+                      className={wdUnanswered ? "comm-wd-flash" : ""}
+                      style={{
+                        background: cardBg,
+                        border: "1px solid var(--line)",
+                        borderLeft,
+                        borderRadius: "var(--r-md)",
+                        overflow: "hidden",
+                        marginBottom: txLog.length > 1 ? 10 : 0,
+                      }}
+                    >
+                      {/* Meta row: timestamp · type badge · watchdog badge · "Most Recent" */}
+                      <div style={{
+                        display: "flex", alignItems: "center", gap: 10,
+                        padding: "7px 14px",
+                        borderBottom: "1px solid var(--line-faint)",
+                        fontFamily: "var(--f-mono)", fontSize: 10,
+                      }}>
+                        <span style={{ color: "var(--t-tertiary)", letterSpacing: "0.06em" }}>
+                          {fmtTs(txLog[0].ts)}
+                        </span>
+                        <span style={{
+                          fontSize: 9, fontWeight: 700, letterSpacing: "0.1em",
+                          textTransform: "uppercase", color: "var(--accent)",
+                          border: "1px solid rgba(77,163,255,0.30)",
+                          borderRadius: "3px", padding: "1px 6px",
+                          background: "rgba(77,163,255,0.10)",
+                        }}>
+                          {fmtType(txLog[0].type)}
+                        </span>
+                        {txLog[0].tokens?.freq && (
+                          <span style={{ color: "var(--t-secondary)", letterSpacing: "0.04em" }}>
+                            {txLog[0].tokens.freq}
+                          </span>
+                        )}
+                        <span style={{ flex: 1 }}/>
+                        {/* Watchdog badge / ACK button */}
+                        {wdAlert && (
+                          <button
+                            className="efb-rx-wd-badge"
+                            onClick={onAckCall}
+                          >
+                            ACK [{ackCountdown}s]
+                          </button>
+                        )}
+                        {wdUnanswered && (
+                          <button
+                            className="efb-rx-wd-ack"
+                            onClick={onAckCall}
+                          >
+                            ACK
+                          </button>
+                        )}
+                        {!isWd && (
+                          <span style={{
+                            fontSize: 9, letterSpacing: "0.1em",
+                            textTransform: "uppercase", color: "var(--t-quiet)",
+                          }}>
+                            Most Recent
+                          </span>
+                        )}
+                      </div>
+                      {/* Large transcript text */}
+                      <div style={{
+                        padding: "11px 14px 13px",
+                        fontFamily: "var(--f-ui)", fontSize: 18, fontWeight: 500,
+                        color: "var(--t-primary)", lineHeight: 1.5,
+                        letterSpacing: "-0.005em",
+                      }}>
+                        &ldquo;{txLog[0].text}&rdquo;
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* ── Earlier transmissions — compact rows ── */}
                 {txLog.length > 1 && (

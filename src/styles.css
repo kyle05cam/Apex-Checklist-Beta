@@ -201,7 +201,7 @@ ul, li { list-style: none; padding: 0; margin: 0; }
 /* ============================================================
    Radio monitoring strip — row 2
    .efb-rx-wrap     outer column container  (grid-row: 2)
-   .efb-rx-watchdog conditional alert banner (only when ACK needed)
+   watchdog state applied inline to .efb-rx-live via data-watchdog attr
    .efb-rx-area     transcript display      (auto height)
    ============================================================ */
 
@@ -213,47 +213,70 @@ ul, li { list-style: none; padding: 0; margin: 0; }
   flex-direction: column;
 }
 
-/* ── WATCHDOG BANNER ──────────────────────────────────────────────────────────
-   Three visual states driven by data-state attribute:
-     pending    — amber: callsign heard, transmission still in progress
-     alert      — amber + countdown: tx done, pilot has 5s to respond
-     unanswered — red + pulse: countdown expired, must ACK
+/* ── WATCHDOG — inline on transmission block ──────────────────────────────────
+   Applied via data-watchdog attribute on .efb-rx-live:
+     pending    — amber left accent: callsign heard, tx still flowing
+     alert      — amber left accent + tint: countdown running
+     unanswered — red left accent + tint + pulse: must ACK
    ──────────────────────────────────────────────────────────────────────────── */
-.efb-rx-watchdog {
-  display: flex;
-  align-items: center;
-  gap: var(--s-3);
-  padding: 0 var(--s-4);
-  height: 36px;
-  background: var(--caution-bg);
-  border-bottom: 1px solid var(--caution-line);
-  flex-shrink: 0;
-  transition: background 0.3s, border-color 0.3s;
+.efb-rx-live[data-watchdog="pending"] {
+  border-left: 3px solid var(--caution);
+  background: rgba(245,181,68,0.04);
 }
-.efb-rx-watchdog[data-state="unanswered"] {
-  background: var(--warn-bg);
-  border-bottom-color: var(--warn-line);
+.efb-rx-live[data-watchdog="alert"] {
+  border-left: 3px solid var(--caution);
+  background: rgba(245,181,68,0.06);
+}
+.efb-rx-live[data-watchdog="unanswered"] {
+  border-left: 3px solid var(--warn);
+  background: rgba(255,107,107,0.06);
   animation: efb-warn-flash 0.5s ease infinite alternate;
 }
-.efb-rx-watchdog-msg {
-  font-family: var(--f-ui);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--caution);
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.efb-rx-watchdog[data-state="unanswered"] .efb-rx-watchdog-msg {
-  color: var(--warn);
-}
-.efb-rx-watchdog-actions {
-  display: flex;
+
+/* ACK countdown badge — amber pill in the header row during alert */
+.efb-rx-wd-badge {
+  display: inline-flex;
   align-items: center;
-  gap: var(--s-3);
+  height: 22px;
+  padding: 0 var(--s-2);
+  background: var(--caution-bg);
+  border: 1px solid var(--caution-line);
+  border-radius: var(--r-sm);
+  color: var(--caution);
+  font-family: var(--f-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
   flex-shrink: 0;
+  transition: all 0.12s ease;
 }
+.efb-rx-wd-badge:hover { background: rgba(245,181,68,0.18); border-color: var(--caution); }
+
+/* Flash class for CommPage featured card when unanswered */
+.comm-wd-flash { animation: efb-warn-flash 0.5s ease infinite alternate; }
+
+/* ACK button — red, shown when unanswered */
+.efb-rx-wd-ack {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 var(--s-2);
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-line);
+  border-radius: var(--r-sm);
+  color: var(--warn);
+  font-family: var(--f-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.12s ease;
+}
+.efb-rx-wd-ack:hover { background: rgba(255,107,107,0.18); border-color: var(--warn); }
 
 /* Blue LISTEN / red STOP button — used in transcript area */
 .efb-rb-listen-btn {
@@ -436,7 +459,6 @@ ul, li { list-style: none; padding: 0; margin: 0; }
 .efb-rx-live-freq { flex-shrink: 0; color: var(--t-secondary); letter-spacing: 0.04em; }
 .efb-rx-live-conf { flex-shrink: 0; color: var(--t-tertiary); }
 .efb-rx-live-pill {
-  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 5px;
