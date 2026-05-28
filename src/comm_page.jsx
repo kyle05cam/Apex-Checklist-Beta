@@ -145,6 +145,7 @@ function formatTaxiVia(raw) {
 export function CommPage({
   aircraft,
   listening,
+  rmsLevel = 0,
   txLog = [],
   onStartListen,
   onStopListen,
@@ -256,7 +257,7 @@ export function CommPage({
             </div>
           </div>
 
-          <Waveform live={listening}/>
+          <Waveform live={listening} rmsLevel={rmsLevel}/>
 
           <div style={{
             fontFamily: "var(--f-mono)", fontSize: 11,
@@ -1142,20 +1143,34 @@ function RouteEditor({ initialValue, onConfirm, onCancel }) {
 
 // ─── WAVEFORM ─────────────────────────────────────────────────────────────────
 // 64 bars; gentle sin + noise when live, flat 3px when idle.
-function Waveform({ live }) {
-  const [bars, setBars] = useState(() => Array.from({ length: 64 }, () => 6));
+// ─── WAVEFORM ─────────────────────────────────────────────────────────────────
+// 64 green bars driven by real rmsLevel (0–1) so height tracks actual audio.
+// Arch envelope makes center bars taller than edges — natural VU-meter shape.
+// When idle all bars collapse to a flat 3px line.
+function Waveform({ live, rmsLevel = 0 }) {
+  const BAR_COUNT = 64;
+  const [bars, setBars] = useState(() => Array.from({ length: BAR_COUNT }, () => 3));
+  const rmsRef = useRef(rmsLevel);
+
+  // Keep ref current so the setInterval closure always reads the latest value
+  useEffect(() => { rmsRef.current = rmsLevel; }, [rmsLevel]);
 
   useEffect(() => {
     if (!live) {
-      setBars(Array.from({ length: 64 }, () => 3));
+      setBars(Array.from({ length: BAR_COUNT }, () => 3));
       return;
     }
     const id = setInterval(() => {
-      setBars((prev) =>
-        prev.map((_, i) => {
-          const base  = 8 + Math.sin(Date.now() / 300 + i * 0.4) * 12;
-          const noise = Math.random() * 30;
-          return Math.max(4, Math.min(48, base + noise));
+      const lvl = rmsRef.current ?? 0;
+      setBars(
+        Array.from({ length: BAR_COUNT }, (_, i) => {
+          // Arch envelope: tallest in the middle, shorter at edges
+          const arch    = 0.4 + Math.sin((i / (BAR_COUNT - 1)) * Math.PI) * 0.6;
+          // Per-bar flutter ±30% for natural texture
+          const flutter = 0.7 + Math.random() * 0.6;
+          // Scale with rmsLevel; small floor keeps bars barely alive even in silence
+          const h = (lvl * 44 + 2) * arch * flutter;
+          return Math.max(2, Math.min(48, h));
         })
       );
     }, 80);
@@ -1168,7 +1183,7 @@ function Waveform({ live }) {
         <div
           key={i}
           className="waveform-bar"
-          style={{ height: h, opacity: live ? 0.35 + (h / 48) * 0.6 : 0.2 }}
+          style={{ height: h, opacity: live ? 0.45 + (h / 48) * 0.5 : 0.15 }}
         />
       ))}
     </div>
