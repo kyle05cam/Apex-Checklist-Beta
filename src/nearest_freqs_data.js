@@ -92,6 +92,90 @@ export const AIRPORT_DB = [
       { type:"TWR",   freq:"118.025", name:"Tower" },
       { type:"EMRG",  freq:"121.500", name:"Guard" },
     ]},
+  // ── ARIZONA (towered GA) ─────────────────────────────────────────────────────
+  { id:"KFFZ", name:"Falcon Field Airport", lat:33.4608, lon:-111.7281, elev:1394, type:"TOWERED",
+    freqs:[
+      { type:"ATIS",  freq:"118.600", name:"ATIS" },
+      { type:"GND",   freq:"121.700", name:"Ground" },
+      { type:"TWR",   freq:"125.550", name:"Tower" },
+      { type:"APP",   freq:"119.700", name:"Phoenix Approach" },
+      { type:"EMRG",  freq:"121.500", name:"Guard" },
+    ]},
+  { id:"KGYR", name:"Phoenix Goodyear Airport", lat:33.4225, lon:-112.3759, elev:968, type:"TOWERED",
+    freqs:[
+      { type:"ATIS",  freq:"132.975", name:"ATIS" },
+      { type:"GND",   freq:"121.700", name:"Ground" },
+      { type:"TWR",   freq:"133.400", name:"Tower" },
+      { type:"APP",   freq:"124.000", name:"Phoenix Approach West" },
+      { type:"EMRG",  freq:"121.500", name:"Guard" },
+    ]},
+  // ── ARIZONA (non-towered GA) ─────────────────────────────────────────────────
+  { id:"KCGZ", name:"Casa Grande Municipal Airport", lat:32.9547, lon:-111.7717, elev:1464, type:"NON-TOWERED",
+    freqs:[
+      { type:"AWOS",  freq:"120.475", name:"AWOS-3" },
+      { type:"CTAF",  freq:"122.800", name:"CTAF / Unicom" },
+    ]},
+  { id:"P08",  name:"Coolidge Municipal Airport", lat:32.9352, lon:-111.4273, elev:1574, type:"NON-TOWERED",
+    freqs:[
+      { type:"AWOS",  freq:"134.300", name:"AWOS-3" },
+      { type:"CTAF",  freq:"122.800", name:"CTAF / Unicom" },
+    ]},
+  { id:"A39",  name:"Ak-Chin Regional Airport", lat:32.9906, lon:-112.0094, elev:1295, type:"NON-TOWERED",
+    freqs:[
+      { type:"CTAF",  freq:"122.800", name:"CTAF / Unicom" },
+    ]},
+  { id:"P53",  name:"Globe Municipal Airport", lat:33.3522, lon:-110.6972, elev:3471, type:"NON-TOWERED",
+    freqs:[
+      { type:"CTAF",  freq:"122.800", name:"CTAF / Unicom" },
+    ]},
+  { id:"KRYN", name:"Ryan Airfield", lat:32.1422, lon:-111.1750, elev:2417, type:"NON-TOWERED",
+    freqs:[
+      { type:"AWOS",  freq:"132.075", name:"AWOS-3" },
+      { type:"CTAF",  freq:"122.800", name:"CTAF / Unicom" },
+    ]},
+  { id:"P19",  name:"Stellar Airpark", lat:33.3019, lon:-111.9203, elev:1175, type:"NON-TOWERED",
+    freqs:[
+      { type:"CTAF",  freq:"122.800", name:"CTAF / Unicom" },
+    ]},
+  { id:"KAVQ", name:"Marana Regional Airport", lat:32.4097, lon:-111.2186, elev:1999, type:"NON-TOWERED",
+    freqs:[
+      { type:"AWOS",  freq:"134.425", name:"AWOS-3" },
+      { type:"CTAF",  freq:"122.800", name:"CTAF / Unicom" },
+    ]},
+  { id:"KBXK", name:"Buckeye Municipal Airport", lat:33.4203, lon:-112.6861, elev:1033, type:"NON-TOWERED",
+    freqs:[
+      { type:"AWOS",  freq:"134.825", name:"AWOS-3" },
+      { type:"CTAF",  freq:"122.800", name:"CTAF / Unicom" },
+    ]},
+  { id:"KSEZ", name:"Sedona Airport", lat:34.8486, lon:-111.7886, elev:4827, type:"NON-TOWERED",
+    freqs:[
+      { type:"AWOS",  freq:"119.525", name:"AWOS-3" },
+      { type:"CTAF",  freq:"122.900", name:"CTAF / Unicom" },
+    ]},
+  { id:"KPAN", name:"Payson Airport", lat:34.2568, lon:-111.3393, elev:4999, type:"NON-TOWERED",
+    freqs:[
+      { type:"AWOS",  freq:"119.875", name:"AWOS-3" },
+      { type:"CTAF",  freq:"122.800", name:"CTAF / Unicom" },
+    ]},
+  { id:"E77",  name:"Wickenburg Municipal Airport", lat:33.9688, lon:-112.7978, elev:2377, type:"NON-TOWERED",
+    freqs:[
+      { type:"CTAF",  freq:"122.800", name:"CTAF / Unicom" },
+    ]},
+  { id:"KIGM", name:"Kingman Airport", lat:35.2595, lon:-113.9388, elev:3449, type:"NON-TOWERED",
+    freqs:[
+      { type:"ASOS",  freq:"128.425", name:"ASOS" },
+      { type:"CTAF",  freq:"122.800", name:"CTAF / Unicom" },
+    ]},
+  { id:"KSOW", name:"Show Low Regional Airport", lat:34.2654, lon:-110.0054, elev:6415, type:"NON-TOWERED",
+    freqs:[
+      { type:"AWOS",  freq:"135.075", name:"AWOS-3" },
+      { type:"CTAF",  freq:"122.800", name:"CTAF / Unicom" },
+    ]},
+  { id:"KPGA", name:"Page Municipal Airport", lat:36.9262, lon:-111.4483, elev:4316, type:"NON-TOWERED",
+    freqs:[
+      { type:"AWOS",  freq:"135.625", name:"AWOS-3" },
+      { type:"CTAF",  freq:"122.800", name:"CTAF / Unicom" },
+    ]},
   // ── CALIFORNIA ──────────────────────────────────────────────────────────────
   { id:"KLAX", name:"Los Angeles Intl Airport", lat:33.9425, lon:-118.4081, elev:125, type:"LARGE",
     freqs:[
