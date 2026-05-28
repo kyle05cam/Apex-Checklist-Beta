@@ -316,11 +316,112 @@ ul, li { list-style: none; padding: 0; margin: 0; }
 .efb-rx-area {
   background: var(--bg-1);
   border-bottom: 1px solid var(--line);
-  cursor: pointer;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
   transition: background 0.2s;
 }
 .efb-rx-area[data-watchdog="unanswered"] {
   animation: efb-warn-flash 0.5s ease infinite alternate;
+}
+
+/* Transcript side — takes up the left ~75% */
+.efb-rx-transcript {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.efb-rx-transcript:hover { background: rgba(255,255,255,0.018); }
+
+/* ── NRST header widget ── */
+.nrst-widget {
+  width: 220px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--line);
+  background: var(--bg-2);
+  padding: 9px 13px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s, border-color 0.12s;
+}
+.nrst-widget:hover {
+  background: rgba(77,163,255,0.07);
+  border-left-color: var(--accent-line);
+}
+.nrst-widget:focus-visible { outline: none; border-left-color: var(--accent); }
+
+.nrst-widget-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.nrst-widget-badge {
+  font-family: var(--f-mono);
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r-sm);
+  padding: 1px 5px;
+  flex-shrink: 0;
+}
+.nrst-widget-id {
+  font-family: var(--f-mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--t-primary);
+  letter-spacing: 0.06em;
+}
+.nrst-widget-dist {
+  font-family: var(--f-mono);
+  font-size: 10px;
+  color: var(--t-tertiary);
+  letter-spacing: 0.04em;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.nrst-widget-status {
+  font-family: var(--f-mono);
+  font-size: 10px;
+  color: var(--t-tertiary);
+  letter-spacing: 0.05em;
+  font-style: italic;
+}
+.nrst-widget-freqs {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.nrst-widget-freq-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.nrst-widget-freq-name {
+  font-family: var(--f-ui);
+  font-size: 11px;
+  color: var(--t-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nrst-widget-freq-hz {
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+  font-feature-settings: var(--num-feat);
 }
 
 /* Idle placeholder */

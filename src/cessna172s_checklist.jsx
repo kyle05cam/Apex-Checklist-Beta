@@ -4,7 +4,7 @@
 // live here. Import { ChecklistApp } into apex_kneeboard.jsx to use.
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState, useEffect, useRef, useCallback } from "react";
-import { CommPage } from "./comm_page.jsx";
+import { CommPage, NrstWidget } from "./comm_page.jsx";
 import { Icon } from "./icons.jsx";
 
 export const PAGES = [
@@ -1109,6 +1109,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   const [commWatchdogTx,    setCommWatchdogTx]    = useState(null);
   const [commAckCountdown,  setCommAckCountdown]  = useState(0);
   const [commReplayActive,  setCommReplayActive]  = useState(false);
+  const [commFreqTabTrigger, setCommFreqTabTrigger] = useState(0);
   const [commForceIfr,      setCommForceIfr]      = useState(false);
   const [commIfrData,       setCommIfrData]       = useState({ C:"",R:"",A:"",F:"",T:"" });
   const [commAtisData,      setCommAtisData]      = useState({ info:"",wind:"",altimeter:"",visibility:"",sky:"",caution:"" });
@@ -2818,12 +2819,16 @@ const commParseGround = (text) => {
             </div>
           </div>
 
-          {/* ── ROW B: transcript display area ── */}
+          {/* ── ROW B: transcript (left ¾) + NRST widget (right ¼) ── */}
           <div
             className="efb-rx-area"
             data-watchdog={commWatchdogState}
-            onClick={() => setCurrentPage("comm")}
           >
+            {/* Transcript side — clicking goes to Active Feed */}
+            <div
+              className="efb-rx-transcript"
+              onClick={() => setCurrentPage("comm")}
+            >
             {(commTranscript || commTxLog.length > 0) ? (
               /* ── ACTIVE / LIVE state ── */
               <div className="efb-rx-live">
@@ -2909,6 +2914,16 @@ const commParseGround = (text) => {
                 </div>
               </div>
             )}
+            </div>{/* end efb-rx-transcript */}
+
+            {/* NRST widget — right side, tapping jumps to Nearest Freqs tab */}
+            <NrstWidget
+              onNavigate={() => {
+                setCurrentPage("comm");
+                setCommFreqTabTrigger(n => n + 1);
+              }}
+            />
+
           </div>
 
         </div>
@@ -2944,6 +2959,7 @@ const commParseGround = (text) => {
                   lightMode={lightMode}
                   aircraft={aircraft}
                   listening={commListening}
+                  forceFreqTab={commFreqTabTrigger}
                   micStatus={commMicStatus}
                   rmsLevel={commRmsLevel}
                   transcript={commTranscript}

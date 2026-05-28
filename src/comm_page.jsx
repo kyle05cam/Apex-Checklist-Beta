@@ -150,6 +150,7 @@ export function CommPage({
   onStopListen,
   onReplay,
   onClearLog,
+  forceFreqTab,
   atisData,  onSetAtisData,  atisArmState,  onArmAtis,  onClearAtisRaw,
   taxiData,  onSetTaxiData,  taxiArmState,  onArmTaxi,  onClearTaxiRaw,
   gndData,   onSetGndData,   gndArmState,   onArmGnd,   onClearGndRaw,
@@ -157,6 +158,11 @@ export function CommPage({
   ...rest
 }) {
   const [tab, setTab] = useState("active");
+
+  // Jump to Nearest Freqs tab when triggered from the header NRST widget
+  useEffect(() => {
+    if (forceFreqTab > 0) setTab("freq");
+  }, [forceFreqTab]);
   const [editPopover, setEditPopover] = useState(null); // { id, label, value, inputMode }
 
   const openEdit = (f) => setEditPopover({ id: f.id, label: f.label, value: getFieldValue(f.id), inputMode: f.inputMode });
@@ -1407,5 +1413,67 @@ function NearestFreqs() {
         )}
       </div>
     </div>
+  );
+}
+
+// ─── NRST HEADER WIDGET ───────────────────────────────────────────────────────
+// Compact nearest-airport readout for embedding in the global radio strip header.
+// Runs its own GPS watchPosition so it stays current throughout the flight.
+// Accepts an onNavigate callback — called when the user taps the widget — so the
+// parent can jump to the Comm page with the Nearest Freqs tab already open.
+export function NrstWidget({ onNavigate }) {
+  const [nearest, setNearest] = useState(null);
+  const [ready,   setReady]   = useState(false);
+
+  useEffect(() => {
+    if (!navigator?.geolocation) { setReady(true); return; }
+    const id = navigator.geolocation.watchPosition(
+      ({ coords }) => {
+        const aps = getNearestAirports(coords.latitude, coords.longitude, 1, 500);
+        setNearest(aps[0] ?? null);
+        setReady(true);
+      },
+      () => setReady(true),
+      { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 },
+    );
+    return () => navigator.geolocation.clearWatch(id);
+  }, []);
+
+  // Top 3 frequencies sorted by priority (Guard excluded — it's on every radio)
+  const topFreqs = nearest
+    ? [...nearest.freqs]
+        .filter(f => f.type !== "EMRG")
+        .sort((a, b) => (FREQ_META[a.type]?.priority ?? 99) - (FREQ_META[b.type]?.priority ?? 99))
+        .slice(0, 3)
+    : [];
+
+  return (
+    <button className="nrst-widget" onClick={onNavigate}>
+      <div className="nrst-widget-header">
+        <span className="nrst-widget-badge">NRST</span>
+        {!ready ? (
+          <span className="nrst-widget-status">Acquiring GPS…</span>
+        ) : !nearest ? (
+          <span className="nrst-widget-status">No airports nearby</span>
+        ) : (
+          <>
+            <span className="nrst-widget-id">{nearest.id}</span>
+            <span className="nrst-widget-dist">
+              {nearest.distNm < 1 ? "<1" : Math.round(nearest.distNm)} NM
+            </span>
+          </>
+        )}
+      </div>
+      {topFreqs.length > 0 && (
+        <div className="nrst-widget-freqs">
+          {topFreqs.map((f, i) => (
+            <div key={i} className="nrst-widget-freq-row">
+              <span className="nrst-widget-freq-name">{f.name}</span>
+              <span className="nrst-widget-freq-hz">{f.freq}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </button>
   );
 }
