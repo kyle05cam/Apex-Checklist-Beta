@@ -1053,27 +1053,12 @@ function DrawingNotepad({ title, footer, onClose, storageKey, initialImage, onSa
 //          ISA = 15 − (PA / 1000) × 2
 //          DA  = PA + 120 × (OAT − ISA)
 // ─────────────────────────────────────────────────────────────────────────────
-function DensityAltitudeHeader({ altimeter, temperature, onNavigate }) {
-  const [nearest,       setNearest]       = useState(null);
-  const [gpsReady,      setGpsReady]      = useState(false);
+function DensityAltitudeHeader({ altimeter, temperature, nearestAirport, gpsReady, onNavigate }) {
   const [elevOverride,  setElevOverride]  = useState(null);
   const [showOverride,  setShowOverride]  = useState(false);
   const [overrideInput, setOverrideInput] = useState("");
 
-  useEffect(() => {
-    if (!navigator?.geolocation) { setGpsReady(true); return; }
-    const wid = navigator.geolocation.watchPosition(
-      ({ coords }) => {
-        const aps = getNearestAirports(coords.latitude, coords.longitude, 1, 500);
-        setNearest(aps[0] ?? null);
-        setGpsReady(true);
-      },
-      () => setGpsReady(true),
-      { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 }
-    );
-    return () => navigator.geolocation.clearWatch(wid);
-  }, []);
-
+  const nearest = nearestAirport;
   const elev    = elevOverride !== null ? elevOverride : (nearest?.elev ?? null);
   const altNum  = parseFloat(altimeter);
   const tempNum = parseFloat(temperature);
@@ -1328,6 +1313,23 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   const [commAtisData,      setCommAtisData]      = useState({ info:"",wind:"",altimeter:"",temperature:"",visibility:"",sky:"",caution:"" });
   const [commGndData,       setCommGndData]        = useState({ clearedTo:"",route:"",altitude:"",frequency:"",taxi:"",squawk:"" });
   const [commTaxiData,      setCommTaxiData]      = useState({ runway:"",route:"",holdShort:"",instructions:"" });
+  // ── GPS nearest airport — single watcher at app level, persists across page changes ──
+  const [nearestAirport, setNearestAirport] = useState(null);
+  const [nearestReady,   setNearestReady]   = useState(false);
+  useEffect(() => {
+    if (!navigator?.geolocation) { setNearestReady(true); return; }
+    const wid = navigator.geolocation.watchPosition(
+      ({ coords }) => {
+        const aps = getNearestAirports(coords.latitude, coords.longitude, 1, 500);
+        setNearestAirport(aps[0] ?? null);
+        setNearestReady(true);
+      },
+      () => setNearestReady(true),
+      { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 }
+    );
+    return () => navigator.geolocation.clearWatch(wid);
+  }, []);
+
   const commWorkerRef       = useRef(null);
   const commWorkerBlobUrl   = useRef(null);
   const commRecognitionRef  = useRef(null);
@@ -2729,6 +2731,8 @@ const commParseGround = (text) => {
             <DensityAltitudeHeader
               altimeter={commAtisData.altimeter}
               temperature={commAtisData.temperature}
+              nearestAirport={nearestAirport}
+              gpsReady={nearestReady}
               onNavigate={() => setCurrentPage("comm")}
             />
           )}
