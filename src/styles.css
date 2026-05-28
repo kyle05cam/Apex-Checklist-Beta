@@ -475,7 +475,7 @@ ul, li { list-style: none; padding: 0; margin: 0; }
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   overflow: hidden;
-  max-height: 220px;
+  max-height: 84px;
   overflow-y: auto;
 }
 
