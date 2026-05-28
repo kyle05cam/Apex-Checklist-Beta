@@ -299,19 +299,77 @@ export function CommPage({
         {/* ── Active Feed ── */}
         {tab === "active" && (
           <>
-            {/* Recent transmissions quick reference — top 5, only shown when data exists */}
+            {/* Transmission history — featured most-recent + compact history rows */}
             {txLog.length > 0 && (
               <div style={{ marginBottom: 16 }}>
+
+                {/* ── Most recent — large featured card ── */}
                 <div style={{
-                  fontFamily: "var(--f-mono)", fontSize: 10, letterSpacing: "0.1em",
-                  textTransform: "uppercase", color: "var(--t-tertiary)",
-                  marginBottom: 8,
+                  background: "var(--bg-1)",
+                  border: "1px solid var(--line)",
+                  borderLeft: "3px solid var(--accent)",
+                  borderRadius: "var(--r-md)",
+                  overflow: "hidden",
+                  marginBottom: txLog.length > 1 ? 10 : 0,
                 }}>
-                  Recent Transmissions
+                  {/* Meta row: timestamp · type badge · "Most Recent" label */}
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 10,
+                    padding: "7px 14px",
+                    borderBottom: "1px solid var(--line-faint)",
+                    fontFamily: "var(--f-mono)", fontSize: 10,
+                  }}>
+                    <span style={{ color: "var(--t-tertiary)", letterSpacing: "0.06em" }}>
+                      {fmtTs(txLog[0].ts)}
+                    </span>
+                    <span style={{
+                      fontSize: 9, fontWeight: 700, letterSpacing: "0.1em",
+                      textTransform: "uppercase", color: "var(--accent)",
+                      border: "1px solid rgba(77,163,255,0.30)",
+                      borderRadius: "3px", padding: "1px 6px",
+                      background: "rgba(77,163,255,0.10)",
+                    }}>
+                      {fmtType(txLog[0].type)}
+                    </span>
+                    {txLog[0].tokens?.freq && (
+                      <span style={{ color: "var(--t-secondary)", letterSpacing: "0.04em" }}>
+                        {txLog[0].tokens.freq}
+                      </span>
+                    )}
+                    <span style={{
+                      marginLeft: "auto", fontSize: 9, letterSpacing: "0.1em",
+                      textTransform: "uppercase", color: "var(--t-quiet)",
+                    }}>
+                      Most Recent
+                    </span>
+                  </div>
+                  {/* Large transcript text */}
+                  <div style={{
+                    padding: "11px 14px 13px",
+                    fontFamily: "var(--f-ui)", fontSize: 18, fontWeight: 500,
+                    color: "var(--t-primary)", lineHeight: 1.5,
+                    letterSpacing: "-0.005em",
+                  }}>
+                    &ldquo;{txLog[0].text}&rdquo;
+                  </div>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <TransmissionFeed txLog={txLog} limit={5}/>
-                </div>
+
+                {/* ── Earlier transmissions — compact rows ── */}
+                {txLog.length > 1 && (
+                  <>
+                    <div style={{
+                      fontFamily: "var(--f-mono)", fontSize: 10, letterSpacing: "0.1em",
+                      textTransform: "uppercase", color: "var(--t-tertiary)",
+                      marginBottom: 6,
+                    }}>
+                      Earlier
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <TransmissionFeed txLog={txLog.slice(1)} limit={4}/>
+                    </div>
+                  </>
+                )}
+
               </div>
             )}
 
