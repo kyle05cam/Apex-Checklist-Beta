@@ -1681,6 +1681,12 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   // ── ATIS setter — enriches windDir/windSpeed/windGust whenever the wind
   // string is changed manually (manual edits bypass commParseAtis, so we
   // parse the formatted string back to numbers here to keep the DA banner fed).
+  //
+  // Two wind string formats exist:
+  //   Auto-capture (commParseAtis): "270° AT 15KT" | "270° AT 15 GUSTING 23"
+  //                                  group1=dir  group2=speed
+  //   WindEditor (manual):          "15 @ 270"   | "15 @ 270 gusting 23"
+  //                                  group1=speed group2=dir  ← ORDER REVERSED
   const handleSetAtisData = (newData) => {
     let out = { ...newData };
     if (newData.wind !== commAtisData.wind) {
@@ -1688,9 +1694,15 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
       if (/^calm$/i.test(w)) {
         out = { ...out, windDir: "", windSpeed: "0", windGust: "" };
       } else {
-        // Match "270° AT 15KT" or "270 AT 15 GUSTING 23" — the two formats commParseAtis writes
-        const m = w.match(/(\d{1,3})[°\s]+(?:at\s+)?(\d{1,3})\s*(?:kt)?(?:[,\s]+(?:gusting|gust)\s+(\d{1,3}))?/i);
-        if (m) out = { ...out, windDir: m[1], windSpeed: m[2], windGust: m[3] || "" };
+        // Format A — auto-capture: "270° AT 15KT" (direction first)
+        const mA = w.match(/^(\d{1,3})\s*°?\s+at\s+(\d{1,3})\s*(?:kt)?(?:\s+gusting\s+(\d{1,3}))?/i);
+        // Format B — WindEditor:   "15 @ 270"     (speed @ direction)
+        const mB = w.match(/^(\d{1,3})\s*@\s*(\d{1,3})(?:\s+gusting\s+(\d{1,3}))?/i);
+        if (mA) {
+          out = { ...out, windDir: mA[1], windSpeed: mA[2], windGust: mA[3] || "" };
+        } else if (mB) {
+          out = { ...out, windDir: mB[2], windSpeed: mB[1], windGust: mB[3] || "" };
+        }
       }
     }
     setCommAtisData(out);
