@@ -229,11 +229,19 @@ ul, li { list-style: none; padding: 0; margin: 0; }
 .efb-rx-featured[data-watchdog="alert"] {
   border-left: 3px solid var(--caution);
   background: rgba(245,181,68,0.06);
+  cursor: pointer;
+}
+.efb-rx-featured[data-watchdog="alert"]:hover {
+  background: rgba(245,181,68,0.10);
 }
 .efb-rx-featured[data-watchdog="unanswered"] {
   border-left: 3px solid var(--warn);
   background: rgba(255,107,107,0.06);
+  cursor: pointer;
   animation: efb-warn-flash 0.5s ease infinite alternate;
+}
+.efb-rx-featured[data-watchdog="unanswered"]:hover {
+  background: rgba(255,107,107,0.12);
 }
 
 /* Flash class for CommPage featured card when unanswered */
@@ -248,31 +256,23 @@ ul, li { list-style: none; padding: 0; margin: 0; }
   justify-content: center;
   width: 100%;
   padding: 10px 14px;
-  border: none;
   border-top: 1px solid;
   font-family: var(--f-mono);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.12s ease;
+  /* cursor and hover handled by parent wrapper */
 }
 .efb-rx-wd-footer[data-state="alert"] {
   background: rgba(245,181,68,0.12);
   border-top-color: var(--caution-line);
   color: var(--caution);
 }
-.efb-rx-wd-footer[data-state="alert"]:hover {
-  background: rgba(245,181,68,0.22);
-}
 .efb-rx-wd-footer[data-state="unanswered"] {
   background: rgba(255,107,107,0.14);
   border-top-color: var(--warn-line);
   color: var(--warn);
-}
-.efb-rx-wd-footer[data-state="unanswered"]:hover {
-  background: rgba(255,107,107,0.24);
 }
 
 /* Blue LISTEN / red STOP button — used in transcript area */

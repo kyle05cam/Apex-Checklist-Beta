@@ -315,7 +315,11 @@ export function CommPage({
                         borderRadius: "var(--r-md)",
                         overflow: "hidden",
                         marginBottom: txLog.length > 1 ? 10 : 0,
+                        cursor: (wdAlert || wdUnanswered) ? "pointer" : "default",
                       }}
+                      onClick={(wdAlert || wdUnanswered)
+                        ? e => { e.stopPropagation(); onAckCall?.(); }
+                        : undefined}
                     >
                       {/* Meta row: timestamp · type badge · watchdog badge · "Most Recent" */}
                       <div style={{
@@ -355,17 +359,13 @@ export function CommPage({
                       }}>
                         &ldquo;{txLog[0].text}&rdquo;
                       </div>
-                      {/* Watchdog footer — full-width tap target inside card */}
+                      {/* Watchdog footer label — whole card is the tap target */}
                       {isWd && (wdAlert || wdUnanswered) && (
-                        <button
-                          className="efb-rx-wd-footer"
-                          data-state={watchdogState}
-                          onClick={e => { e.stopPropagation(); onAckCall?.(); }}
-                        >
+                        <div className="efb-rx-wd-footer" data-state={watchdogState}>
                           {wdAlert
-                            ? `ATC call — tap to acknowledge  ·  ${ackCountdown}s`
-                            : "ATC call unanswered — tap to acknowledge"}
-                        </button>
+                            ? `ATC call — tap anywhere to acknowledge  ·  ${ackCountdown}s`
+                            : "ATC call unanswered — tap anywhere to acknowledge"}
+                        </div>
                       )}
                     </div>
                   );

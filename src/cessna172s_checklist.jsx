@@ -2789,10 +2789,13 @@ const commParseGround = (text) => {
               /* ── ACTIVE / LIVE state ── */
               <div className="efb-rx-live">
 
-                {/* ── Featured message only — watchdog highlight stays within this wrapper ── */}
+                {/* ── Featured message only — entire block is the ACK tap target ── */}
                 <div
                   className="efb-rx-featured"
                   data-watchdog={commWatchdogState !== "clear" ? commWatchdogState : undefined}
+                  onClick={(commWatchdogState === "alert" || commWatchdogState === "unanswered")
+                    ? e => { e.stopPropagation(); commAckCall(); }
+                    : undefined}
                 >
                   {/* Info header: timestamp · type · freq · spacer · ●LIVE · LISTEN */}
                   <div className="efb-rx-live-header">
@@ -2847,17 +2850,13 @@ const commParseGround = (text) => {
                     &ldquo;{commTranscript || commTxLog[0]?.text || ""}&rdquo;
                   </div>
 
-                  {/* ── Watchdog footer — full-width tap target, well clear of LISTEN ── */}
+                  {/* ── Watchdog footer label — visual indicator, whole block is the tap target ── */}
                   {(commWatchdogState === "alert" || commWatchdogState === "unanswered") && (
-                    <button
-                      className="efb-rx-wd-footer"
-                      data-state={commWatchdogState}
-                      onClick={e => { e.stopPropagation(); commAckCall(); }}
-                    >
+                    <div className="efb-rx-wd-footer" data-state={commWatchdogState}>
                       {commWatchdogState === "alert"
-                        ? `ATC call — tap to acknowledge  ·  ${commAckCountdown}s`
-                        : "ATC call unanswered — tap to acknowledge"}
-                    </button>
+                        ? `ATC call — tap anywhere to acknowledge  ·  ${commAckCountdown}s`
+                        : "ATC call unanswered — tap anywhere to acknowledge"}
+                    </div>
                   )}
                 </div>{/* end efb-rx-featured */}
 
