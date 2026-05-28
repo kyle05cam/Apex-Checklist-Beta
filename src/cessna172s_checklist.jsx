@@ -1842,6 +1842,7 @@ const commParseGround = (text) => {
   const watchdogInterimActiveRef = useRef(false); // true while interim text is flowing
   const watchdogCountdownRef     = useRef(false); // true while 5s countdown is actively running
   const watchdogUnansweredRef    = useRef(false); // true once countdown expired — blocks RMS standdown
+  const watchdogEscalatedRef     = useRef(false); // true when re-triggered from unanswered — uses short silence gate
   const SILENCE_CONFIRM_MS       = 1800;          // ms of speech-recognition silence before countdown starts
 
   // Called from the VU animation loop on every audio frame when watchdog is pending
@@ -1849,12 +1850,15 @@ const commParseGround = (text) => {
   const watchdogRmsCheckRef = useRef(null);
 
   const commTriggerWatchdog = useCallback((entry) => {
-    // Enter PENDING state immediately — no chime, no countdown yet
+    // If ATC is repeating a call we never answered, skip the long silence gate
+    const wasUnanswered = watchdogUnansweredRef.current;
     commClearTimers();
     clearTimeout(watchdogSilenceTimerRef.current);
     watchdogPendingEntryRef.current = entry;
     watchdogCountdownRef.current    = false;
     watchdogUnansweredRef.current   = false;
+    // Store whether this is an escalated repeat so commWatchdogOnFinal uses shorter gate
+    watchdogEscalatedRef.current    = wasUnanswered;
     setCommWatchdogState("pending");
     setCommWatchdogTx(entry);
     setCommAckCountdown(0);
@@ -1902,10 +1906,14 @@ const commParseGround = (text) => {
     watchdogInterimActiveRef.current = false;
     // Only arm the silence timer if pending (not yet counting down, not unanswered)
     if (watchdogPendingEntryRef.current && !watchdogCountdownRef.current && !watchdogUnansweredRef.current) {
+      // Escalated repeat (ATC called again on an unanswered tx): use a much shorter gate
+      // — we already know ATC has finished, no need to wait for silence confirmation
+      const gateMs = watchdogEscalatedRef.current ? 300 : SILENCE_CONFIRM_MS;
+      watchdogEscalatedRef.current = false; // consume the flag
       clearTimeout(watchdogSilenceTimerRef.current);
       watchdogSilenceTimerRef.current = setTimeout(() => {
         commStartWatchdogCountdown();
-      }, SILENCE_CONFIRM_MS);
+      }, gateMs);
     }
   }, [commStartWatchdogCountdown]);
 
@@ -2177,6 +2185,7 @@ const commParseGround = (text) => {
     watchdogPendingEntryRef.current  = null;
     watchdogCountdownRef.current     = false;
     watchdogUnansweredRef.current    = false;
+    watchdogEscalatedRef.current     = false;
     watchdogInterimActiveRef.current = false;
     setCommWatchdogState("clear");
     setCommWatchdogTx(null);
