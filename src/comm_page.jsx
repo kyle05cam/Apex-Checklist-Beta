@@ -1171,20 +1171,12 @@ function TransmissionFeed({ txLog = [], limit }) {
 // Falls back to placeholder rows when the log is empty.
 const PAGE_SIZE = 20;
 
-const ARCHIVE_PLACEHOLDER = [
-  { id: "p4", ts: null, type: "atis",     text: "Information Charlie, wind 270 at 12, altimeter 29.92, runway 12 center in use." },
-  { id: "p3", ts: null, type: "clnc_del", text: "Cleared to KOAK via JANIC, climb maintain 4000, expect 8000 in 10, squawk 4271." },
-  { id: "p2", ts: null, type: "ground",   text: "Skyhawk 12345, taxi to runway 12 center via Yankee, hold short Bravo." },
-  { id: "p1", ts: null, type: "tower",    text: "Skyhawk 12345, cleared for takeoff runway 12 center, fly heading 130." },
-];
-
 function ArchiveLog({ txLog = [], onClearLog }) {
   const [shown,        setShown]        = useState(PAGE_SIZE);
   const [confirmClear, setConfirmClear] = useState(false);
 
-  const isPlaceholder = txLog.length === 0;
-  const source  = isPlaceholder ? ARCHIVE_PLACEHOLDER : txLog;
-  const visible = source.slice(0, shown);
+  const source    = txLog;
+  const visible   = source.slice(0, shown);
   const remaining = source.length - shown;
 
   // Reset pagination when the log changes (e.g. after clear)
@@ -1200,8 +1192,8 @@ function ArchiveLog({ txLog = [], onClearLog }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
 
-      {/* Header bar — count + clear control */}
-      {!isPlaceholder && (
+      {/* Header bar — count + clear control (only when there are real entries) */}
+      {txLog.length > 0 && (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
           <span style={{ ...mono, fontSize: 10, color: "var(--t-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
             {txLog.length} transmission{txLog.length !== 1 ? "s" : ""} stored
@@ -1236,9 +1228,9 @@ function ArchiveLog({ txLog = [], onClearLog }) {
         </div>
       )}
 
-      {/* Entries */}
-      {source.length === 0 ? (
-        <div style={{ ...mono, fontSize: 11, color: "var(--t-tertiary)", textAlign: "center", padding: "32px 0", letterSpacing: "0.06em" }}>
+      {/* Entries or empty state */}
+      {txLog.length === 0 ? (
+        <div style={{ ...mono, fontSize: 11, color: "var(--t-tertiary)", textAlign: "center", padding: "40px 0", letterSpacing: "0.06em" }}>
           No transmissions recorded yet
         </div>
       ) : (
