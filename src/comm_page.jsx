@@ -1379,7 +1379,6 @@ function NearestFreqs() {
               </div>
               {freqs.map((f, i) => (
                 <div key={i} className="freq-row">
-                  <span className="freq-type">{f.type}</span>
                   <span className="freq-row-name">{f.name}</span>
                   <span className="freq-hz">{f.freq}</span>
                 </div>

@@ -3636,7 +3636,7 @@ ul, li { list-style: none; padding: 0; margin: 0; }
 }
 .freq-airport-id {
   font-family: var(--f-mono);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--accent);
   letter-spacing: 0.08em;
@@ -3644,17 +3644,19 @@ ul, li { list-style: none; padding: 0; margin: 0; }
 }
 .freq-airport-name {
   font-family: var(--f-ui);
-  font-size: 11px;
-  color: var(--t-secondary);
-  margin-left: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t-primary);
+  margin-left: 10px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .freq-airport-dist {
   font-family: var(--f-mono);
-  font-size: 11px;
-  color: var(--t-tertiary);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t-secondary);
   letter-spacing: 0.06em;
   flex-shrink: 0;
   margin-left: 8px;
@@ -3663,30 +3665,23 @@ ul, li { list-style: none; padding: 0; margin: 0; }
 /* Individual frequency row */
 .freq-row {
   display: grid;
-  grid-template-columns: 38px 1fr auto;
+  grid-template-columns: 1fr auto;
   align-items: center;
   gap: var(--s-3);
-  padding: 7px 12px;
+  padding: 8px 12px;
 }
 .freq-row + .freq-row {
   border-top: 1px solid var(--line);
 }
-.freq-type {
-  font-family: var(--f-mono);
-  font-size: 9px;
-  font-weight: 700;
-  color: var(--t-tertiary);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
 .freq-row-name {
   font-family: var(--f-ui);
-  font-size: 12px;
-  color: var(--t-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--t-primary);
 }
 .freq-hz {
   font-family: var(--f-mono);
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--accent);
   letter-spacing: 0.04em;
@@ -3718,7 +3713,7 @@ ul, li { list-style: none; padding: 0; margin: 0; }
 }
 .freq-guard-name {
   font-family: var(--f-ui);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--t-primary);
 }
