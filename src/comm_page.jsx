@@ -258,20 +258,6 @@ export function CommPage({
           </div>
 
           <Waveform live={listening} rmsLevel={rmsLevel}/>
-
-          <div style={{
-            fontFamily: "var(--f-mono)", fontSize: 11,
-            color: "var(--t-tertiary)", letterSpacing: "0.06em", textAlign: "center",
-          }}>
-            {listening ? (
-              <>
-                <span>TRANSCRIBING · 121.500 MHz · </span>
-                <span style={{ color: "var(--accent)" }}>conf 96%</span>
-              </>
-            ) : (
-              "TAP LISTEN TO BEGIN MONITORING"
-            )}
-          </div>
         </div>
 
         {/* ── Tabs ── */}
