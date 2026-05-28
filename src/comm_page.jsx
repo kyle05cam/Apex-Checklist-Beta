@@ -315,8 +315,8 @@ export function CommPage({
               </div>
             )}
 
-            {/* Empty state — only when idle and nothing captured yet */}
-            {!listening && !hasValues && (
+            {/* Empty state — only before any transmissions have ever been received */}
+            {!listening && !hasValues && txLog.length === 0 && (
               <div className="radio-empty">
                 <div className="radio-empty-icon">
                   <Icon name="antenna" size={22}/>
