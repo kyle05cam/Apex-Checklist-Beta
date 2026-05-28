@@ -1162,18 +1162,20 @@ function Waveform({ live, rmsLevel = 0 }) {
     }
     const id = setInterval(() => {
       const lvl = rmsRef.current ?? 0;
+      // Square-root gamma: expands the low-mid range where voice energy lives.
+      // Without this a loud voice at lvl=0.3 only moves bars ~30% of max height.
+      const boosted = Math.pow(Math.min(1, lvl * 2), 0.45);
       setBars(
         Array.from({ length: BAR_COUNT }, (_, i) => {
           // Arch envelope: tallest in the middle, shorter at edges
-          const arch    = 0.4 + Math.sin((i / (BAR_COUNT - 1)) * Math.PI) * 0.6;
-          // Per-bar flutter ±30% for natural texture
-          const flutter = 0.7 + Math.random() * 0.6;
-          // Scale with rmsLevel; small floor keeps bars barely alive even in silence
-          const h = (lvl * 44 + 2) * arch * flutter;
+          const arch    = 0.35 + Math.sin((i / (BAR_COUNT - 1)) * Math.PI) * 0.65;
+          // Wide per-bar flutter so bars dance independently rather than moving in unison
+          const flutter = 0.35 + Math.random() * 1.3;
+          const h = (boosted * 46 + 2) * arch * flutter;
           return Math.max(2, Math.min(48, h));
         })
       );
-    }, 80);
+    }, 60);
     return () => clearInterval(id);
   }, [live]);
 
