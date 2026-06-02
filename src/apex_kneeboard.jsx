@@ -250,7 +250,7 @@ function AircraftEditModal({ profile, onSave, onClose }) {
 
         {/* Scrollable form body */}
         <div className="hangar-modal-body">
-          <SectionContent />
+          {SectionContent()}
         </div>
 
         {/* Footer */}
