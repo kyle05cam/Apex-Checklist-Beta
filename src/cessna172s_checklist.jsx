@@ -775,7 +775,7 @@ export const MORE_REFS = [
     ],
   },
   {
-    id: "c172_limits", title: "C172S Operating Limits", color: "#f5b544",
+    id: "c172_limits", title: "C172S Operating Limits", color: "#4a9fe8",
     note: "§2 Limitations — values shown are C172S POH defaults. Upload your POH to override.",
     cols: ["Limit", "Value"],
     rows: [
