@@ -1605,8 +1605,27 @@ function DensityAltitudeHeader({ altimeter, temperature, windDir, windSpeed, win
 // CHECKLIST APP — the full interactive kneeboard for a single aircraft
 // Import this into apex_kneeboard.jsx
 // ─────────────────────────────────────────────────────────────────────────────
+// Convert scanned checklist phases → PAGES-compatible structure,
+// merging with built-in page metadata (icon, label) where available.
+function buildPagesFromScan(scanned) {
+  return scanned.map(group => {
+    const base = PAGES.find(p => p.id === group.phase.id);
+    return {
+      id:       group.phase.id,
+      icon:     base?.icon  ?? "📋",
+      label:    base?.label ?? group.phase.label.toUpperCase(),
+      sections: group.sections,
+    };
+  });
+}
+
 export function ChecklistApp({ onBackToHangar, aircraft }) {
-  const [currentPage, setCurrentPage] = useState("preflight");
+  // Use scanned checklist pages when available, fall back to built-in PAGES
+  const activePages = aircraft?.scannedChecklist
+    ? buildPagesFromScan(aircraft.scannedChecklist)
+    : PAGES;
+
+  const [currentPage, setCurrentPage] = useState(activePages[0]?.id ?? "preflight");
   const [checked, setChecked] = useState({});
   const [vspeedOpen, setVspeedOpen] = useState(false);
   const [perfOpen, setPerfOpen] = useState(false);
@@ -3096,7 +3115,7 @@ const commParseGround = (text) => {
   const resetPage = (pageId) => setChecked(prev => { const next = { ...prev }; Object.keys(next).forEach(k => { if (k.startsWith(pageId + "::")) delete next[k]; }); return next; });
 
   const countPage = (pageId) => {
-    const allPgs = [...PAGES, ...EMG_PAGES];
+    const allPgs = [...activePages, ...EMG_PAGES];
     const pg = allPgs.find(p => p.id === pageId);
     if (!pg) return { total: 0, done: 0 };
     let total = 0, done = 0;
@@ -3116,9 +3135,9 @@ const commParseGround = (text) => {
     return { total, done };
   };
 
-  const masterCount = [...PAGES, ...EMG_PAGES].reduce((acc, p) => { const c = countPage(p.id); return { total: acc.total + c.total, done: acc.done + c.done }; }, { total: 0, done: 0 });
+  const masterCount = [...activePages, ...EMG_PAGES].reduce((acc, p) => { const c = countPage(p.id); return { total: acc.total + c.total, done: acc.done + c.done }; }, { total: 0, done: 0 });
   const isEmgPage = EMG_PAGES.some(p => p.id === currentPage);
-  const activePg = isEmgPage ? EMG_PAGES.find(p => p.id === currentPage) : PAGES.find(p => p.id === currentPage);
+  const activePg = isEmgPage ? EMG_PAGES.find(p => p.id === currentPage) : activePages.find(p => p.id === currentPage);
 
   const applyInlineRename = (pageId, sectionTitle, item, newLabel, newAction, addedIdx) => {
     const key = getSectionKey(pageId, sectionTitle);
@@ -3657,7 +3676,7 @@ const commParseGround = (text) => {
 
       {/* ── LEFT RAIL ── */}
       <nav className="efb-rail-l">
-        {PAGES.map(pg => {
+        {activePages.map(pg => {
           const iconMap = { preflight:"preflight", startup:"startup", taxi:"taxi", takeoff:"takeoff", cruise:"cruise", approach:"landing", shutdown:"power" };
           const isActive = currentPage === pg.id;
           const count = countPage(pg.id);

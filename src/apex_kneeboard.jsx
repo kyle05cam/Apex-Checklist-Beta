@@ -8,6 +8,7 @@ import { ChecklistApp } from "./cessna172s_checklist.jsx";
 import { AIRPORT_DB } from "./nearest_freqs_data.js";
 import { parsePoh } from "./pohParser.js";
 import { saveProfile as dbSaveProfile, loadProfile as dbLoadProfile } from "./pohDb.js";
+import { ChecklistScanner } from "./checklistScanner.jsx";
 
 const DEFAULT_PROFILE = {
   id: "n12345",
@@ -52,6 +53,8 @@ const DEFAULT_PROFILE = {
   pohTakeoff:    null,    // { gndRoll: [[alt,ft]…], over50ft: [[alt,ft]…] }
   pohLanding:    null,    // { gndRoll: [[alt,ft]…], over50ft: [[alt,ft]…] }
   pohMaxXwind:   null,    // max demonstrated crosswind kt (shortcut from pohLimits)
+  // Scanned checklist — array of { phase: {id, label}, sections: [{title, items}] }
+  scannedChecklist: null,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -912,15 +915,24 @@ function ManualEntryView({ onClose }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ADD AIRCRAFT MODAL — bottom sheet with 3 option cards
+// ADD AIRCRAFT MODAL — centered dialog with 3 option cards
 // ─────────────────────────────────────────────────────────────────────────────
-function AddAircraftModal({ onClose }) {
-  const [screen, setScreen] = useState("choose"); // "choose" | "library" | "manual"
+function AddAircraftModal({ onClose, onSaveProfile, profile }) {
+  const [screen, setScreen] = useState("choose"); // "choose" | "library" | "manual" | "scan"
   const [searchQuery, setSearchQuery] = useState("");
   const readyCount = CHECKLIST_LIBRARY.filter(a => a.status === "INCLUDED").length;
   const soonCount  = CHECKLIST_LIBRARY.filter(a => a.status === "COMING SOON").length;
 
   if (screen === "manual") return <ManualEntryView onClose={onClose} />;
+
+  if (screen === "scan") return (
+    <ChecklistScanner
+      onClose={onClose}
+      onApply={(scannedChecklist) => {
+        onSaveProfile({ ...profile, scannedChecklist });
+      }}
+    />
+  );
 
   const filtered = CHECKLIST_LIBRARY.filter(ac =>
     ac.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -931,20 +943,20 @@ function AddAircraftModal({ onClose }) {
     <>
       {/* Backdrop */}
       <div
-        className="hangar-sheet-backdrop open"
-        onClick={onClose}
-      />
+        className="hangar-modal-backdrop centered"
+        onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+        style={{ animation: "hangarFadeIn 0.2s ease" }}
+      >
 
-      {/* Sheet */}
-      <div className="hangar-sheet open">
-        <div className="hangar-sheet-inner">
+      {/* Panel */}
+      <div className="hangar-modal-panel" style={{ animation: "modalSlideUp 0.25s cubic-bezier(0.16,1,0.3,1)" }}>
 
           {/* ── CHOOSE SCREEN ── */}
           {screen === "choose" && (<>
-            <div className="hangar-sheet-head">
+            <div className="hangar-modal-header">
               <div>
-                <span className="hangar-sheet-title-name">Add Aircraft</span>
-                <span className="hangar-sheet-title-sub">Choose how to load a checklist</span>
+                <div className="hangar-modal-title">Add Aircraft</div>
+                <div className="hangar-modal-sub">CHOOSE HOW TO LOAD A CHECKLIST</div>
               </div>
               <button className="hangar-close-btn" onClick={onClose}>
                 <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -954,7 +966,7 @@ function AddAircraftModal({ onClose }) {
               </button>
             </div>
 
-            <div className="hangar-sheet-options">
+            <div className="hangar-modal-body"><div className="hangar-sheet-options">
               {/* Option 1 — Search Library */}
               <button className="hangar-opt-card" onClick={() => setScreen("library")}>
                 <span className="hangar-opt-icon">
@@ -1004,30 +1016,35 @@ function AddAircraftModal({ onClose }) {
                 </span>
               </button>
 
-              {/* Option 3 — AI Scan (disabled) */}
-              <button className="hangar-opt-card" data-disabled="true">
-                <span className="hangar-opt-icon dim-ico">
+              {/* Option 3 — Scan Paper Checklist */}
+              <button className="hangar-opt-card" onClick={() => setScreen("scan")}>
+                <span className="hangar-opt-icon">
                   <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
                     <circle cx="12" cy="13" r="4"/>
                   </svg>
                 </span>
                 <span className="hangar-opt-body">
-                  <span className="hangar-opt-name">Scan Paper Checklist (AI)</span>
-                  <span className="hangar-opt-desc">Photograph a POH or paper checklist.</span>
+                  <span className="hangar-opt-name">Scan Paper Checklist</span>
+                  <span className="hangar-opt-desc">Photograph a Checkmate card or printed POH checklist.</span>
                   <span className="hangar-opt-meta">
-                    <span className="pill">OCR + AI parsing</span>
-                    <span className="pill caution">Coming soon</span>
+                    <span className="pill ok">On-device OCR</span>
+                    <span className="pill">No internet needed</span>
                   </span>
                 </span>
-                <span className="hangar-opt-cta">Coming Soon</span>
+                <span className="hangar-opt-cta">
+                  Scan Now
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+                  </svg>
+                </span>
               </button>
-            </div>
+            </div></div>
           </>)}
 
           {/* ── LIBRARY SCREEN ── */}
           {screen === "library" && (<>
-            <div className="hangar-sheet-head">
+            <div className="hangar-modal-header">
               <div style={{ display:"flex", alignItems:"center", gap:12 }}>
                 <button
                   onClick={() => setScreen("choose")}
@@ -1039,8 +1056,8 @@ function AddAircraftModal({ onClose }) {
                   Back
                 </button>
                 <div>
-                  <span className="hangar-sheet-title-name">Checklist Library</span>
-                  <span className="hangar-sheet-title-sub">{readyCount} available · {soonCount} coming soon</span>
+                  <div className="hangar-modal-title">Checklist Library</div>
+                  <div className="hangar-modal-sub">{readyCount} AVAILABLE · {soonCount} COMING SOON</div>
                 </div>
               </div>
               <button className="hangar-close-btn" onClick={onClose}>
@@ -1050,6 +1067,7 @@ function AddAircraftModal({ onClose }) {
                 Close
               </button>
             </div>
+            <div className="hangar-modal-body">
 
             {/* Search */}
             <div style={{ position:"relative", marginBottom:16 }}>
@@ -1100,14 +1118,13 @@ function AddAircraftModal({ onClose }) {
                 );
               })}
             </div>
-          </>)}
+          </div></>)}
 
-        </div>
+      </div>
       </div>
     </>
   );
 }
-
 // ─────────────────────────────────────────────────────────────────────────────
 // HANGAR VIEW
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1403,7 +1420,7 @@ function HangarView({ profile, onSelectAircraft, onSaveProfile }) {
 
       {/* Add Aircraft modal */}
       {addOpen && (
-        <AddAircraftModal onClose={() => setAddOpen(false)} />
+        <AddAircraftModal onClose={() => setAddOpen(false)} profile={profile} onSaveProfile={onSaveProfile} />
       )}
     </div>
   );

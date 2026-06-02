@@ -3385,6 +3385,22 @@ ul, li { list-style: none; padding: 0; margin: 0; }
   flex-shrink: 0;
   background: var(--bg-0);
 }
+/* Centered modal variant — used for dialogs that aren't full-height sheets */
+.hangar-modal-backdrop.centered {
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.hangar-modal-backdrop.centered .hangar-modal-panel {
+  width: 100%;
+  max-width: 560px;
+  max-height: 82vh;
+  border-radius: 12px;
+  border-top: none;
+  border: 1px solid var(--accent-line);
+  box-shadow: 0 32px 80px rgba(0,0,0,0.7);
+}
+
 .hangar-field { margin-bottom: 14px; }
 .hangar-field-label {
   font-family: var(--f-mono);
