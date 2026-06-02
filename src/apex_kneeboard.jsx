@@ -6,6 +6,8 @@
 import { useState, useEffect } from "react";
 import { ChecklistApp } from "./cessna172s_checklist.jsx";
 import { AIRPORT_DB } from "./nearest_freqs_data.js";
+import { parsePoh } from "./pohParser.js";
+import { saveProfile as dbSaveProfile, loadProfile as dbLoadProfile } from "./pohDb.js";
 
 const DEFAULT_PROFILE = {
   id: "n12345",
@@ -42,98 +44,15 @@ const DEFAULT_PROFILE = {
   pohUploadedAt: "",      // ISO date string
   pohSource:     "DEFAULT",  // "DEFAULT" | "UPLOADED"
   // Extracted POH data (null = use aircraft type defaults)
-  pohVSpeeds:    null,    // { vso, vs1, vr, vx, vy, va, vfe, vno, vne }
-  pohWeights:    null,    // { maxGross, emptyWeight, usefulLoad }
-  pohFuel:       null,    // { totalGal, usableGal, type }
-  pohMaxXwind:   null,    // max demonstrated crosswind kt
+  pohVSpeeds:    null,    // { vso, vs1, vr, vx, vy, va, vfe, vno, vne, vapp }
+  pohWeights:    null,    // { maxGross, maxRamp, emptyWeight, usefulLoad, maxBaggage, cgFwd, cgAft }
+  pohFuel:       null,    // { totalGal, usableGal, type, oilType, oilCapMax, oilCapMin }
+  pohEngine:     null,    // { model, horsepower, cylinders, displacement, tbo, maxRpm, oilPressMin, oilPressMax, oilTempMax, chtMax }
+  pohLimits:     null,    // { maxCrosswind }
+  pohTakeoff:    null,    // { gndRoll: [[alt,ft]…], over50ft: [[alt,ft]…] }
+  pohLanding:    null,    // { gndRoll: [[alt,ft]…], over50ft: [[alt,ft]…] }
+  pohMaxXwind:   null,    // max demonstrated crosswind kt (shortcut from pohLimits)
 };
-
-// ─────────────────────────────────────────────────────────────────────────────
-// POH OFFLINE PARSER
-// Extracts readable ASCII strings from a PDF binary (works on digital PDFs,
-// not scanned images) then applies aviation-specific regex patterns to find
-// V-speeds, weight limits, fuel capacity, and crosswind limits.
-// ─────────────────────────────────────────────────────────────────────────────
-function extractTextFromPdfBuffer(buffer) {
-  const bytes = new Uint8Array(buffer);
-  const chunks = [];
-  let current = "";
-  for (let i = 0; i < bytes.length; i++) {
-    const c = bytes[i];
-    if (c >= 32 && c <= 126) {
-      current += String.fromCharCode(c);
-    } else {
-      if (current.length >= 4) chunks.push(current);
-      current = "";
-    }
-  }
-  if (current.length >= 4) chunks.push(current);
-  return chunks.join(" ");
-}
-
-function parsePohFromText(text) {
-  const t = text.replace(/\s+/g, " ");
-  const num = (pattern) => {
-    const m = t.match(pattern);
-    return m ? parseInt(m[1], 10) : null;
-  };
-  const flt = (pattern) => {
-    const m = t.match(pattern);
-    return m ? parseFloat(m[1]) : null;
-  };
-
-  // ── V-speeds ── (matches "Vx 62", "VX...62", "best angle...62 KIAS", etc.)
-  const vSpeeds = {
-    vso: num(/V[Ss][Oo0][\s\.\-]*(\d{2,3})\s*(?:KIAS|KT)?/i)
-      ?? num(/stall(?:ing)?\s+speed[^.]*(?:landing|full\s+flap)[^.]*?(\d{2,3})\s*(?:KIAS|KT)/i),
-    vs1: num(/V[Ss]1[\s\.\-]*(\d{2,3})\s*(?:KIAS|KT)?/i)
-      ?? num(/stall(?:ing)?\s+speed[^.]*clean[^.]*?(\d{2,3})\s*(?:KIAS|KT)/i),
-    vr:  num(/V[Rr][\s\.\-]*(\d{2,3})\s*(?:KIAS|KT)?/i)
-      ?? num(/rotation\s+speed[^.]*?(\d{2,3})\s*(?:KIAS|KT)/i),
-    vx:  num(/V[Xx][\s\.\-]*(\d{2,3})\s*(?:KIAS|KT)?/i)
-      ?? num(/best\s+angle[^.]*?(\d{2,3})\s*(?:KIAS|KT)/i),
-    vy:  num(/V[Yy][\s\.\-]*(\d{2,3})\s*(?:KIAS|KT)?/i)
-      ?? num(/best\s+rate[^.]*?(\d{2,3})\s*(?:KIAS|KT)/i),
-    va:  num(/V[Aa][\s\.\-]*(\d{2,3})\s*(?:KIAS|KT)?/i)
-      ?? num(/maneuver(?:ing)?\s+speed[^.]*?(\d{2,3})\s*(?:KIAS|KT)/i),
-    vfe: num(/V[Ff][Ee][\s\.\-]*(\d{2,3})\s*(?:KIAS|KT)?/i)
-      ?? num(/flap\s+extension[^.]*?(\d{2,3})\s*(?:KIAS|KT)/i),
-    vno: num(/V[Nn][Oo][\s\.\-]*(\d{2,3})\s*(?:KIAS|KT)?/i)
-      ?? num(/max(?:imum)?\s+structural\s+cruising[^.]*?(\d{2,3})\s*(?:KIAS|KT)/i),
-    vne: num(/V[Nn][Ee][\s\.\-]*(\d{2,3})\s*(?:KIAS|KT)?/i)
-      ?? num(/never[\s\-]exceed[^.]*?(\d{2,3})\s*(?:KIAS|KT)/i),
-  };
-
-  // ── Weights ──
-  const weights = {
-    maxGross:    num(/max(?:imum)?\s+(?:gross\s+)?(?:takeoff\s+)?weight[^.]*?(\d{3,5})\s*(?:lbs?|pounds?)/i)
-      ?? num(/gross\s+weight[^.]*?(\d{3,5})\s*(?:lbs?|pounds?)/i),
-    emptyWeight: num(/(?:standard\s+)?empty\s+weight[^.]*?(\d{3,5})\s*(?:lbs?|pounds?)/i),
-    usefulLoad:  num(/useful\s+load[^.]*?(\d{3,5})\s*(?:lbs?|pounds?)/i),
-  };
-
-  // ── Fuel ──
-  const fuel = {
-    totalGal:  num(/total\s+(?:fuel\s+)?capacity[^.]*?(\d{1,3}(?:\.\d)?)\s*(?:U\.?S\.?\s*)?gal/i)
-      ?? num(/fuel\s+capacity[^.]*?(\d{1,3})\s*(?:U\.?S\.?\s*)?gal/i),
-    usableGal: num(/usable\s+(?:fuel[^.]*?)?(\d{1,3}(?:\.\d)?)\s*(?:U\.?S\.?\s*)?gal/i),
-    type:      t.match(/(?:fuel\s+grade|fuel\s+type)[^.]*?(100\s*LL|Avgas|Jet\s*A|100\s*Octane)/i)?.[1]?.trim() ?? null,
-  };
-
-  // ── Max demonstrated crosswind ──
-  const maxXwind = num(/max(?:imum)?\s+demonstrated\s+crosswind[^.]*?(\d{1,2})\s*(?:KIAS|KT|knots)?/i)
-    ?? num(/crosswind[^.]*?demonstrated[^.]*?(\d{1,2})\s*(?:KIAS|KT|knots)?/i);
-
-  // Filter out null-only objects
-  const hasAny = (obj) => Object.values(obj).some(v => v !== null);
-
-  return {
-    vSpeeds:  hasAny(vSpeeds)  ? vSpeeds  : null,
-    weights:  hasAny(weights)  ? weights  : null,
-    fuel:     hasAny(fuel)     ? fuel     : null,
-    maxXwind: maxXwind,
-  };
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AIRCRAFT EDIT MODAL
@@ -154,41 +73,42 @@ function PohSection({ draft, onSet, setMultiple }) {
     setExtracted(null);
     setConfirmed(false);
 
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const buffer = ev.target.result;
-      const rawText = extractTextFromPdfBuffer(buffer);
-
-      // Heuristic: if very little readable text, likely a scanned PDF
-      const wordCount = rawText.split(/\s+/).filter(w => w.length > 3).length;
-      if (wordCount < 200) {
+    file.arrayBuffer().then((buffer) => {
+      parsePoh(buffer).then((result) => {
+        if (result.scanned) {
+          setMultiple({ pohFileName: file.name, pohUploadedAt: new Date().toISOString(), pohSource: "UPLOADED" });
+          setParseState("scanned");
+          return;
+        }
+        setExtracted(result);
         setMultiple({ pohFileName: file.name, pohUploadedAt: new Date().toISOString(), pohSource: "UPLOADED" });
-        setParseState("scanned");
-        return;
-      }
-
-      const result = parsePohFromText(rawText);
-      setExtracted(result);
-      setMultiple({ pohFileName: file.name, pohUploadedAt: new Date().toISOString(), pohSource: "UPLOADED" });
-      setParseState("done");
-    };
-    reader.onerror = () => setParseState("error");
-    reader.readAsArrayBuffer(file);
+        setParseState("done");
+      }).catch(() => setParseState("error"));
+    }).catch(() => setParseState("error"));
   };
 
   const applyExtracted = () => {
     if (!extracted) return;
     const updates = {};
-    if (extracted.vSpeeds)  updates.pohVSpeeds  = extracted.vSpeeds;
-    if (extracted.weights)  updates.pohWeights  = extracted.weights;
-    if (extracted.fuel)     updates.pohFuel     = extracted.fuel;
-    if (extracted.maxXwind !== null) updates.pohMaxXwind = extracted.maxXwind;
+    if (extracted.vSpeeds)             updates.pohVSpeeds  = extracted.vSpeeds;
+    if (extracted.weights)             updates.pohWeights  = extracted.weights;
+    if (extracted.fuel)                updates.pohFuel     = extracted.fuel;
+    if (extracted.engine)              updates.pohEngine   = extracted.engine;
+    if (extracted.limits)              updates.pohLimits   = extracted.limits;
+    if (extracted.takeoff)             updates.pohTakeoff  = extracted.takeoff;
+    if (extracted.landing)             updates.pohLanding  = extracted.landing;
+    if (extracted.maxXwind != null)    updates.pohMaxXwind = extracted.maxXwind;
     setMultiple(updates);
     setConfirmed(true);
   };
 
   const clearPoh = () => {
-    setMultiple({ pohFileName: "", pohUploadedAt: "", pohSource: "DEFAULT", pohVSpeeds: null, pohWeights: null, pohFuel: null, pohMaxXwind: null });
+    setMultiple({
+      pohFileName: "", pohUploadedAt: "", pohSource: "DEFAULT",
+      pohVSpeeds: null, pohWeights: null, pohFuel: null,
+      pohEngine: null, pohLimits: null, pohTakeoff: null, pohLanding: null,
+      pohMaxXwind: null,
+    });
     setParseState("idle");
     setExtracted(null);
     setConfirmed(false);
@@ -199,9 +119,22 @@ function PohSection({ draft, onSet, setMultiple }) {
   const Row = ({ label, value, unit = "" }) => value == null ? null : (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "5px 0", borderBottom: "1px solid var(--line-faint)" }}>
       <span style={{ ...mono, fontSize: 10, color: "var(--t-tertiary)", letterSpacing: "0.08em" }}>{label}</span>
-      <span style={{ ...mono, fontSize: 13, fontWeight: 700, color: "var(--t-primary)" }}>{value}{unit && <span style={{ fontSize: 10, color: "var(--t-tertiary)", marginLeft: 4 }}>{unit}</span>}</span>
+      <span style={{ ...mono, fontSize: 13, fontWeight: 700, color: "var(--t-primary)" }}>
+        {value}{unit && <span style={{ fontSize: 10, color: "var(--t-tertiary)", marginLeft: 4 }}>{unit}</span>}
+      </span>
     </div>
   );
+
+  const Section = ({ title, children }) => (
+    <div style={{ marginBottom: 12, padding: "12px 14px", borderRadius: 6, background: "var(--bg-inset)", border: "1px solid var(--line)" }}>
+      <div style={{ ...mono, fontSize: 9, fontWeight: 700, color: "var(--accent)", letterSpacing: "0.14em", marginBottom: 8 }}>{title}</div>
+      {children}
+    </div>
+  );
+
+  const nothingFound = extracted && !extracted.vSpeeds && !extracted.weights &&
+    !extracted.fuel && !extracted.engine && !extracted.limits &&
+    !extracted.takeoff && !extracted.landing && extracted.maxXwind == null;
 
   return (
     <div>
@@ -276,46 +209,87 @@ function PohSection({ draft, onSet, setMultiple }) {
           </div>
 
           {extracted.vSpeeds && (
-            <div style={{ marginBottom: 12, padding: "12px 14px", borderRadius: 6, background: "var(--bg-inset)", border: "1px solid var(--line)" }}>
-              <div style={{ ...mono, fontSize: 9, fontWeight: 700, color: "var(--accent)", letterSpacing: "0.14em", marginBottom: 8 }}>V-SPEEDS</div>
-              <Row label="Vso — Stall, full flaps"   value={extracted.vSpeeds.vso} unit="KT" />
-              <Row label="Vs1 — Stall, clean"        value={extracted.vSpeeds.vs1} unit="KT" />
-              <Row label="Vr — Rotation"             value={extracted.vSpeeds.vr}  unit="KT" />
-              <Row label="Vx — Best angle climb"     value={extracted.vSpeeds.vx}  unit="KT" />
-              <Row label="Vy — Best rate climb"      value={extracted.vSpeeds.vy}  unit="KT" />
-              <Row label="Va — Maneuvering"          value={extracted.vSpeeds.va}  unit="KT" />
-              <Row label="Vfe — Max flap extension"  value={extracted.vSpeeds.vfe} unit="KT" />
-              <Row label="Vno — Max structural cruise" value={extracted.vSpeeds.vno} unit="KT" />
-              <Row label="Vne — Never exceed"        value={extracted.vSpeeds.vne} unit="KT" />
-            </div>
+            <Section title="V-SPEEDS">
+              <Row label="Vso — Stall, full flaps"      value={extracted.vSpeeds.vso}  unit="KT" />
+              <Row label="Vs1 — Stall, clean"           value={extracted.vSpeeds.vs1}  unit="KT" />
+              <Row label="Vr — Rotation"                value={extracted.vSpeeds.vr}   unit="KT" />
+              <Row label="Vx — Best angle climb"        value={extracted.vSpeeds.vx}   unit="KT" />
+              <Row label="Vy — Best rate climb"         value={extracted.vSpeeds.vy}   unit="KT" />
+              <Row label="Vapp — Normal approach"       value={extracted.vSpeeds.vapp} unit="KT" />
+              <Row label="Va — Maneuvering"             value={extracted.vSpeeds.va}   unit="KT" />
+              <Row label="Vfe — Max flap extension"     value={extracted.vSpeeds.vfe}  unit="KT" />
+              <Row label="Vno — Max structural cruise"  value={extracted.vSpeeds.vno}  unit="KT" />
+              <Row label="Vne — Never exceed"           value={extracted.vSpeeds.vne}  unit="KT" />
+            </Section>
           )}
 
           {extracted.weights && (
-            <div style={{ marginBottom: 12, padding: "12px 14px", borderRadius: 6, background: "var(--bg-inset)", border: "1px solid var(--line)" }}>
-              <div style={{ ...mono, fontSize: 9, fontWeight: 700, color: "var(--accent)", letterSpacing: "0.14em", marginBottom: 8 }}>WEIGHT LIMITS</div>
-              <Row label="Max gross weight"  value={extracted.weights.maxGross}    unit="LBS" />
-              <Row label="Standard empty"    value={extracted.weights.emptyWeight} unit="LBS" />
-              <Row label="Useful load"       value={extracted.weights.usefulLoad}  unit="LBS" />
-            </div>
+            <Section title="WEIGHT LIMITS">
+              <Row label="Max gross weight"   value={extracted.weights.maxGross}    unit="LBS" />
+              <Row label="Max ramp weight"    value={extracted.weights.maxRamp}     unit="LBS" />
+              <Row label="Standard empty"     value={extracted.weights.emptyWeight} unit="LBS" />
+              <Row label="Useful load"        value={extracted.weights.usefulLoad}  unit="LBS" />
+              <Row label="Max baggage"        value={extracted.weights.maxBaggage}  unit="LBS" />
+              <Row label="CG fwd limit"       value={extracted.weights.cgFwd}       unit="IN" />
+              <Row label="CG aft limit"       value={extracted.weights.cgAft}       unit="IN" />
+            </Section>
           )}
 
           {extracted.fuel && (
-            <div style={{ marginBottom: 12, padding: "12px 14px", borderRadius: 6, background: "var(--bg-inset)", border: "1px solid var(--line)" }}>
-              <div style={{ ...mono, fontSize: 9, fontWeight: 700, color: "var(--accent)", letterSpacing: "0.14em", marginBottom: 8 }}>FUEL</div>
-              <Row label="Total capacity"  value={extracted.fuel.totalGal}  unit="GAL" />
-              <Row label="Usable"          value={extracted.fuel.usableGal} unit="GAL" />
-              <Row label="Grade"           value={extracted.fuel.type} />
-            </div>
+            <Section title="FUEL & OIL">
+              <Row label="Total fuel capacity"  value={extracted.fuel.totalGal}   unit="GAL" />
+              <Row label="Usable fuel"          value={extracted.fuel.usableGal}  unit="GAL" />
+              <Row label="Fuel grade"           value={extracted.fuel.type} />
+              <Row label="Oil type"             value={extracted.fuel.oilType} />
+              <Row label="Oil capacity (max)"   value={extracted.fuel.oilCapMax}  unit="QT" />
+              <Row label="Oil capacity (min)"   value={extracted.fuel.oilCapMin}  unit="QT" />
+            </Section>
           )}
 
-          {extracted.maxXwind !== null && (
-            <div style={{ marginBottom: 12, padding: "12px 14px", borderRadius: 6, background: "var(--bg-inset)", border: "1px solid var(--line)" }}>
-              <div style={{ ...mono, fontSize: 9, fontWeight: 700, color: "var(--accent)", letterSpacing: "0.14em", marginBottom: 8 }}>CROSSWIND LIMITS</div>
+          {extracted.engine && (
+            <Section title="ENGINE SPECIFICATIONS">
+              <Row label="Engine model"         value={extracted.engine.model} />
+              <Row label="Horsepower"           value={extracted.engine.horsepower}   unit="HP" />
+              <Row label="Cylinders"            value={extracted.engine.cylinders} />
+              <Row label="Displacement"         value={extracted.engine.displacement}  unit="CU IN" />
+              <Row label="TBO"                  value={extracted.engine.tbo}           unit="HRS" />
+              <Row label="Max RPM"              value={extracted.engine.maxRpm}        unit="RPM" />
+              <Row label="Oil pressure (min)"   value={extracted.engine.oilPressMin}   unit="PSI" />
+              <Row label="Oil pressure (max)"   value={extracted.engine.oilPressMax}   unit="PSI" />
+              <Row label="Oil temp (max)"       value={extracted.engine.oilTempMax}    unit="°F" />
+              <Row label="CHT (max)"            value={extracted.engine.chtMax}        unit="°F" />
+            </Section>
+          )}
+
+          {(extracted.maxXwind != null) && (
+            <Section title="OPERATING LIMITS">
               <Row label="Max demonstrated crosswind" value={extracted.maxXwind} unit="KT" />
-            </div>
+            </Section>
           )}
 
-          {!extracted.vSpeeds && !extracted.weights && !extracted.fuel && extracted.maxXwind == null && (
+          {extracted.takeoff && (
+            <Section title="TAKEOFF PERFORMANCE (extracted)">
+              {extracted.takeoff.gndRoll.map(([alt, ft]) => (
+                <Row key={`to-gr-${alt}`} label={`Ground roll @ ${alt === 0 ? "sea level" : `${alt.toLocaleString()} ft`}`} value={ft} unit="FT" />
+              ))}
+              {extracted.takeoff.over50ft?.map(([alt, ft]) => (
+                <Row key={`to-50-${alt}`} label={`Over 50ft @ ${alt === 0 ? "sea level" : `${alt.toLocaleString()} ft`}`} value={ft} unit="FT" />
+              ))}
+            </Section>
+          )}
+
+          {extracted.landing && (
+            <Section title="LANDING PERFORMANCE (extracted)">
+              {extracted.landing.gndRoll.map(([alt, ft]) => (
+                <Row key={`ld-gr-${alt}`} label={`Ground roll @ ${alt === 0 ? "sea level" : `${alt.toLocaleString()} ft`}`} value={ft} unit="FT" />
+              ))}
+              {extracted.landing.over50ft?.map(([alt, ft]) => (
+                <Row key={`ld-50-${alt}`} label={`Over 50ft @ ${alt === 0 ? "sea level" : `${alt.toLocaleString()} ft`}`} value={ft} unit="FT" />
+              ))}
+            </Section>
+          )}
+
+          {nothingFound && (
             <div style={{ padding: "12px 14px", borderRadius: 6, background: "var(--caution-bg)", border: "1px solid var(--caution-line)", ...mono, fontSize: 11, color: "var(--caution)", lineHeight: 1.6 }}>
               ⚠ Could not automatically identify performance data in this PDF. The file may use non-standard formatting. Please enter values manually in the Aircraft tab.
             </div>
@@ -342,18 +316,35 @@ function PohSection({ draft, onSet, setMultiple }) {
 
       {/* ── What gets used where ── */}
       <div style={{ marginTop: 18, padding: "12px 14px", borderRadius: 6, background: "var(--bg-inset)", border: "1px solid var(--line)" }}>
-        <div style={{ ...mono, fontSize: 9, fontWeight: 700, color: "var(--t-tertiary)", letterSpacing: "0.14em", marginBottom: 8 }}>HOW THIS DATA IS USED</div>
+        <div style={{ ...mono, fontSize: 9, fontWeight: 700, color: "var(--t-tertiary)", letterSpacing: "0.14em", marginBottom: 8 }}>WHERE EXTRACTED DATA APPEARS</div>
         {[
-          ["V-speeds",          "V-speeds reference page · displayed in takeoff/approach banners"],
-          ["Crosswind limit",   "Performance banner crosswind fill-bar (red at 100% of POH max)"],
-          ["Max gross weight",  "Weight & balance validation"],
-          ["Fuel capacity",     "Fuel planning reference"],
+          ["V-speeds (Vso–Vne)",   "V-speeds tab · takeoff & approach performance banners"],
+          ["Vapp",                 "Approach banner threshold speed indicator"],
+          ["Vr",                   "Takeoff banner rotation speed cue"],
+          ["Crosswind limit",      "Performance banner crosswind fill-bar (red at 100%)"],
+          ["Max gross weight",     "Aircraft info — Weight & CG Limits section"],
+          ["Max ramp weight",      "Aircraft info — Weight & CG Limits section"],
+          ["Empty weight",         "Aircraft info — Weight & CG Limits section"],
+          ["Useful load",          "Aircraft info — Weight & CG Limits & Operating Limits"],
+          ["Max baggage",          "Aircraft info — Weight & CG Limits section"],
+          ["CG range (fwd/aft)",   "Aircraft info — Weight & CG Limits section"],
+          ["Fuel type & capacity", "Aircraft info — Fuel & Oil Quick Ref section"],
+          ["Oil type & capacity",  "Aircraft info — Fuel & Oil Quick Ref section"],
+          ["Engine model & HP",    "Aircraft info — Engine Specifications section"],
+          ["TBO",                  "Aircraft info — Engine Specifications section"],
+          ["Oil & CHT limits",     "Aircraft info — Engine Specifications section"],
+          ["Takeoff distances",    "Density altitude banner — ground roll & 50ft obstacle"],
+          ["Landing distances",    "Density altitude banner — ground roll & 50ft obstacle"],
+          ["Vne / Vno / Vfe",      "Aircraft info — Operating Limits section"],
         ].map(([k, v]) => (
           <div key={k} style={{ display: "flex", gap: 10, padding: "4px 0", borderBottom: "1px solid var(--line-faint)" }}>
-            <span style={{ ...mono, fontSize: 10, fontWeight: 700, color: "var(--accent)", minWidth: 110, flexShrink: 0 }}>{k}</span>
+            <span style={{ ...mono, fontSize: 10, fontWeight: 700, color: "var(--accent)", minWidth: 140, flexShrink: 0 }}>{k}</span>
             <span style={{ ...mono, fontSize: 10, color: "var(--t-secondary)" }}>{v}</span>
           </div>
         ))}
+        <div style={{ ...mono, fontSize: 9, color: "var(--t-quiet)", marginTop: 8, lineHeight: 1.5 }}>
+          Note: Cruise & climb performance tables vary widely between manufacturers and cannot be reliably extracted — those sections use built-in reference data.
+        </div>
       </div>
     </div>
   );
@@ -1427,7 +1418,8 @@ export default function App() {
     return "hangar";
   });
 
-  // Profile lives here — single source of truth for both Hangar and ChecklistApp
+  // Profile lives here — single source of truth for both Hangar and ChecklistApp.
+  // Loads from IndexedDB on mount (with localStorage fallback for migration).
   const [profile, setProfile] = useState(() => {
     try {
       const saved = localStorage.getItem("apex_kneeboard_profile");
@@ -1436,8 +1428,16 @@ export default function App() {
     return { ...DEFAULT_PROFILE };
   });
 
+  // On mount, hydrate from IndexedDB (may have more recent data than localStorage)
+  useEffect(() => {
+    dbLoadProfile().then((saved) => {
+      if (saved) setProfile({ ...DEFAULT_PROFILE, ...saved });
+    }).catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const saveProfile = (next) => {
     setProfile(next);
+    dbSaveProfile(next).catch(() => {});
     try { localStorage.setItem("apex_kneeboard_profile", JSON.stringify(next)); } catch {}
   };
 

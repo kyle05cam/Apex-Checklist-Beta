@@ -689,7 +689,7 @@ export const MORE_REFS = [
     ],
   },
   {
-    id: "c172_engine", title: "C172S Engine Specifications", color: "#4a9fe8",
+    id: "c172_engine", title: "Aircraft Engine Specifications", color: "#4a9fe8",
     cols: ["Item", "Specification"],
     rows: [
       ["Engine Model",          "Lycoming IO-360-L2A"],
@@ -708,7 +708,7 @@ export const MORE_REFS = [
     ],
   },
   {
-    id: "c172_electrical", title: "C172S Electrical System", color: "#4a9fe8",
+    id: "c172_electrical", title: "Aircraft Electrical System", color: "#4a9fe8",
     cols: ["Item", "Specification"],
     rows: [
       ["System Voltage",      "28V DC"],
@@ -748,7 +748,7 @@ export const MORE_REFS = [
     ],
   },
   {
-    id: "fuel_oil", title: "C172S Fuel & Oil Quick Ref", color: "#4a9fe8",
+    id: "fuel_oil", title: "Aircraft Fuel & Oil Quick Ref", color: "#4a9fe8",
     cols: ["Item", "Specification"],
     rows: [
       ["Fuel Type",           "100LL AVGAS (blue)"],
@@ -762,7 +762,7 @@ export const MORE_REFS = [
     ],
   },
   {
-    id: "weight_cg", title: "C172S Weight & CG Limits", color: "#4a9fe8",
+    id: "weight_cg", title: "Aircraft Weight & CG Limits", color: "#4a9fe8",
     cols: ["Limit", "Value"],
     rows: [
       ["Max Gross Weight",    "2,550 lb"],
@@ -775,8 +775,8 @@ export const MORE_REFS = [
     ],
   },
   {
-    id: "c172_limits", title: "C172S Operating Limits", color: "#4a9fe8",
-    note: "§2 Limitations — values shown are C172S POH defaults. Upload your POH to override.",
+    id: "c172_limits", title: "Aircraft Operating Limits", color: "#4a9fe8",
+    note: "§2 Limitations — values shown are built-in defaults. Upload your POH to override.",
     cols: ["Limit", "Value"],
     rows: [
       ["Max Demonstrated Crosswind",    "15 KT"],
@@ -790,7 +790,7 @@ export const MORE_REFS = [
     ],
   },
   {
-    id: "tire_pressures", title: "C172S Tire Pressures", color: "#4a9fe8",
+    id: "tire_pressures", title: "Aircraft Tire Pressures", color: "#4a9fe8",
     note: "Check cold pressure only. Inspect for cuts, wear, and proper inflation before each flight.",
     cols: ["Tire", "Pressure", "Size / Notes"],
     rows: [
@@ -1688,10 +1688,33 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
     return () => navigator.geolocation.clearWatch(wid);
   }, []);
 
-  // ── POH performance data — starts at built-in C172S defaults.
-  // When the POH-upload feature is built, swap this in with parsed data
-  // (source:"UPLOADED") and all DA calculations update automatically.
-  const [pohData, setPohData] = useState(C172S_POH_DEFAULT); // eslint-disable-line no-unused-vars
+  // ── POH performance data — merges uploaded data over built-in defaults.
+  // When takeoff/landing tables are extracted from the POH, they replace the
+  // default C172S values so DA calculations use the correct aircraft's data.
+  const pohData = (() => {
+    const base = { ...C172S_POH_DEFAULT };
+    if (aircraft?.pohSource !== "UPLOADED") return base;
+    if (aircraft?.pohTakeoff) {
+      base.takeoff = {
+        ...base.takeoff,
+        gndRoll:  aircraft.pohTakeoff.gndRoll  ?? base.takeoff.gndRoll,
+        over50ft: aircraft.pohTakeoff.over50ft ?? base.takeoff.over50ft,
+      };
+    }
+    if (aircraft?.pohLanding) {
+      base.landing = {
+        ...base.landing,
+        gndRoll:  aircraft.pohLanding.gndRoll  ?? base.landing.gndRoll,
+        over50ft: aircraft.pohLanding.over50ft ?? base.landing.over50ft,
+      };
+    }
+    if (aircraft?.pohVSpeeds?.vr)   base.takeoff.vr   = aircraft.pohVSpeeds.vr;
+    if (aircraft?.pohVSpeeds?.vapp) base.landing.vapp = aircraft.pohVSpeeds.vapp;
+    if (aircraft?.pohWeights?.maxGross) base.maxGrossWeight = aircraft.pohWeights.maxGross;
+    if (aircraft?.pohMaxXwind != null)  base.maxCrosswind   = aircraft.pohMaxXwind;
+    base.source = "UPLOADED";
+    return base;
+  })();
 
   // ── POH V-speed overlay ───────────────────────────────────────────────────
   // Maps extracted pohVSpeeds keys → VSPEEDS card codes. When a POH is uploaded
@@ -3792,33 +3815,59 @@ const commParseGround = (text) => {
                   // ── Dynamic row overrides from uploaded POH data ────────────
                   const pW  = aircraft?.pohWeights;
                   const pF  = aircraft?.pohFuel;
+                  const pE  = aircraft?.pohEngine;
                   const pXW = aircraft?.pohMaxXwind;
                   const pVS = aircraft?.pohVSpeeds;
                   const uploaded = aircraft?.pohSource === "UPLOADED";
                   const mEntry = uploaded ? "— (Manual Entry)" : null;
+                  const wt = (lbs) => lbs ? `${lbs.toLocaleString()} lb` : null;
+                  const kias = (v) => v ? `${v} KIAS` : null;
 
                   const getRows = () => {
                     if (ref.id === "weight_cg") return ref.rows.map(row => {
                       const label = row[0];
-                      if (label.includes("Max Gross"))    return [label, pW?.maxGross    ? `${pW.maxGross.toLocaleString()} lb` : (uploaded ? mEntry : row[1])];
-                      if (label.includes("Empty"))         return [label, pW?.emptyWeight ? `${pW.emptyWeight.toLocaleString()} lb` : (uploaded ? mEntry : row[1])];
-                      if (label.includes("Useful"))        return [label, pW?.usefulLoad  ? `${pW.usefulLoad.toLocaleString()} lb` : (uploaded ? mEntry : row[1])];
+                      if (label.includes("Max Gross"))   return [label, wt(pW?.maxGross)    ?? (uploaded ? mEntry : row[1])];
+                      if (label.includes("Max Ramp"))    return [label, wt(pW?.maxRamp)     ?? (uploaded ? mEntry : row[1])];
+                      if (label.includes("Empty"))       return [label, wt(pW?.emptyWeight) ?? (uploaded ? mEntry : row[1])];
+                      if (label.includes("Useful"))      return [label, wt(pW?.usefulLoad)  ?? (uploaded ? mEntry : row[1])];
+                      if (label.includes("Baggage"))     return [label, pW?.maxBaggage ? `${pW.maxBaggage} lb` : (uploaded ? mEntry : row[1])];
+                      if (label.includes("fwd") || label.includes("Fwd"))
+                                                         return [label, pW?.cgFwd ? `${pW.cgFwd} in aft of datum` : (uploaded ? mEntry : row[1])];
+                      if (label.includes("aft") || label.includes("Aft"))
+                                                         return [label, pW?.cgAft ? `${pW.cgAft} in aft of datum` : (uploaded ? mEntry : row[1])];
                       return row;
                     });
                     if (ref.id === "fuel_oil") return ref.rows.map(row => {
                       const label = row[0];
-                      if (label.includes("Fuel Type"))   return [label, pF?.type      ? pF.type                            : (uploaded ? mEntry : row[1])];
-                      if (label.includes("Total Fuel"))  return [label, pF?.totalGal  ? `${pF.totalGal} USG total`         : (uploaded ? mEntry : row[1])];
-                      if (label.includes("Fuel Burn") || label.includes("usable")) return [label, pF?.usableGal ? `${pF.usableGal} USG usable` : (uploaded ? mEntry : row[1])];
+                      if (label.includes("Fuel Type"))   return [label, pF?.type      ?? (uploaded ? mEntry : row[1])];
+                      if (label.includes("Total Fuel"))  return [label, pF?.totalGal  ? `${pF.totalGal} USG total / ${pF.usableGal ?? "?"} USG usable` : (uploaded ? mEntry : row[1])];
+                      if (label.includes("usable") || label.includes("Usable")) return [label, pF?.usableGal ? `${pF.usableGal} USG usable` : (uploaded ? mEntry : row[1])];
+                      if (label.includes("Oil Type"))    return [label, pF?.oilType   ?? (uploaded ? mEntry : row[1])];
+                      if (label.includes("Oil Capacity"))return [label, pF?.oilCapMax ? `${pF.oilCapMax} qt max / ${pF.oilCapMin ?? "?"} qt min` : (uploaded ? mEntry : row[1])];
+                      return row;
+                    });
+                    if (ref.id === "c172_engine" && pE) return ref.rows.map(row => {
+                      const label = row[0];
+                      if (label.includes("Engine Model"))       return [label, pE.model       ?? (uploaded ? mEntry : row[1])];
+                      if (label.includes("Horsepower"))         return [label, pE.horsepower  ? `${pE.horsepower} HP @ ${pE.maxRpm ?? "?"} RPM` : (uploaded ? mEntry : row[1])];
+                      if (label.includes("Displacement"))       return [label, pE.displacement ? `${pE.displacement} cubic inches` : (uploaded ? mEntry : row[1])];
+                      if (label.includes("TBO"))                return [label, pE.tbo         ? `${pE.tbo.toLocaleString()} hours` : (uploaded ? mEntry : row[1])];
+                      if (label.includes("Max RPM"))            return [label, pE.maxRpm      ? `${pE.maxRpm} RPM` : (uploaded ? mEntry : row[1])];
+                      if (label.includes("Oil Pressure (min)")) return [label, pE.oilPressMin ? `${pE.oilPressMin} PSI` : (uploaded ? mEntry : row[1])];
+                      if (label.includes("Oil Pressure (nor"))  return [label, (pE.oilPressMin && pE.oilPressMax) ? `${pE.oilPressMin}–${pE.oilPressMax} PSI` : (uploaded ? mEntry : row[1])];
+                      if (label.includes("Oil Temp (max)"))     return [label, pE.oilTempMax  ? `${pE.oilTempMax} °F` : (uploaded ? mEntry : row[1])];
+                      if (label.includes("CHT"))                return [label, pE.chtMax      ? `${pE.chtMax} °F` : (uploaded ? mEntry : row[1])];
                       return row;
                     });
                     if (ref.id === "c172_limits") return ref.rows.map(row => {
                       const label = row[0];
-                      if (label.includes("Crosswind"))   return [label, pXW  != null ? `${pXW} KT`                         : (uploaded ? mEntry : row[1])];
-                      if (label.includes("Max Gross"))   return [label, pW?.maxGross  ? `${pW.maxGross.toLocaleString()} lb` : (uploaded ? mEntry : row[1])];
-                      if (label.includes("Useful"))      return [label, pW?.usefulLoad ? `${pW.usefulLoad.toLocaleString()} lb` : (uploaded ? mEntry : row[1])];
-                      if (label.includes("Never Exceed") || label.includes("Vne")) return [label, pVS?.vne ? `${pVS.vne} KIAS` : (uploaded ? mEntry : row[1])];
-                      if (label.includes("Structural") || label.includes("Vno"))   return [label, pVS?.vno ? `${pVS.vno} KIAS` : (uploaded ? mEntry : row[1])];
+                      if (label.includes("Crosswind"))   return [label, pXW  != null ? `${pXW} KT`       : (uploaded ? mEntry : row[1])];
+                      if (label.includes("Max Gross"))   return [label, wt(pW?.maxGross)                  ?? (uploaded ? mEntry : row[1])];
+                      if (label.includes("Max Ramp"))    return [label, wt(pW?.maxRamp)                   ?? (uploaded ? mEntry : row[1])];
+                      if (label.includes("Useful"))      return [label, wt(pW?.usefulLoad)                ?? (uploaded ? mEntry : row[1])];
+                      if (label.includes("Never Exceed") || label.includes("Vne")) return [label, kias(pVS?.vne) ?? (uploaded ? mEntry : row[1])];
+                      if (label.includes("Structural") || label.includes("Vno"))   return [label, kias(pVS?.vno) ?? (uploaded ? mEntry : row[1])];
+                      if (label.includes("Flap Speed") && pVS?.vfe) return [label, `${pVS.vfe} KIAS`];
                       return row;
                     });
                     return ref.rows;
