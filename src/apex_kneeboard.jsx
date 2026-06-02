@@ -37,11 +37,328 @@ const DEFAULT_PROFILE = {
   groundFrq: "",
   fieldElev: "",
   runways: "",
+  // POH upload metadata
+  pohFileName:   "",      // original filename
+  pohUploadedAt: "",      // ISO date string
+  pohSource:     "DEFAULT",  // "DEFAULT" | "UPLOADED"
+  // Extracted POH data (null = use aircraft type defaults)
+  pohVSpeeds:    null,    // { vso, vs1, vr, vx, vy, va, vfe, vno, vne }
+  pohWeights:    null,    // { maxGross, emptyWeight, usefulLoad }
+  pohFuel:       null,    // { totalGal, usableGal, type }
+  pohMaxXwind:   null,    // max demonstrated crosswind kt
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POH OFFLINE PARSER
+// Extracts readable ASCII strings from a PDF binary (works on digital PDFs,
+// not scanned images) then applies aviation-specific regex patterns to find
+// V-speeds, weight limits, fuel capacity, and crosswind limits.
+// ─────────────────────────────────────────────────────────────────────────────
+function extractTextFromPdfBuffer(buffer) {
+  const bytes = new Uint8Array(buffer);
+  const chunks = [];
+  let current = "";
+  for (let i = 0; i < bytes.length; i++) {
+    const c = bytes[i];
+    if (c >= 32 && c <= 126) {
+      current += String.fromCharCode(c);
+    } else {
+      if (current.length >= 4) chunks.push(current);
+      current = "";
+    }
+  }
+  if (current.length >= 4) chunks.push(current);
+  return chunks.join(" ");
+}
+
+function parsePohFromText(text) {
+  const t = text.replace(/\s+/g, " ");
+  const num = (pattern) => {
+    const m = t.match(pattern);
+    return m ? parseInt(m[1], 10) : null;
+  };
+  const flt = (pattern) => {
+    const m = t.match(pattern);
+    return m ? parseFloat(m[1]) : null;
+  };
+
+  // ── V-speeds ── (matches "Vx 62", "VX...62", "best angle...62 KIAS", etc.)
+  const vSpeeds = {
+    vso: num(/V[Ss][Oo0][\s\.\-]*(\d{2,3})\s*(?:KIAS|KT)?/i)
+      ?? num(/stall(?:ing)?\s+speed[^.]*(?:landing|full\s+flap)[^.]*?(\d{2,3})\s*(?:KIAS|KT)/i),
+    vs1: num(/V[Ss]1[\s\.\-]*(\d{2,3})\s*(?:KIAS|KT)?/i)
+      ?? num(/stall(?:ing)?\s+speed[^.]*clean[^.]*?(\d{2,3})\s*(?:KIAS|KT)/i),
+    vr:  num(/V[Rr][\s\.\-]*(\d{2,3})\s*(?:KIAS|KT)?/i)
+      ?? num(/rotation\s+speed[^.]*?(\d{2,3})\s*(?:KIAS|KT)/i),
+    vx:  num(/V[Xx][\s\.\-]*(\d{2,3})\s*(?:KIAS|KT)?/i)
+      ?? num(/best\s+angle[^.]*?(\d{2,3})\s*(?:KIAS|KT)/i),
+    vy:  num(/V[Yy][\s\.\-]*(\d{2,3})\s*(?:KIAS|KT)?/i)
+      ?? num(/best\s+rate[^.]*?(\d{2,3})\s*(?:KIAS|KT)/i),
+    va:  num(/V[Aa][\s\.\-]*(\d{2,3})\s*(?:KIAS|KT)?/i)
+      ?? num(/maneuver(?:ing)?\s+speed[^.]*?(\d{2,3})\s*(?:KIAS|KT)/i),
+    vfe: num(/V[Ff][Ee][\s\.\-]*(\d{2,3})\s*(?:KIAS|KT)?/i)
+      ?? num(/flap\s+extension[^.]*?(\d{2,3})\s*(?:KIAS|KT)/i),
+    vno: num(/V[Nn][Oo][\s\.\-]*(\d{2,3})\s*(?:KIAS|KT)?/i)
+      ?? num(/max(?:imum)?\s+structural\s+cruising[^.]*?(\d{2,3})\s*(?:KIAS|KT)/i),
+    vne: num(/V[Nn][Ee][\s\.\-]*(\d{2,3})\s*(?:KIAS|KT)?/i)
+      ?? num(/never[\s\-]exceed[^.]*?(\d{2,3})\s*(?:KIAS|KT)/i),
+  };
+
+  // ── Weights ──
+  const weights = {
+    maxGross:    num(/max(?:imum)?\s+(?:gross\s+)?(?:takeoff\s+)?weight[^.]*?(\d{3,5})\s*(?:lbs?|pounds?)/i)
+      ?? num(/gross\s+weight[^.]*?(\d{3,5})\s*(?:lbs?|pounds?)/i),
+    emptyWeight: num(/(?:standard\s+)?empty\s+weight[^.]*?(\d{3,5})\s*(?:lbs?|pounds?)/i),
+    usefulLoad:  num(/useful\s+load[^.]*?(\d{3,5})\s*(?:lbs?|pounds?)/i),
+  };
+
+  // ── Fuel ──
+  const fuel = {
+    totalGal:  num(/total\s+(?:fuel\s+)?capacity[^.]*?(\d{1,3}(?:\.\d)?)\s*(?:U\.?S\.?\s*)?gal/i)
+      ?? num(/fuel\s+capacity[^.]*?(\d{1,3})\s*(?:U\.?S\.?\s*)?gal/i),
+    usableGal: num(/usable\s+(?:fuel[^.]*?)?(\d{1,3}(?:\.\d)?)\s*(?:U\.?S\.?\s*)?gal/i),
+    type:      t.match(/(?:fuel\s+grade|fuel\s+type)[^.]*?(100\s*LL|Avgas|Jet\s*A|100\s*Octane)/i)?.[1]?.trim() ?? null,
+  };
+
+  // ── Max demonstrated crosswind ──
+  const maxXwind = num(/max(?:imum)?\s+demonstrated\s+crosswind[^.]*?(\d{1,2})\s*(?:KIAS|KT|knots)?/i)
+    ?? num(/crosswind[^.]*?demonstrated[^.]*?(\d{1,2})\s*(?:KIAS|KT|knots)?/i);
+
+  // Filter out null-only objects
+  const hasAny = (obj) => Object.values(obj).some(v => v !== null);
+
+  return {
+    vSpeeds:  hasAny(vSpeeds)  ? vSpeeds  : null,
+    weights:  hasAny(weights)  ? weights  : null,
+    fuel:     hasAny(fuel)     ? fuel     : null,
+    maxXwind: maxXwind,
+  };
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AIRCRAFT EDIT MODAL
 // ─────────────────────────────────────────────────────────────────────────────
+// ── POH Section — upload, parse, review ──────────────────────────────────────
+function PohSection({ draft, onSet, setMultiple }) {
+  const [parseState, setParseState] = useState("idle"); // idle | parsing | done | error | scanned
+  const [extracted,  setExtracted]  = useState(null);
+  const [confirmed,  setConfirmed]  = useState(false);
+
+  const hasUploaded = !!draft.pohFileName;
+  const isDefault   = draft.pohSource === "DEFAULT" || !draft.pohSource;
+
+  const handleFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file || file.type !== "application/pdf") return;
+    setParseState("parsing");
+    setExtracted(null);
+    setConfirmed(false);
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const buffer = ev.target.result;
+      const rawText = extractTextFromPdfBuffer(buffer);
+
+      // Heuristic: if very little readable text, likely a scanned PDF
+      const wordCount = rawText.split(/\s+/).filter(w => w.length > 3).length;
+      if (wordCount < 200) {
+        setMultiple({ pohFileName: file.name, pohUploadedAt: new Date().toISOString(), pohSource: "UPLOADED" });
+        setParseState("scanned");
+        return;
+      }
+
+      const result = parsePohFromText(rawText);
+      setExtracted(result);
+      setMultiple({ pohFileName: file.name, pohUploadedAt: new Date().toISOString(), pohSource: "UPLOADED" });
+      setParseState("done");
+    };
+    reader.onerror = () => setParseState("error");
+    reader.readAsArrayBuffer(file);
+  };
+
+  const applyExtracted = () => {
+    if (!extracted) return;
+    const updates = {};
+    if (extracted.vSpeeds)  updates.pohVSpeeds  = extracted.vSpeeds;
+    if (extracted.weights)  updates.pohWeights  = extracted.weights;
+    if (extracted.fuel)     updates.pohFuel     = extracted.fuel;
+    if (extracted.maxXwind !== null) updates.pohMaxXwind = extracted.maxXwind;
+    setMultiple(updates);
+    setConfirmed(true);
+  };
+
+  const clearPoh = () => {
+    setMultiple({ pohFileName: "", pohUploadedAt: "", pohSource: "DEFAULT", pohVSpeeds: null, pohWeights: null, pohFuel: null, pohMaxXwind: null });
+    setParseState("idle");
+    setExtracted(null);
+    setConfirmed(false);
+  };
+
+  const mono = { fontFamily: "var(--f-mono)" };
+
+  const Row = ({ label, value, unit = "" }) => value == null ? null : (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "5px 0", borderBottom: "1px solid var(--line-faint)" }}>
+      <span style={{ ...mono, fontSize: 10, color: "var(--t-tertiary)", letterSpacing: "0.08em" }}>{label}</span>
+      <span style={{ ...mono, fontSize: 13, fontWeight: 700, color: "var(--t-primary)" }}>{value}{unit && <span style={{ fontSize: 10, color: "var(--t-tertiary)", marginLeft: 4 }}>{unit}</span>}</span>
+    </div>
+  );
+
+  return (
+    <div>
+      {/* ── Source indicator ── */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16,
+        padding: "10px 14px", borderRadius: 6,
+        background: isDefault ? "var(--bg-inset)" : "var(--ok-bg)",
+        border: `1px solid ${isDefault ? "var(--line)" : "var(--ok-line)"}` }}>
+        <div>
+          <div style={{ ...mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.12em",
+            color: isDefault ? "var(--t-tertiary)" : "var(--ok)" }}>
+            {isDefault ? "USING BUILT-IN DEFAULTS" : "CUSTOM POH LOADED"}
+          </div>
+          <div style={{ ...mono, fontSize: 11, color: "var(--t-secondary)", marginTop: 3 }}>
+            {isDefault
+              ? `${draft.type || "Aircraft"} · Factory default performance data`
+              : `${draft.pohFileName} · ${draft.pohUploadedAt ? new Date(draft.pohUploadedAt).toLocaleDateString() : ""}`}
+          </div>
+        </div>
+        {hasUploaded && (
+          <button onClick={clearPoh} style={{ ...mono, fontSize: 10, color: "var(--warn)", background: "transparent", border: "1px solid var(--warn-line)", borderRadius: 4, padding: "4px 10px", cursor: "pointer" }}>
+            Remove
+          </button>
+        )}
+      </div>
+
+      {/* ── Upload area ── */}
+      <label style={{
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+        gap: 10, padding: "28px 20px", borderRadius: 8, cursor: "pointer",
+        border: "2px dashed var(--line-strong)", background: "var(--bg-inset)",
+        transition: "all 0.15s", marginBottom: 16,
+      }}
+        onDragOver={e => e.preventDefault()}
+        onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile({ target: { files: [f] } }); }}
+      >
+        <input type="file" accept="application/pdf" onChange={handleFile} style={{ display: "none" }} />
+        <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/>
+        </svg>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ ...mono, fontSize: 12, fontWeight: 700, color: "var(--accent)", letterSpacing: "0.08em" }}>
+            {parseState === "parsing" ? "READING PDF…" : hasUploaded ? "REPLACE POH PDF" : "CLICK OR DROP POH PDF"}
+          </div>
+          <div style={{ ...mono, fontSize: 10, color: "var(--t-tertiary)", marginTop: 4, letterSpacing: "0.06em" }}>
+            Digital PDF only · Scanned images have limited extraction
+          </div>
+        </div>
+      </label>
+
+      {/* ── Parse result ── */}
+      {parseState === "error" && (
+        <div style={{ padding: "10px 14px", borderRadius: 6, background: "var(--warn-bg)", border: "1px solid var(--warn-line)", ...mono, fontSize: 11, color: "var(--warn)" }}>
+          ⚠ Could not read the file. Make sure it is a valid PDF.
+        </div>
+      )}
+
+      {parseState === "scanned" && (
+        <div style={{ padding: "12px 14px", borderRadius: 6, background: "var(--caution-bg)", border: "1px solid var(--caution-line)" }}>
+          <div style={{ ...mono, fontSize: 10, fontWeight: 700, color: "var(--caution)", letterSpacing: "0.1em", marginBottom: 4 }}>SCANNED PDF DETECTED</div>
+          <div style={{ ...mono, fontSize: 11, color: "var(--t-secondary)", lineHeight: 1.6 }}>
+            This appears to be a scanned image PDF — text extraction is not available. The file has been logged. Use the Aircraft and Airworthiness tabs to enter performance data manually.
+          </div>
+        </div>
+      )}
+
+      {parseState === "done" && extracted && !confirmed && (
+        <div>
+          <div style={{ ...mono, fontSize: 10, fontWeight: 700, color: "var(--ok)", letterSpacing: "0.12em", marginBottom: 10 }}>
+            ✓ EXTRACTION COMPLETE — REVIEW BEFORE APPLYING
+          </div>
+
+          {extracted.vSpeeds && (
+            <div style={{ marginBottom: 12, padding: "12px 14px", borderRadius: 6, background: "var(--bg-inset)", border: "1px solid var(--line)" }}>
+              <div style={{ ...mono, fontSize: 9, fontWeight: 700, color: "var(--accent)", letterSpacing: "0.14em", marginBottom: 8 }}>V-SPEEDS</div>
+              <Row label="Vso — Stall, full flaps"   value={extracted.vSpeeds.vso} unit="KT" />
+              <Row label="Vs1 — Stall, clean"        value={extracted.vSpeeds.vs1} unit="KT" />
+              <Row label="Vr — Rotation"             value={extracted.vSpeeds.vr}  unit="KT" />
+              <Row label="Vx — Best angle climb"     value={extracted.vSpeeds.vx}  unit="KT" />
+              <Row label="Vy — Best rate climb"      value={extracted.vSpeeds.vy}  unit="KT" />
+              <Row label="Va — Maneuvering"          value={extracted.vSpeeds.va}  unit="KT" />
+              <Row label="Vfe — Max flap extension"  value={extracted.vSpeeds.vfe} unit="KT" />
+              <Row label="Vno — Max structural cruise" value={extracted.vSpeeds.vno} unit="KT" />
+              <Row label="Vne — Never exceed"        value={extracted.vSpeeds.vne} unit="KT" />
+            </div>
+          )}
+
+          {extracted.weights && (
+            <div style={{ marginBottom: 12, padding: "12px 14px", borderRadius: 6, background: "var(--bg-inset)", border: "1px solid var(--line)" }}>
+              <div style={{ ...mono, fontSize: 9, fontWeight: 700, color: "var(--accent)", letterSpacing: "0.14em", marginBottom: 8 }}>WEIGHT LIMITS</div>
+              <Row label="Max gross weight"  value={extracted.weights.maxGross}    unit="LBS" />
+              <Row label="Standard empty"    value={extracted.weights.emptyWeight} unit="LBS" />
+              <Row label="Useful load"       value={extracted.weights.usefulLoad}  unit="LBS" />
+            </div>
+          )}
+
+          {extracted.fuel && (
+            <div style={{ marginBottom: 12, padding: "12px 14px", borderRadius: 6, background: "var(--bg-inset)", border: "1px solid var(--line)" }}>
+              <div style={{ ...mono, fontSize: 9, fontWeight: 700, color: "var(--accent)", letterSpacing: "0.14em", marginBottom: 8 }}>FUEL</div>
+              <Row label="Total capacity"  value={extracted.fuel.totalGal}  unit="GAL" />
+              <Row label="Usable"          value={extracted.fuel.usableGal} unit="GAL" />
+              <Row label="Grade"           value={extracted.fuel.type} />
+            </div>
+          )}
+
+          {extracted.maxXwind !== null && (
+            <div style={{ marginBottom: 12, padding: "12px 14px", borderRadius: 6, background: "var(--bg-inset)", border: "1px solid var(--line)" }}>
+              <div style={{ ...mono, fontSize: 9, fontWeight: 700, color: "var(--accent)", letterSpacing: "0.14em", marginBottom: 8 }}>CROSSWIND LIMITS</div>
+              <Row label="Max demonstrated crosswind" value={extracted.maxXwind} unit="KT" />
+            </div>
+          )}
+
+          {!extracted.vSpeeds && !extracted.weights && !extracted.fuel && extracted.maxXwind == null && (
+            <div style={{ padding: "12px 14px", borderRadius: 6, background: "var(--caution-bg)", border: "1px solid var(--caution-line)", ...mono, fontSize: 11, color: "var(--caution)", lineHeight: 1.6 }}>
+              ⚠ Could not automatically identify performance data in this PDF. The file may use non-standard formatting. Please enter values manually in the Aircraft tab.
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+            <button onClick={() => { setParseState("idle"); setExtracted(null); }}
+              style={{ flex: 1, padding: "10px 0", borderRadius: 6, border: "1px solid var(--line)", background: "transparent", cursor: "pointer", ...mono, fontSize: 11, color: "var(--t-secondary)" }}>
+              Discard
+            </button>
+            <button onClick={applyExtracted}
+              style={{ flex: 2, padding: "10px 0", borderRadius: 6, border: "1px solid var(--ok-line)", background: "var(--ok-bg)", cursor: "pointer", ...mono, fontSize: 11, fontWeight: 700, color: "var(--ok)", letterSpacing: "0.08em" }}>
+              ✓ Apply to Profile
+            </button>
+          </div>
+        </div>
+      )}
+
+      {(parseState === "done" && confirmed) && (
+        <div style={{ padding: "10px 14px", borderRadius: 6, background: "var(--ok-bg)", border: "1px solid var(--ok-line)", ...mono, fontSize: 11, color: "var(--ok)" }}>
+          ✓ POH data applied. Save the profile to persist.
+        </div>
+      )}
+
+      {/* ── What gets used where ── */}
+      <div style={{ marginTop: 18, padding: "12px 14px", borderRadius: 6, background: "var(--bg-inset)", border: "1px solid var(--line)" }}>
+        <div style={{ ...mono, fontSize: 9, fontWeight: 700, color: "var(--t-tertiary)", letterSpacing: "0.14em", marginBottom: 8 }}>HOW THIS DATA IS USED</div>
+        {[
+          ["V-speeds",          "V-speeds reference page · displayed in takeoff/approach banners"],
+          ["Crosswind limit",   "Performance banner crosswind fill-bar (red at 100% of POH max)"],
+          ["Max gross weight",  "Weight & balance validation"],
+          ["Fuel capacity",     "Fuel planning reference"],
+        ].map(([k, v]) => (
+          <div key={k} style={{ display: "flex", gap: 10, padding: "4px 0", borderBottom: "1px solid var(--line-faint)" }}>
+            <span style={{ ...mono, fontSize: 10, fontWeight: 700, color: "var(--accent)", minWidth: 110, flexShrink: 0 }}>{k}</span>
+            <span style={{ ...mono, fontSize: 10, color: "var(--t-secondary)" }}>{v}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Airport search + auto-fill — module scope for stable identity ────────────
 function AirportSearchField({ onFill }) {
   const [query,   setQuery]   = useState("");
@@ -165,6 +482,7 @@ function AircraftEditModal({ profile, onSave, onClose }) {
     { id: "airworthiness", label: "AIRWORTHINESS",  icon: "🔧" },
     { id: "pilot",         label: "PILOT",          icon: "👤" },
     { id: "airport",       label: "HOME AIRPORT",   icon: "🏢" },
+    { id: "poh",           label: "POH",            icon: "📄" },
   ];
 
   // Helper: classify a date string as "EXPIRED" | "DUE SOON" | "VALID" | "NONE"
@@ -317,6 +635,10 @@ function AircraftEditModal({ profile, onSave, onClose }) {
           <HangarField label="Runways" fieldKey="runways" placeholder="07L/25R · 07R/25L" draft={draft} onSet={set} />
         </div>
       </div>
+    );
+
+    if (activeSection === "poh") return (
+      <PohSection draft={draft} onSet={set} setMultiple={setMultiple} />
     );
 
     return null;
