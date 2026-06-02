@@ -5,6 +5,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState, useEffect } from "react";
 import { ChecklistApp } from "./cessna172s_checklist.jsx";
+import { AIRPORT_DB } from "./nearest_freqs_data.js";
 
 const DEFAULT_PROFILE = {
   id: "n12345",
@@ -41,6 +42,83 @@ const DEFAULT_PROFILE = {
 // ─────────────────────────────────────────────────────────────────────────────
 // AIRCRAFT EDIT MODAL
 // ─────────────────────────────────────────────────────────────────────────────
+// ── Airport search + auto-fill — module scope for stable identity ────────────
+function AirportSearchField({ onFill }) {
+  const [query,   setQuery]   = useState("");
+  const [results, setResults] = useState([]);
+  const [open,    setOpen]    = useState(false);
+
+  const handleChange = (val) => {
+    setQuery(val);
+    if (val.length < 2) { setResults([]); setOpen(false); return; }
+    const q = val.toUpperCase();
+    const hits = AIRPORT_DB.filter(a =>
+      a.id.startsWith(q) || a.name.toUpperCase().includes(q)
+    ).slice(0, 8);
+    setResults(hits);
+    setOpen(hits.length > 0);
+  };
+
+  const pick = (ap) => {
+    const freq = (type) => ap.freqs.find(f => f.type === type)?.freq ?? "";
+    onFill({
+      homeAirport: ap.name,
+      homeIcao:    ap.id,
+      fieldElev:   ap.elev ? `${ap.elev} MSL` : "",
+      atisFrq:     freq("ATIS") || freq("AWOS") || freq("ASOS"),
+      towerFrq:    freq("TWR"),
+      groundFrq:   freq("GND"),
+      ctafFrq:     freq("CTAF") || freq("UNIC") || freq("TWR"),
+    });
+    setQuery("");
+    setResults([]);
+    setOpen(false);
+  };
+
+  return (
+    <div style={{ position: "relative", marginBottom: 14 }}>
+      <div className="hangar-field">
+        <span className="hangar-field-label">Search Airport</span>
+        <input
+          className="hangar-input"
+          value={query}
+          onChange={e => handleChange(e.target.value)}
+          onFocus={() => results.length > 0 && setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 160)}
+          placeholder="Type ICAO or name — e.g. KIWA or Mesa Gateway"
+          autoComplete="off"
+        />
+        <span className="hangar-field-hint">Selects airport and auto-fills all fields below</span>
+      </div>
+      {open && (
+        <div style={{
+          position: "absolute", top: "100%", left: 0, right: 0, zIndex: 60,
+          background: "var(--bg-1)", border: "1px solid var(--accent-line)",
+          borderRadius: "var(--r-md)", overflow: "hidden",
+          boxShadow: "0 12px 32px rgba(0,0,0,0.55)",
+        }}>
+          {results.map((ap, i) => (
+            <button
+              key={ap.id}
+              onMouseDown={() => pick(ap)}
+              style={{
+                display: "flex", width: "100%", alignItems: "center", gap: 12,
+                padding: "10px 14px", background: "transparent", border: "none",
+                borderBottom: i < results.length - 1 ? "1px solid var(--line-faint)" : "none",
+                cursor: "pointer", textAlign: "left",
+              }}
+            >
+              <span style={{ fontFamily: "var(--f-mono)", fontSize: 13, fontWeight: 700, color: "var(--accent)", minWidth: 48, flexShrink: 0 }}>{ap.id}</span>
+              <span style={{ fontFamily: "var(--f-ui)", fontSize: 12, color: "var(--t-primary)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ap.name}</span>
+              <span style={{ fontFamily: "var(--f-mono)", fontSize: 10, color: "var(--t-tertiary)", flexShrink: 0 }}>{ap.elev ? `${ap.elev} MSL` : ""}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Stable field helpers — defined at module scope so their identity never
 //    changes between renders. Inline definitions inside a component create a new
 //    function reference every render, causing React to unmount/remount the input
@@ -79,7 +157,8 @@ function AircraftEditModal({ profile, onSave, onClose }) {
   const [draft, setDraft] = useState({ ...profile });
   const [activeSection, setActiveSection] = useState("aircraft");
 
-  const set = (key, val) => setDraft(p => ({ ...p, [key]: val }));
+  const set      = (key, val) => setDraft(p => ({ ...p, [key]: val }));
+  const setMultiple = (fields)  => setDraft(p => ({ ...p, ...fields }));
 
   const SECTIONS = [
     { id: "aircraft",      label: "AIRCRAFT",       icon: "✈" },
@@ -107,11 +186,11 @@ function AircraftEditModal({ profile, onSave, onClose }) {
   };
 
   const INSPECTIONS = [
-    { label: "Annual Inspection",       ref: "14 CFR 91.409",  fieldKey: "dateAnnual" },
-    { label: "Pitot-Static System",     ref: "14 CFR 91.411",  fieldKey: "datePitotStatic" },
-    { label: "Transponder",             ref: "14 CFR 91.413",  fieldKey: "dateTransponder" },
-    { label: "ELT Battery",             ref: "14 CFR 91.207",  fieldKey: "dateEltBattery" },
-    { label: "ELT Inspection",          ref: "14 CFR 91.207",  fieldKey: "dateEltInspect" },
+    { label: "Annual Inspection",   ref: "14 CFR 91.409", fieldKey: "dateAnnual",      ifrOnly: false },
+    { label: "Pitot-Static System", ref: "14 CFR 91.411", fieldKey: "datePitotStatic", ifrOnly: true  }, // IFR flight only
+    { label: "Transponder",         ref: "14 CFR 91.413", fieldKey: "dateTransponder", ifrOnly: false },
+    { label: "ELT Battery",         ref: "14 CFR 91.207", fieldKey: "dateEltBattery",  ifrOnly: false },
+    { label: "ELT Inspection",      ref: "14 CFR 91.207", fieldKey: "dateEltInspect",  ifrOnly: false },
   ];
 
   const SectionContent = () => {
@@ -142,16 +221,27 @@ function AircraftEditModal({ profile, onSave, onClose }) {
     );
 
     if (activeSection === "airworthiness") {
-      const anyExpired = INSPECTIONS.some(i => getDateStatus(draft[i.fieldKey]) === "EXPIRED");
+      const vfrExpired = INSPECTIONS.filter(i => !i.ifrOnly).some(i => getDateStatus(draft[i.fieldKey]) === "EXPIRED");
+      const ifrExpired = INSPECTIONS.filter(i =>  i.ifrOnly).some(i => getDateStatus(draft[i.fieldKey]) === "EXPIRED");
       return (
         <div>
-          {/* Auto-grounding notice */}
-          {anyExpired && (
-            <div style={{ marginBottom: 16, padding: "10px 14px", borderRadius: 6, background: "var(--warn-bg)", border: "1px solid var(--warn-line)", display: "flex", alignItems: "center", gap: 10 }}>
+          {/* VFR-limiting expired → GROUNDED */}
+          {vfrExpired && (
+            <div style={{ marginBottom: 10, padding: "10px 14px", borderRadius: 6, background: "var(--warn-bg)", border: "1px solid var(--warn-line)", display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 16 }}>⚠</span>
               <div>
-                <div style={{ fontFamily: "var(--f-mono)", fontSize: 10, fontWeight: 700, color: "var(--warn)", letterSpacing: "0.12em" }}>Aircraft will be grounded on save</div>
-                <div style={{ fontFamily: "var(--f-ui)", fontSize: 12, color: "var(--t-secondary)", marginTop: 3 }}>One or more inspections are expired. Status overridden automatically.</div>
+                <div style={{ fontFamily: "var(--f-mono)", fontSize: 10, fontWeight: 700, color: "var(--warn)", letterSpacing: "0.12em" }}>Aircraft will be GROUNDED on save</div>
+                <div style={{ fontFamily: "var(--f-ui)", fontSize: 12, color: "var(--t-secondary)", marginTop: 3 }}>Annual, transponder, or ELT expired — required for all flight.</div>
+              </div>
+            </div>
+          )}
+          {/* IFR-only expired → NOT IFR CURRENT (only if not already grounded) */}
+          {!vfrExpired && ifrExpired && (
+            <div style={{ marginBottom: 10, padding: "10px 14px", borderRadius: 6, background: "var(--caution-bg)", border: "1px solid var(--caution-line)", display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 16 }}>⚠</span>
+              <div>
+                <div style={{ fontFamily: "var(--f-mono)", fontSize: 10, fontWeight: 700, color: "var(--caution)", letterSpacing: "0.12em" }}>Aircraft will be marked NOT IFR CURRENT on save</div>
+                <div style={{ fontFamily: "var(--f-ui)", fontSize: 12, color: "var(--t-secondary)", marginTop: 3 }}>Pitot-static (91.411) is required for IFR flight only — VFR operations unaffected.</div>
               </div>
             </div>
           )}
@@ -164,7 +254,12 @@ function AircraftEditModal({ profile, onSave, onClose }) {
               <div key={insp.fieldKey} style={{ marginBottom: 10, padding: "12px 14px", borderRadius: 7, background: "var(--bg-inset)", border: `1px solid ${ds === "NONE" ? "var(--line)" : ss.border}` }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                   <div>
-                    <div style={{ fontFamily: "var(--f-ui)", fontSize: 14, fontWeight: 600, color: "var(--t-primary)" }}>{insp.label}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontFamily: "var(--f-ui)", fontSize: 14, fontWeight: 600, color: "var(--t-primary)" }}>{insp.label}</span>
+                      {insp.ifrOnly && (
+                        <span style={{ fontFamily: "var(--f-mono)", fontSize: 8, fontWeight: 700, letterSpacing: "0.12em", padding: "2px 6px", borderRadius: 3, background: "var(--accent-bg)", border: "1px solid var(--accent-line)", color: "var(--accent)" }}>IFR ONLY</span>
+                      )}
+                    </div>
                     <div style={{ fontFamily: "var(--f-mono)", fontSize: 9, color: "var(--t-tertiary)", letterSpacing: "0.08em", marginTop: 2 }}>{insp.ref}</div>
                   </div>
                   <span style={{ fontFamily: "var(--f-mono)", fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", padding: "3px 10px", borderRadius: 3, background: ss.bg, border: `1px solid ${ss.border}`, color: ss.color, flexShrink: 0 }}>
@@ -187,8 +282,9 @@ function AircraftEditModal({ profile, onSave, onClose }) {
               </div>
             );
           })}
-          <div style={{ fontFamily: "var(--f-mono)", fontSize: 9, color: "var(--t-quiet)", letterSpacing: "0.08em", marginTop: 8 }}>
-            ★ Any expired inspection automatically sets aircraft status to Grounded on save.
+          <div style={{ fontFamily: "var(--f-mono)", fontSize: 9, color: "var(--t-quiet)", letterSpacing: "0.08em", marginTop: 8, lineHeight: 1.6 }}>
+            ★ Annual / transponder / ELT expired → GROUNDED on save.<br/>
+            ★ Pitot-static expired → NOT IFR CURRENT (VFR flight unaffected).
           </div>
         </div>
       );
@@ -204,13 +300,19 @@ function AircraftEditModal({ profile, onSave, onClose }) {
 
     if (activeSection === "airport") return (
       <div>
-        <HangarField label="Airport Name" fieldKey="homeAirport" placeholder="Phoenix Deer Valley" draft={draft} onSet={set} />
-        <HangarField label="ICAO / IATA Identifier" fieldKey="homeIcao" placeholder="KDVT" draft={draft} onSet={set} />
+        <AirportSearchField onFill={setMultiple} />
+        {draft.homeAirport && (
+          <div style={{ marginBottom: 14, padding: "8px 12px", borderRadius: 6, background: "var(--ok-bg)", border: "1px solid var(--ok-line)", fontFamily: "var(--f-mono)", fontSize: 11, color: "var(--ok)", letterSpacing: "0.06em" }}>
+            ✓ {draft.homeIcao} · {draft.homeAirport}{draft.fieldElev ? ` · ${draft.fieldElev}` : ""}
+          </div>
+        )}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <HangarField label="ATIS Frequency" fieldKey="atisFrq" placeholder="127.25" draft={draft} onSet={set} />
+          <HangarField label="Airport Name" fieldKey="homeAirport" placeholder="Phoenix Deer Valley" draft={draft} onSet={set} />
+          <HangarField label="ICAO Identifier" fieldKey="homeIcao" placeholder="KDVT" draft={draft} onSet={set} />
+          <HangarField label="ATIS / AWOS" fieldKey="atisFrq" placeholder="127.25" draft={draft} onSet={set} />
           <HangarField label="CTAF / Unicom" fieldKey="ctafFrq" placeholder="122.80" draft={draft} onSet={set} />
-          <HangarField label="Tower Frequency" fieldKey="towerFrq" placeholder="119.90" draft={draft} onSet={set} />
-          <HangarField label="Ground Frequency" fieldKey="groundFrq" placeholder="121.80" draft={draft} onSet={set} />
+          <HangarField label="Tower" fieldKey="towerFrq" placeholder="119.90" draft={draft} onSet={set} />
+          <HangarField label="Ground" fieldKey="groundFrq" placeholder="121.80" draft={draft} onSet={set} />
           <HangarField label="Field Elevation" fieldKey="fieldElev" placeholder="1478 MSL" draft={draft} onSet={set} />
           <HangarField label="Runways" fieldKey="runways" placeholder="07L/25R · 07R/25L" draft={draft} onSet={set} />
         </div>
@@ -265,8 +367,11 @@ function AircraftEditModal({ profile, onSave, onClose }) {
         <div className="hangar-modal-footer">
           <button className="hangar-cancel-btn" onClick={onClose}>Cancel</button>
           <button className="hangar-save-btn" onClick={() => {
-            const anyExpired = INSPECTIONS.some(i => getDateStatus(draft[i.fieldKey]) === "EXPIRED");
-            const finalDraft = anyExpired ? { ...draft, status: "GROUNDED" } : draft;
+            const vfrExpired = INSPECTIONS.filter(i => !i.ifrOnly).some(i => getDateStatus(draft[i.fieldKey]) === "EXPIRED");
+            const ifrExpired = INSPECTIONS.filter(i =>  i.ifrOnly).some(i => getDateStatus(draft[i.fieldKey]) === "EXPIRED");
+            const finalDraft = vfrExpired ? { ...draft, status: "GROUNDED" }
+              : ifrExpired   ? { ...draft, status: "NOT IFR CURRENT" }
+              : draft;
             onSave(finalDraft); onClose();
           }}>✓ Save Profile</button>
         </div>
@@ -733,15 +838,19 @@ function HangarView({ profile, onSelectAircraft, onSaveProfile }) {
 
   const INSPECTIONS = [
     { label: "Annual",       key: "dateAnnual",      fallbackSub: "14 CFR 91.409" },
-    { label: "Pitot-Static", key: "datePitotStatic",  fallbackSub: "VFR/IFR 91.411" },
+    { label: "Pitot-Static", key: "datePitotStatic",  fallbackSub: "IFR Only · 91.411" },
     { label: "Transponder",  key: "dateTransponder",  fallbackSub: "91.413" },
     { label: "ELT",          key: "dateEltBattery",   fallbackSub: "Battery · 12 mo" },
   ];
 
-  const acStatusClass = ac.status === "AIRWORTHY" ? "airworthy"
-    : ac.status === "GROUNDED" ? "grounded" : "caution";
-  const acStatusLabel = ac.status === "AIRWORTHY" ? "Airworthy"
-    : ac.status === "GROUNDED" ? "Grounded" : "Maintenance";
+  const acStatusClass = ac.status === "AIRWORTHY"       ? "airworthy"
+    : ac.status === "GROUNDED"         ? "grounded"
+    : ac.status === "NOT IFR CURRENT"  ? "caution"
+    : "caution";
+  const acStatusLabel = ac.status === "AIRWORTHY"       ? "Airworthy"
+    : ac.status === "GROUNDED"         ? "Grounded"
+    : ac.status === "NOT IFR CURRENT"  ? "Not IFR Current"
+    : "Maintenance";
 
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100vh", width:"100%", background:"var(--bg-0)", overflow:"hidden" }}>
