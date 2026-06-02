@@ -369,10 +369,13 @@ function AircraftEditModal({ profile, onSave, onClose }) {
           <button className="hangar-save-btn" onClick={() => {
             const vfrExpired = INSPECTIONS.filter(i => !i.ifrOnly).some(i => getDateStatus(draft[i.fieldKey]) === "EXPIRED");
             const ifrExpired = INSPECTIONS.filter(i =>  i.ifrOnly).some(i => getDateStatus(draft[i.fieldKey]) === "EXPIRED");
-            const finalDraft = vfrExpired ? { ...draft, status: "GROUNDED" }
-              : ifrExpired   ? { ...draft, status: "NOT IFR CURRENT" }
-              : draft;
-            onSave(finalDraft); onClose();
+            // Always resolve status from inspection state so fixing dates restores Airworthy.
+            // MAINTENANCE is the only status that must be set manually and is preserved.
+            const resolvedStatus = vfrExpired          ? "GROUNDED"
+              : ifrExpired                             ? "NOT IFR CURRENT"
+              : draft.status === "MAINTENANCE"         ? "MAINTENANCE"
+              : "AIRWORTHY";
+            onSave({ ...draft, status: resolvedStatus }); onClose();
           }}>✓ Save Profile</button>
         </div>
       </div>
