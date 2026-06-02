@@ -41,6 +41,40 @@ const DEFAULT_PROFILE = {
 // ─────────────────────────────────────────────────────────────────────────────
 // AIRCRAFT EDIT MODAL
 // ─────────────────────────────────────────────────────────────────────────────
+// ── Stable field helpers — defined at module scope so their identity never
+//    changes between renders. Inline definitions inside a component create a new
+//    function reference every render, causing React to unmount/remount the input
+//    and instantly stealing focus from the user.
+function HangarField({ label, fieldKey, placeholder, hint, draft, onSet }) {
+  return (
+    <div className="hangar-field">
+      <span className="hangar-field-label">{label}</span>
+      <input
+        className="hangar-input"
+        value={draft[fieldKey] || ""}
+        onChange={e => onSet(fieldKey, e.target.value)}
+        placeholder={placeholder || ""}
+      />
+      {hint && <span className="hangar-field-hint">{hint}</span>}
+    </div>
+  );
+}
+
+function HangarSelectField({ label, fieldKey, options, draft, onSet }) {
+  return (
+    <div className="hangar-field">
+      <span className="hangar-field-label">{label}</span>
+      <select
+        className="hangar-select"
+        value={draft[fieldKey] || ""}
+        onChange={e => onSet(fieldKey, e.target.value)}
+      >
+        {options.map(o => <option key={o} value={o}>{o}</option>)}
+      </select>
+    </div>
+  );
+}
+
 function AircraftEditModal({ profile, onSave, onClose }) {
   const [draft, setDraft] = useState({ ...profile });
   const [activeSection, setActiveSection] = useState("aircraft");
@@ -80,41 +114,15 @@ function AircraftEditModal({ profile, onSave, onClose }) {
     { label: "ELT Inspection",          ref: "14 CFR 91.207",  fieldKey: "dateEltInspect" },
   ];
 
-  const Field = ({ label, fieldKey, placeholder, hint }) => (
-    <div className="hangar-field">
-      <span className="hangar-field-label">{label}</span>
-      <input
-        className="hangar-input"
-        value={draft[fieldKey] || ""}
-        onChange={e => set(fieldKey, e.target.value)}
-        placeholder={placeholder || ""}
-      />
-      {hint && <span className="hangar-field-hint">{hint}</span>}
-    </div>
-  );
-
-  const SelectField = ({ label, fieldKey, options }) => (
-    <div className="hangar-field">
-      <span className="hangar-field-label">{label}</span>
-      <select
-        className="hangar-select"
-        value={draft[fieldKey] || ""}
-        onChange={e => set(fieldKey, e.target.value)}
-      >
-        {options.map(o => <option key={o} value={o}>{o}</option>)}
-      </select>
-    </div>
-  );
-
   const SectionContent = () => {
     if (activeSection === "aircraft") return (
       <div>
-        <Field label="Tail Number" fieldKey="tail" placeholder="N12345" hint="FAA registration number" />
-        <Field label="Aircraft Type" fieldKey="type" placeholder="Cessna 172S Skyhawk" />
-        <Field label="Year" fieldKey="year" placeholder="2019" />
-        <Field label="Engine" fieldKey="engine" placeholder="Lycoming IO-360-L2A · 180 HP" />
-        <Field label="Avionics" fieldKey="avionics" placeholder="Garmin G1000 NXi" />
-        <Field label="POH Reference" fieldKey="pohRef" placeholder="REV 2022-05" hint="Shown in status bar" />
+        <HangarField label="Tail Number" fieldKey="tail" placeholder="N12345" hint="FAA registration number" draft={draft} onSet={set} />
+        <HangarField label="Aircraft Type" fieldKey="type" placeholder="Cessna 172S Skyhawk" draft={draft} onSet={set} />
+        <HangarField label="Year" fieldKey="year" placeholder="2019" draft={draft} onSet={set} />
+        <HangarField label="Engine" fieldKey="engine" placeholder="Lycoming IO-360-L2A · 180 HP" draft={draft} onSet={set} />
+        <HangarField label="Avionics" fieldKey="avionics" placeholder="Garmin G1000 NXi" draft={draft} onSet={set} />
+        <HangarField label="POH Reference" fieldKey="pohRef" placeholder="REV 2022-05" hint="Shown in status bar" draft={draft} onSet={set} />
         <div className="hangar-field">
           <span className="hangar-field-label">Airworthiness Status</span>
           <div style={{ display: "flex", gap: 8 }}>
@@ -188,23 +196,23 @@ function AircraftEditModal({ profile, onSave, onClose }) {
 
     if (activeSection === "pilot") return (
       <div>
-        <Field label="Pilot Name" fieldKey="pilotName" placeholder="First Last" hint="Displayed in header" />
-        <Field label="Certificate Number" fieldKey="certNumber" placeholder="123456789" />
-        <SelectField label="Certificate Type" fieldKey="certType" options={["Student Pilot","Sport Pilot","Recreational Pilot","Private Pilot","Commercial Pilot","ATP"]} />
+        <HangarField label="Pilot Name" fieldKey="pilotName" placeholder="First Last" hint="Displayed in header" draft={draft} onSet={set} />
+        <HangarField label="Certificate Number" fieldKey="certNumber" placeholder="123456789" draft={draft} onSet={set} />
+        <HangarSelectField label="Certificate Type" fieldKey="certType" options={["Student Pilot","Sport Pilot","Recreational Pilot","Private Pilot","Commercial Pilot","ATP"]} draft={draft} onSet={set} />
       </div>
     );
 
     if (activeSection === "airport") return (
       <div>
-        <Field label="Airport Name" fieldKey="homeAirport" placeholder="Phoenix Deer Valley" />
-        <Field label="ICAO / IATA Identifier" fieldKey="homeIcao" placeholder="KDVT" />
+        <HangarField label="Airport Name" fieldKey="homeAirport" placeholder="Phoenix Deer Valley" draft={draft} onSet={set} />
+        <HangarField label="ICAO / IATA Identifier" fieldKey="homeIcao" placeholder="KDVT" draft={draft} onSet={set} />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <Field label="ATIS Frequency" fieldKey="atisFrq" placeholder="127.25" />
-          <Field label="CTAF / Unicom" fieldKey="ctafFrq" placeholder="122.80" />
-          <Field label="Tower Frequency" fieldKey="towerFrq" placeholder="119.90" />
-          <Field label="Ground Frequency" fieldKey="groundFrq" placeholder="121.80" />
-          <Field label="Field Elevation" fieldKey="fieldElev" placeholder="1478 MSL" />
-          <Field label="Runways" fieldKey="runways" placeholder="07L/25R · 07R/25L" />
+          <HangarField label="ATIS Frequency" fieldKey="atisFrq" placeholder="127.25" draft={draft} onSet={set} />
+          <HangarField label="CTAF / Unicom" fieldKey="ctafFrq" placeholder="122.80" draft={draft} onSet={set} />
+          <HangarField label="Tower Frequency" fieldKey="towerFrq" placeholder="119.90" draft={draft} onSet={set} />
+          <HangarField label="Ground Frequency" fieldKey="groundFrq" placeholder="121.80" draft={draft} onSet={set} />
+          <HangarField label="Field Elevation" fieldKey="fieldElev" placeholder="1478 MSL" draft={draft} onSet={set} />
+          <HangarField label="Runways" fieldKey="runways" placeholder="07L/25R · 07R/25L" draft={draft} onSet={set} />
         </div>
       </div>
     );
