@@ -775,6 +775,21 @@ export const MORE_REFS = [
     ],
   },
   {
+    id: "c172_limits", title: "C172S Operating Limits", color: "#f5b544",
+    note: "§2 Limitations — values shown are C172S POH defaults. Upload your POH to override.",
+    cols: ["Limit", "Value"],
+    rows: [
+      ["Max Demonstrated Crosswind",    "15 KT"],
+      ["Max Gross Weight",              "2,550 lb"],
+      ["Max Ramp Weight",               "2,558 lb"],
+      ["Max Useful Load (typical)",     "~887 lb"],
+      ["Max Flap Speed (10° / 30°)",    "85 KIAS / 85 KIAS"],
+      ["Max Gear Extension Speed",      "N/A (fixed gear)"],
+      ["Never Exceed (Vne)",            "163 KIAS"],
+      ["Max Structural Cruise (Vno)",   "129 KIAS"],
+    ],
+  },
+  {
     id: "tire_pressures", title: "C172S Tire Pressures", color: "#4a9fe8",
     note: "Check cold pressure only. Inspect for cuts, wear, and proper inflation before each flight.",
     cols: ["Tire", "Pressure", "Size / Notes"],
@@ -1677,6 +1692,30 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   // When the POH-upload feature is built, swap this in with parsed data
   // (source:"UPLOADED") and all DA calculations update automatically.
   const [pohData, setPohData] = useState(C172S_POH_DEFAULT); // eslint-disable-line no-unused-vars
+
+  // ── POH V-speed overlay ───────────────────────────────────────────────────
+  // Maps extracted pohVSpeeds keys → VSPEEDS card codes. When a POH is uploaded
+  // we compute displayVspeeds: found values come from the POH, unfound values
+  // are marked manualNeeded so the card renders grayed out with "MANUAL ENTRY".
+  const POH_VS_CODE_MAP = { vso:"VSO", vs1:"VS1", vr:"VR", vx:"VX", vy:"VY", va:"VA", vfe:"VFE", vno:"VNO", vne:"VNE" };
+  const pohUploaded  = aircraft?.pohSource === "UPLOADED";
+  const pohVSExtract = aircraft?.pohVSpeeds ?? {};
+
+  const displayVspeeds = pohUploaded
+    ? vspeeds.map(g => ({
+        ...g,
+        items: g.items.map(i => {
+          const pohKey = Object.entries(POH_VS_CODE_MAP).find(([, code]) => code === i.code.toUpperCase())?.[0];
+          const pohVal = pohKey != null ? pohVSExtract[pohKey] : null;
+          return {
+            ...i,
+            value:        pohVal != null ? String(pohVal) : "—",
+            fromPoh:      pohVal != null,
+            manualNeeded: pohKey != null && pohVal == null,
+          };
+        }),
+      }))
+    : vspeeds;
 
   // ── ATIS setter — enriches windDir/windSpeed/windGust whenever the wind
   // string is changed manually (manual edits bypass commParseAtis, so we
@@ -3723,7 +3762,7 @@ const commParseGround = (text) => {
                 {[
                   { label: "Communications", ids: ["light_gun", "transponder", "phonetic"] },
                   { label: "Regulations",    ids: ["wx_minimums", "airspeed_limits", "vfr_altitudes", "airspace_entry"] },
-                  { label: "Aircraft",       ids: ["c172_engine", "c172_electrical", "fuel_oil", "weight_cg", "tire_pressures"] },
+                  { label: "Aircraft",       ids: ["c172_engine", "c172_electrical", "fuel_oil", "weight_cg", "c172_limits", "tire_pressures"] },
                   { label: "Airport",        ids: ["runway_markings"] },
                 ].map(group => (
                   <div key={group.label} className="efb-qr-group">
@@ -3749,31 +3788,85 @@ const commParseGround = (text) => {
                 {(() => {
                   const ref = MORE_REFS.find(r => r.id === activeMoreRef);
                   if (!ref) return null;
+
+                  // ── Dynamic row overrides from uploaded POH data ────────────
+                  const pW  = aircraft?.pohWeights;
+                  const pF  = aircraft?.pohFuel;
+                  const pXW = aircraft?.pohMaxXwind;
+                  const pVS = aircraft?.pohVSpeeds;
+                  const uploaded = aircraft?.pohSource === "UPLOADED";
+                  const mEntry = uploaded ? "— (Manual Entry)" : null;
+
+                  const getRows = () => {
+                    if (ref.id === "weight_cg") return ref.rows.map(row => {
+                      const label = row[0];
+                      if (label.includes("Max Gross"))    return [label, pW?.maxGross    ? `${pW.maxGross.toLocaleString()} lb` : (uploaded ? mEntry : row[1])];
+                      if (label.includes("Empty"))         return [label, pW?.emptyWeight ? `${pW.emptyWeight.toLocaleString()} lb` : (uploaded ? mEntry : row[1])];
+                      if (label.includes("Useful"))        return [label, pW?.usefulLoad  ? `${pW.usefulLoad.toLocaleString()} lb` : (uploaded ? mEntry : row[1])];
+                      return row;
+                    });
+                    if (ref.id === "fuel_oil") return ref.rows.map(row => {
+                      const label = row[0];
+                      if (label.includes("Fuel Type"))   return [label, pF?.type      ? pF.type                            : (uploaded ? mEntry : row[1])];
+                      if (label.includes("Total Fuel"))  return [label, pF?.totalGal  ? `${pF.totalGal} USG total`         : (uploaded ? mEntry : row[1])];
+                      if (label.includes("Fuel Burn") || label.includes("usable")) return [label, pF?.usableGal ? `${pF.usableGal} USG usable` : (uploaded ? mEntry : row[1])];
+                      return row;
+                    });
+                    if (ref.id === "c172_limits") return ref.rows.map(row => {
+                      const label = row[0];
+                      if (label.includes("Crosswind"))   return [label, pXW  != null ? `${pXW} KT`                         : (uploaded ? mEntry : row[1])];
+                      if (label.includes("Max Gross"))   return [label, pW?.maxGross  ? `${pW.maxGross.toLocaleString()} lb` : (uploaded ? mEntry : row[1])];
+                      if (label.includes("Useful"))      return [label, pW?.usefulLoad ? `${pW.usefulLoad.toLocaleString()} lb` : (uploaded ? mEntry : row[1])];
+                      if (label.includes("Never Exceed") || label.includes("Vne")) return [label, pVS?.vne ? `${pVS.vne} KIAS` : (uploaded ? mEntry : row[1])];
+                      if (label.includes("Structural") || label.includes("Vno"))   return [label, pVS?.vno ? `${pVS.vno} KIAS` : (uploaded ? mEntry : row[1])];
+                      return row;
+                    });
+                    return ref.rows;
+                  };
+
+                  const displayRows = getRows();
+                  const hasOverrides = uploaded && ref.id !== "light_gun";
+
                   return (
                     <>
                       <div className="efb-qr-content-head">
-                        <span className="efb-qr-content-title" style={{color: ref.color}}>{ref.title}</span>
-                        {ref.note && <span className="efb-qr-content-sub">{ref.note}</span>}
+                        <div>
+                          <span className="efb-qr-content-title" style={{color: ref.color}}>{ref.title}</span>
+                          {ref.note && <div className="efb-qr-content-sub" style={{ marginTop: 4 }}>{ref.note}</div>}
+                        </div>
+                        {hasOverrides && (
+                          <span style={{ fontFamily: "var(--f-mono)", fontSize: 9, fontWeight: 700,
+                            letterSpacing: "0.12em", padding: "3px 10px", borderRadius: 4,
+                            background: uploaded ? "var(--ok-bg)" : "var(--bg-inset)",
+                            border: `1px solid ${uploaded ? "var(--ok-line)" : "var(--line)"}`,
+                            color: uploaded ? "var(--ok)" : "var(--t-quiet)" }}>
+                            {uploaded ? "✓ YOUR POH" : "DEFAULT DATA"}
+                          </span>
+                        )}
                       </div>
                       <table className="efb-qr-table">
                         <thead>
                           <tr>{ref.cols.map((col, ci) => <th key={ci}>{col}</th>)}</tr>
                         </thead>
                         <tbody>
-                          {ref.rows.map((row, ri) => (
-                            <tr key={ri}>
-                              {row.map((cell, ci) => (
-                                <td key={ci} className={ci === 0 ? "efb-qr-cell-key" : ""}>
-                                  {ci === 0 && ref.signalDots?.[ri] ? (
-                                    <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                                      <span className={`lgd-dot lgd-${ref.signalDots[ri]}`}/>
-                                      {cell}
-                                    </span>
-                                  ) : cell}
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
+                          {displayRows.map((row, ri) => {
+                            const isManual = row.some(c => c === mEntry);
+                            return (
+                              <tr key={ri} style={isManual ? { opacity: 0.5 } : {}}>
+                                {row.map((cell, ci) => (
+                                  <td key={ci} className={ci === 0 ? "efb-qr-cell-key" : ""}
+                                    style={isManual && ci > 0 ? { color: "var(--caution)", fontStyle: "italic", fontFamily: "var(--f-mono)", fontSize: 11 } : {}}>
+                                    {ci === 0 && ref.signalDots?.[ri] ? (
+                                      <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                                        <span className={`lgd-dot lgd-${ref.signalDots[ri]}`}/>
+                                        {cell}
+                                      </span>
+                                    ) : cell}
+                                  </td>
+                                ))}
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </>
@@ -3857,45 +3950,94 @@ const commParseGround = (text) => {
             <div className="efb-poh-content">
 
               {/* ── V-SPEEDS ── */}
-              {pohTab === "vspeeds" && vspeeds.map((group, gi) => (
-                <div key={gi} className="efb-poh-group">
-                  <div className="efb-poh-group-label">{group.group.toUpperCase()}</div>
-                  <div className="efb-poh-cards">
-                    {group.items.map((item, ii) => {
-                      const codeColor = item.danger ? "var(--warn)" : item.caution ? "var(--caution)" : "var(--accent)";
-                      return (
-                        <div key={ii} className="efb-poh-card">
-                          <div className="efb-poh-card-top">
-                            <span className="efb-poh-card-code" style={{ color: codeColor }}>
-                              {vspeedEditing
-                                ? <input value={item.code} onChange={e => updateVspeed(gi, ii, "code", e.target.value)} className="efb-poh-input" style={{ color: codeColor, borderColor: codeColor }}/>
-                                : item.code}
-                            </span>
-                            <span className="efb-poh-card-unit">{item.unit}</span>
-                          </div>
-                          <div className="efb-poh-card-value">
-                            {vspeedEditing
-                              ? <input value={item.value} onChange={e => updateVspeed(gi, ii, "value", e.target.value)} className="efb-poh-input wide"/>
-                              : item.value}
-                          </div>
-                          <div className="efb-poh-card-desc">
-                            {vspeedEditing
-                              ? <input value={item.desc} onChange={e => updateVspeed(gi, ii, "desc", e.target.value)} className="efb-poh-input full"/>
-                              : item.desc}
-                          </div>
-                        </div>
-                      );
-                    })}
+              {pohTab === "vspeeds" && (
+                <>
+                  {/* Source banner */}
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 10,
+                    padding: "8px 12px", borderRadius: 6, marginBottom: 4,
+                    background: pohUploaded ? "var(--ok-bg)" : "var(--bg-inset)",
+                    border: `1px solid ${pohUploaded ? "var(--ok-line)" : "var(--line)"}`,
+                  }}>
+                    <span style={{ fontFamily: "var(--f-mono)", fontSize: 9, fontWeight: 700,
+                      letterSpacing: "0.14em", textTransform: "uppercase",
+                      color: pohUploaded ? "var(--ok)" : "var(--t-quiet)" }}>
+                      {pohUploaded ? `✓ YOUR POH · ${aircraft?.pohFileName || "Uploaded"}` : "BUILT-IN DEFAULTS"}
+                    </span>
+                    {pohUploaded && Object.values(pohVSExtract).some(v => v != null) && (
+                      <span style={{ fontFamily: "var(--f-mono)", fontSize: 9, color: "var(--t-tertiary)", marginLeft: "auto" }}>
+                        {Object.values(pohVSExtract).filter(v => v != null).length} of {Object.keys(POH_VS_CODE_MAP).length} speeds extracted
+                      </span>
+                    )}
+                    {pohUploaded && !Object.values(pohVSExtract).some(v => v != null) && (
+                      <span style={{ fontFamily: "var(--f-mono)", fontSize: 9, color: "var(--caution)", marginLeft: "auto" }}>
+                        Not extracted — enter manually
+                      </span>
+                    )}
                   </div>
-                  {vspeedEditing && (
-                    <button className="efb-poh-add-row" onClick={() => addVspeedItem(gi)}>
-                      + Add Speed
-                    </button>
-                  )}
-                </div>
-              ))}
+
+                  {displayVspeeds.map((group, gi) => (
+                    <div key={gi} className="efb-poh-group">
+                      <div className="efb-poh-group-label">{group.group.toUpperCase()}</div>
+                      <div className="efb-poh-cards">
+                        {group.items.map((item, ii) => {
+                          const codeColor = item.danger ? "var(--warn)" : item.caution ? "var(--caution)" : "var(--accent)";
+                          const isManual  = item.manualNeeded;
+                          const isFromPoh = item.fromPoh;
+                          return (
+                            <div key={ii} className="efb-poh-card" style={isManual ? { opacity: 0.55, border: "1px dashed var(--line-strong)" } : {}}>
+                              <div className="efb-poh-card-top">
+                                <span className="efb-poh-card-code" style={{ color: isManual ? "var(--t-quiet)" : codeColor }}>
+                                  {vspeedEditing && !pohUploaded
+                                    ? <input value={item.code} onChange={e => updateVspeed(gi, ii, "code", e.target.value)} className="efb-poh-input" style={{ color: codeColor, borderColor: codeColor }}/>
+                                    : item.code}
+                                </span>
+                                <span className="efb-poh-card-unit" style={{ color: isManual ? "var(--t-quiet)" : undefined }}>{item.unit}</span>
+                              </div>
+                              <div className="efb-poh-card-value" style={{ color: isManual ? "var(--t-quiet)" : undefined, fontSize: isManual ? 20 : undefined }}>
+                                {vspeedEditing && !pohUploaded
+                                  ? <input value={item.value} onChange={e => updateVspeed(gi, ii, "value", e.target.value)} className="efb-poh-input wide"/>
+                                  : item.value}
+                              </div>
+                              <div className="efb-poh-card-desc" style={{ color: isManual ? "var(--caution)" : undefined, fontStyle: isManual ? "italic" : undefined }}>
+                                {vspeedEditing && !pohUploaded
+                                  ? <input value={item.desc} onChange={e => updateVspeed(gi, ii, "desc", e.target.value)} className="efb-poh-input full"/>
+                                  : isManual ? "MANUAL ENTRY" : item.desc}
+                              </div>
+                              {isFromPoh && !vspeedEditing && (
+                                <div style={{ fontFamily: "var(--f-mono)", fontSize: 8, color: "var(--ok)", letterSpacing: "0.1em", marginTop: 4 }}>✓ POH</div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {vspeedEditing && !pohUploaded && (
+                        <button className="efb-poh-add-row" onClick={() => addVspeedItem(gi)}>
+                          + Add Speed
+                        </button>
+                      )}
+                      {pohUploaded && (
+                        <div style={{ fontFamily: "var(--f-mono)", fontSize: 9, color: "var(--t-tertiary)", marginTop: 6, letterSpacing: "0.06em", fontStyle: "italic" }}>
+                          Remove POH in Hangar → Aircraft Profile → POH tab to edit manually.
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </>
+              )}
 
               {/* ── T/O & LANDING ── */}
+              {pohTab === "perf" && (
+                <div style={{ padding: "8px 12px", borderRadius: 6, marginBottom: 8,
+                  background: pohUploaded ? "var(--caution-bg)" : "var(--bg-inset)",
+                  border: `1px solid ${pohUploaded ? "var(--caution-line)" : "var(--line)"}`,
+                  fontFamily: "var(--f-mono)", fontSize: 9, fontWeight: 700, letterSpacing: "0.12em",
+                  color: pohUploaded ? "var(--caution)" : "var(--t-quiet)" }}>
+                  {pohUploaded
+                    ? `⚠ POH UPLOADED — Performance tables must be verified against your actual POH. Use EDIT to update values.`
+                    : "BUILT-IN DEFAULTS · C172S POH Section 5"}
+                </div>
+              )}
               {pohTab === "perf" && perfData.map((section, si) => (
                 <div key={si} className="efb-poh-group">
                   <div className="efb-poh-section-title" style={{ color: "#3a9ad4" }}>{section.group.toUpperCase()}</div>
@@ -3927,6 +4069,17 @@ const commParseGround = (text) => {
               ))}
 
               {/* ── CLIMB PERFORMANCE ── */}
+              {pohTab === "climb" && (
+                <div style={{ padding: "8px 12px", borderRadius: 6, marginBottom: 8,
+                  background: pohUploaded ? "var(--caution-bg)" : "var(--bg-inset)",
+                  border: `1px solid ${pohUploaded ? "var(--caution-line)" : "var(--line)"}`,
+                  fontFamily: "var(--f-mono)", fontSize: 9, fontWeight: 700, letterSpacing: "0.12em",
+                  color: pohUploaded ? "var(--caution)" : "var(--t-quiet)" }}>
+                  {pohUploaded
+                    ? "⚠ POH UPLOADED — Verify climb data against your actual POH. Use EDIT to update values."
+                    : "BUILT-IN DEFAULTS · C172S POH Section 5"}
+                </div>
+              )}
               {pohTab === "climb" && climbData.map((section, si) => (
                 <div key={si} className="efb-poh-group">
                   <div className="efb-poh-section-title" style={{ color: "#3a9ad4" }}>{section.group.toUpperCase()}</div>
@@ -3958,6 +4111,17 @@ const commParseGround = (text) => {
               ))}
 
               {/* ── CRUISE PERFORMANCE ── */}
+              {pohTab === "cruise" && (
+                <div style={{ padding: "8px 12px", borderRadius: 6, marginBottom: 8,
+                  background: pohUploaded ? "var(--caution-bg)" : "var(--bg-inset)",
+                  border: `1px solid ${pohUploaded ? "var(--caution-line)" : "var(--line)"}`,
+                  fontFamily: "var(--f-mono)", fontSize: 9, fontWeight: 700, letterSpacing: "0.12em",
+                  color: pohUploaded ? "var(--caution)" : "var(--t-quiet)" }}>
+                  {pohUploaded
+                    ? "⚠ POH UPLOADED — Verify cruise data against your actual POH. Use EDIT to update values."
+                    : "BUILT-IN DEFAULTS · C172S POH Section 5"}
+                </div>
+              )}
               {pohTab === "cruise" && cruiseData.map((section, si) => (
                 <div key={si} className="efb-poh-group">
                   <div className="efb-poh-section-title" style={{ color: "#3a9ad4" }}>{section.group.toUpperCase()}</div>
