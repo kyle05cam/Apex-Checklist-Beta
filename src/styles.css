@@ -3915,3 +3915,135 @@ ul, li { list-style: none; padding: 0; margin: 0; }
   font-feature-settings: var(--num-feat);
 }
 
+/* ============================================================
+   COMPACT MODE — iPad Slide Over / narrow viewports (≤400px)
+   ============================================================ */
+@media (max-width: 400px) {
+
+  /* ── Grid: drop topbar row, narrow left rail, no right rail ── */
+  .efb-app {
+    grid-template-columns: 48px 1fr;
+    grid-template-rows: auto 1fr var(--statusbar);
+  }
+
+  /* ── Hide the topbar entirely ── */
+  .efb-topbar { display: none; }
+
+  /* ── ATC strip moves to row 1, spans full width ── */
+  .efb-rx-wrap {
+    grid-row: 1;
+    grid-column: 1 / -1;
+  }
+
+  /* ── Make ATC strip more prominent — bigger text area ── */
+  .efb-rx-idle {
+    padding: 10px 14px;
+    gap: 10px;
+  }
+  .efb-rx-idle-title {
+    font-size: 13px;
+  }
+  .efb-rx-idle-sub {
+    font-size: 10px;
+  }
+  .efb-rx-live-main {
+    font-size: 15px;
+    line-height: 1.4;
+    padding: 8px 12px 6px;
+  }
+  .efb-rx-live-header {
+    padding: 6px 12px 4px;
+    gap: 6px;
+  }
+
+  /* ── Left rail — thinner, icon-only ── */
+  .efb-rail-l {
+    grid-row: 2;
+    grid-column: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  .efb-rail-l.compact .efb-rail-item {
+    padding: 10px 0;
+    min-height: 48px;
+  }
+  .efb-rail-l.compact .efb-rail-ico {
+    width: 26px;
+    height: 26px;
+  }
+
+  /* ── Right rail — gone ── */
+  .efb-rail-r { display: none; }
+
+  /* ── Main content — takes remaining width, moves to row 2 ── */
+  .efb-main {
+    grid-row: 2;
+    grid-column: 2;
+  }
+
+  /* ── Statusbar moves to row 3 ── */
+  .efb-statusbar {
+    grid-row: 3;
+    grid-column: 1 / -1;
+  }
+
+  /* ── Hide checklist page header block ── */
+  .efb-page-header.compact-hidden { display: none; }
+
+  /* ── Bigger checklist tap targets, tighter outer padding ── */
+  .efb-check-row {
+    padding: 11px 8px;
+    min-height: 48px;
+  }
+  .efb-check-box {
+    width: 22px;
+    height: 22px;
+  }
+  .efb-check-label {
+    font-size: 14px;
+  }
+  .efb-check-value {
+    font-size: 11px;
+  }
+
+  /* ── Section header — hide READ/EDIT buttons in compact to save space ── */
+  .efb-cl-actions {
+    display: none;
+  }
+  .efb-cl-head {
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+  .efb-cl-title {
+    min-width: 0;
+    overflow: hidden;
+  }
+  .efb-cl-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ── EMG toggle button — bright red, prominent ── */
+  .efb-rail-emg-toggle {
+    background: rgba(220, 38, 38, 0.12) !important;
+    border-top: 1px solid rgba(220, 38, 38, 0.3) !important;
+    color: #ff4444 !important;
+    min-height: 52px;
+    font-family: var(--f-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+  .efb-rail-emg-toggle:hover {
+    background: rgba(220, 38, 38, 0.22) !important;
+  }
+  .efb-rail-emg-toggle.active-emg {
+    background: rgba(220, 38, 38, 0.28) !important;
+    border-left: 2px solid #ff4444 !important;
+  }
+  .efb-rail-emg-toggle .efb-rail-ico {
+    color: #ff4444;
+  }
+}
+

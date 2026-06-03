@@ -1659,6 +1659,15 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   const [spPenColor, setSpPenColor] = useState("#e6ecf2");
   const spClearRef = useRef(null);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [isCompact, setIsCompact] = useState(() => window.innerWidth <= 400);
+  const [compactEmgMode, setCompactEmgMode] = useState(false);
+  useEffect(() => {
+    const ro = new ResizeObserver(entries => {
+      setIsCompact(entries[0].contentRect.width <= 400);
+    });
+    ro.observe(document.documentElement);
+    return () => ro.disconnect();
+  }, []);
   const [activeMoreRef, setActiveMoreRef] = useState("light_gun");
   const [activeDrawer, setActiveDrawer] = useState(new Set());   // Set of open keys — multiple allowed
   const [pohTab, setPohTab] = useState("vspeeds");               // Active tab in POH overlay
@@ -3189,10 +3198,10 @@ const commParseGround = (text) => {
     const isComplete = pageCount.total > 0 && pageCount.done === pageCount.total;
 
     return (
-      <div key={pg.id} style={{ animation: "efb-fade-in 0.15s ease", padding: "12px 12px 88px" }}>
-        {/* Sticky block: page title header + optional DA performance header */}
-        <div style={{ position: "sticky", top: 0, zIndex: 10, background: "var(--bg-0)" }}>
-          <div className="efb-page-header">
+      <div key={pg.id} style={{ animation: "efb-fade-in 0.15s ease", padding: isCompact ? "8px 6px 88px" : "12px 12px 88px" }}>
+        {/* Sticky block: page title header + optional DA performance header — hidden entirely in compact */}
+        <div style={{ position: "sticky", top: 0, zIndex: 10, background: "var(--bg-0)", display: isCompact ? "none" : undefined }}>
+          <div className={`efb-page-header${isCompact ? " compact-hidden" : ""}`}>
             <div>
               <h1 className="efb-page-title" style={isEmg ? { color: accentColor } : {}}>
                 {pg.id === "approach"     ? "APPROACH & LANDING"
@@ -3682,13 +3691,15 @@ const commParseGround = (text) => {
             )}
             </div>{/* end efb-rx-transcript */}
 
-            {/* NRST widget — right side, tapping jumps to Nearest Freqs tab */}
-            <NrstWidget
-              onNavigate={() => {
-                setCurrentPage("comm");
-                setCommFreqTabTrigger(n => n + 1);
-              }}
-            />
+            {/* NRST widget — right side, hidden in compact mode */}
+            {!isCompact && (
+              <NrstWidget
+                onNavigate={() => {
+                  setCurrentPage("comm");
+                  setCommFreqTabTrigger(n => n + 1);
+                }}
+              />
+            )}
 
           </div>
 
@@ -3696,25 +3707,45 @@ const commParseGround = (text) => {
       )}
 
       {/* ── LEFT RAIL ── */}
-      <nav className="efb-rail-l">
-        {activePages.map(pg => {
+      <nav className={`efb-rail-l${isCompact ? " compact" : ""}`}>
+        {(isCompact && compactEmgMode ? EMG_PAGES : activePages).map(pg => {
           const iconMap = { preflight:"preflight", startup:"startup", taxi:"taxi", takeoff:"takeoff", cruise:"cruise", approach:"landing", shutdown:"power" };
+          const isEmgRail = EMG_PAGES.some(p => p.id === pg.id);
           const isActive = currentPage === pg.id;
           const count = countPage(pg.id);
           const isDone = count.total > 0 && count.done === count.total;
           return (
-            <button key={pg.id} className={`efb-rail-item${isActive ? " active" : ""}${isDone ? " complete" : ""}`} onClick={() => setCurrentPage(pg.id)}>
-              <span className="efb-rail-ico"><Icon name={iconMap[pg.id] || "plane"} size={22}/></span>
-              <span className="efb-rail-lbl">{pg.label}</span>
-              {count.total > 0 && <span className="efb-rail-cnt">{isDone ? "✓" : `${count.done}/${count.total}`}</span>}
+            <button
+              key={pg.id}
+              className={`efb-rail-item${isActive ? " active" : ""}${isDone ? " complete" : ""}${isEmgRail ? " efb-rail-emg" : ""}`}
+              style={isEmgRail ? { "--emg-color": pg.color } : {}}
+              onClick={() => { setCurrentPage(pg.id); if (isCompact && compactEmgMode) setCompactEmgMode(false); }}
+            >
+              <span className="efb-rail-ico">
+                {isEmgRail && typeof pg.icon === "function"
+                  ? pg.icon(isCompact ? 20 : 22)
+                  : <Icon name={iconMap[pg.id] || "plane"} size={isCompact ? 20 : 22}/>
+                }
+              </span>
+              {!isCompact && <span className="efb-rail-lbl">{pg.label}</span>}
+              {!isCompact && count.total > 0 && <span className="efb-rail-cnt">{isDone ? "✓" : `${count.done}/${count.total}`}</span>}
             </button>
           );
         })}
         <div className="efb-rail-spacer"/>
-        <button className="efb-rail-item" onClick={() => setMoreOpen(true)}>
-          <span className="efb-rail-ico"><Icon name="menu" size={20}/></span>
-          <span className="efb-rail-lbl">MORE</span>
+        <button
+          className={`efb-rail-item efb-rail-emg-toggle${compactEmgMode ? " active-emg" : ""}`}
+          onClick={() => setCompactEmgMode(m => !m)}
+          title="Emergency procedures"
+        >
+          <span className="efb-rail-ico" style={{ fontSize: isCompact ? 16 : 14, fontWeight: 700, color: compactEmgMode ? "#ff4444" : undefined }}>EMG</span>
         </button>
+        {!isCompact && (
+          <button className="efb-rail-item" onClick={() => setMoreOpen(true)}>
+            <span className="efb-rail-ico"><Icon name="menu" size={20}/></span>
+            <span className="efb-rail-lbl">MORE</span>
+          </button>
+        )}
       </nav>
 
       {/* ── MAIN CONTENT ── */}
