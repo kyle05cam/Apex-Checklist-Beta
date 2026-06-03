@@ -3935,28 +3935,103 @@ ul, li { list-style: none; padding: 0; margin: 0; }
     grid-column: 1 / -1;
   }
 
-  /* ── Make ATC strip more prominent — bigger text area ── */
+  /* ── ATC strip — 35% of viewport height ── */
+  .efb-rx-wrap {
+    height: 35vh;
+    min-height: 35vh;
+    max-height: 35vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-1);
+    border-bottom: 1px solid var(--line);
+  }
+  .efb-rx-area {
+    flex: 1;
+    border-bottom: none;
+  }
+  .efb-rx-transcript {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border-right: none;
+  }
+
+  /* ── ATC idle state — center in the 35vh zone ── */
   .efb-rx-idle {
-    padding: 10px 14px;
-    gap: 10px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px 16px;
+    gap: 12px;
+    height: 100%;
+    box-sizing: border-box;
+  }
+  .efb-rx-idle-body {
+    align-items: center;
   }
   .efb-rx-idle-title {
-    font-size: 13px;
+    font-size: 15px;
   }
   .efb-rx-idle-sub {
     font-size: 10px;
-  }
-  .efb-rx-live-main {
-    font-size: 15px;
-    line-height: 1.4;
-    padding: 8px 12px 6px;
-  }
-  .efb-rx-live-header {
-    padding: 6px 12px 4px;
-    gap: 6px;
+    white-space: normal;
+    text-align: center;
   }
 
-  /* ── Left rail — thinner, icon-only ── */
+  /* ── Make antenna icon bigger in idle ── */
+  .efb-rx-idle svg {
+    width: 44px;
+    height: 44px;
+    opacity: 0.35;
+  }
+  /* ── LISTEN button full-width in idle ── */
+  .efb-rx-idle .efb-rb-listen-btn {
+    margin: 4px 0 0;
+    width: 100%;
+    max-width: 160px;
+    justify-content: center;
+  }
+
+  /* ── ATC live header — tiny timestamp, no "GENERAL" type label ── */
+  .efb-rx-live-header {
+    padding: 5px 10px 4px;
+    gap: 5px;
+    font-size: 9px;
+  }
+  .efb-rx-live-ts {
+    font-size: 9px;
+    opacity: 0.6;
+  }
+  .efb-rx-live-type {
+    display: none;
+  }
+  .efb-rx-live-freq {
+    font-size: 9px;
+  }
+  .efb-rx-live-conf {
+    font-size: 9px;
+  }
+
+  /* ── ATC live main transcript — readable but compact ── */
+  .efb-rx-live-main {
+    font-size: 13px;
+    line-height: 1.45;
+    padding: 7px 10px 5px;
+  }
+
+  /* ── ATC log rows — tiny, dense ── */
+  .efb-rx-log-row {
+    padding: 4px 10px;
+    font-size: 9px;
+    gap: 6px;
+  }
+  .efb-rx-log-ts   { min-width: 32px; font-size: 9px; }
+  .efb-rx-log-type { min-width: 0; font-size: 9px; display: none; }
+  .efb-rx-log-freq { min-width: 36px; font-size: 9px; }
+
+  /* ── Left rail — thinner, icon-only, taller items ── */
   .efb-rail-l {
     grid-row: 2;
     grid-column: 1;
@@ -3964,8 +4039,9 @@ ul, li { list-style: none; padding: 0; margin: 0; }
     overflow-x: hidden;
   }
   .efb-rail-l.compact .efb-rail-item {
-    padding: 10px 0;
-    min-height: 48px;
+    padding: 0;
+    min-height: 56px;
+    justify-content: center;
   }
   .efb-rail-l.compact .efb-rail-ico {
     width: 26px;
@@ -3990,46 +4066,58 @@ ul, li { list-style: none; padding: 0; margin: 0; }
   /* ── Hide checklist page header block ── */
   .efb-page-header.compact-hidden { display: none; }
 
-  /* ── Bigger checklist tap targets, tighter outer padding ── */
+  /* ── Checklist tap targets — smaller font, still tappable ── */
   .efb-check-row {
-    padding: 11px 8px;
-    min-height: 48px;
+    padding: 9px 8px;
+    min-height: 40px;
   }
   .efb-check-box {
-    width: 22px;
-    height: 22px;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
   }
   .efb-check-label {
-    font-size: 14px;
+    font-size: 12px;
   }
   .efb-check-value {
-    font-size: 11px;
+    font-size: 10px;
   }
 
-  /* ── Section header — hide READ/EDIT buttons in compact to save space ── */
+  /* ── Section header — hide READ/EDIT/progress, show full wrapping title ── */
   .efb-cl-actions {
     display: none;
   }
+  .efb-cl-progress {
+    display: none;
+  }
+  .efb-cl-count {
+    display: none;
+  }
   .efb-cl-head {
-    flex-wrap: nowrap;
-    gap: 4px;
+    padding: 6px 8px 6px 12px;
+    align-items: flex-start;
   }
   .efb-cl-title {
     min-width: 0;
-    overflow: hidden;
+    flex: 1;
   }
   .efb-cl-name {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    font-size: 11px;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    line-height: 1.3;
+    word-break: break-word;
   }
 
-  /* ── EMG toggle button — bright red, prominent ── */
+  /* ── EMG toggle button — bright red, prominent, tall ── */
   .efb-rail-emg-toggle {
     background: rgba(220, 38, 38, 0.12) !important;
     border-top: 1px solid rgba(220, 38, 38, 0.3) !important;
     color: #ff4444 !important;
-    min-height: 52px;
+    min-height: 64px;
+    padding: 0;
+    justify-content: center;
     font-family: var(--f-mono);
     font-size: 11px;
     font-weight: 700;
