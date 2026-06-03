@@ -1763,30 +1763,51 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   // string is changed manually (manual edits bypass commParseAtis, so we
   // parse the formatted string back to numbers here to keep the DA banner fed).
   //
-  // Two wind string formats exist:
-  //   Auto-capture (commParseAtis): "270° AT 15KT" | "270° AT 15 GUSTING 23"
-  //                                  group1=dir  group2=speed
-  //   WindEditor (manual):          "15 @ 270"   | "15 @ 270 gusting 23"
-  //                                  group1=speed group2=dir  ← ORDER REVERSED
+  // Supported wind string formats (all produce dir/speed/gust numbers):
+  //   Auto-capture:  "270° AT 15KT"  | "270° AT 15 GUSTING 23"  dir → speed
+  //   Auto (no sym): "270 AT 15"     | "270 AT 15 G23"
+  //   METAR-style:   "27015KT"       | "27015G23KT"
+  //   WindEditor:    "15 @ 270"      | "15 @ 270 gusting 23"     speed → dir (reversed)
+  //   CALM / 00000:  "CALM"          | "00000KT"                 → speed 0, dir cleared
+  //
+  // Key invariant: if no format matches (mid-edit / partial string) we PRESERVE
+  // the existing numeric values rather than clearing them, so the DA banner
+  // never loses a previously good reading during typing.
+  const parseWindString = (w, existing) => {
+    const s = (w || "").trim();
+
+    // CALM / 00000KT
+    if (/^calm$/i.test(s) || /^0{3,5}(?:KT)?$/i.test(s)) {
+      return { windDir: "", windSpeed: "0", windGust: "" };
+    }
+
+    // Format A — auto-capture / ATC readback: "270° AT 15KT" or "270 AT 15 G23"
+    const mA = s.match(/^(\d{1,3})\s*°?\s+(?:at\s+)(\d{1,3})\s*(?:kt)?(?:\s+(?:gusting|g)\s*(\d{1,3}))?/i);
+    if (mA) return { windDir: mA[1], windSpeed: mA[2], windGust: mA[3] || "" };
+
+    // Format B — METAR compact: "27015KT" or "27015G23KT"
+    const mB = s.match(/^(\d{3})(\d{2,3})(?:G(\d{2,3}))?KT$/i);
+    if (mB) return { windDir: String(parseInt(mB[1], 10)), windSpeed: String(parseInt(mB[2], 10)), windGust: mB[3] ? String(parseInt(mB[3], 10)) : "" };
+
+    // Format C — WindEditor: "15 @ 270" or "15 @ 270 gusting 23"  (speed @ dir)
+    const mC = s.match(/^(\d{1,3})\s*@\s*(\d{1,3})(?:\s+(?:gusting|g)\s*(\d{1,3}))?/i);
+    if (mC) return { windDir: mC[2], windSpeed: mC[1], windGust: mC[3] || "" };
+
+    // Format D — slash separator: "270/15" or "270/15G23"
+    const mD = s.match(/^(\d{1,3})\/(\d{1,3})(?:G(\d{1,3}))?/i);
+    if (mD) return { windDir: mD[1], windSpeed: mD[2], windGust: mD[3] || "" };
+
+    // No format matched (mid-edit / unknown) — preserve existing values
+    return { windDir: existing.windDir, windSpeed: existing.windSpeed, windGust: existing.windGust };
+  };
+
   const handleSetAtisData = (newData) => {
     let out = { ...newData };
 
-    // When wind string changes, parse numeric components for the DA banner
+    // When wind string changes, re-parse numeric components for the DA banner
     if (newData.wind !== commAtisData.wind) {
-      const w = (newData.wind || "").trim();
-      if (/^calm$/i.test(w)) {
-        out = { ...out, windDir: "", windSpeed: "0", windGust: "" };
-      } else {
-        // Format A — auto-capture: "270° AT 15KT"  (direction @ speed)
-        const mA = w.match(/^(\d{1,3})\s*°?\s+at\s+(\d{1,3})\s*(?:kt)?(?:\s+gusting\s+(\d{1,3}))?/i);
-        // Format B — WindEditor:   "15 @ 270"       (speed @ direction — reversed)
-        const mB = w.match(/^(\d{1,3})\s*@\s*(\d{1,3})(?:\s+gusting\s+(\d{1,3}))?/i);
-        if (mA) {
-          out = { ...out, windDir: mA[1], windSpeed: mA[2], windGust: mA[3] || "" };
-        } else if (mB) {
-          out = { ...out, windDir: mB[2], windSpeed: mB[1], windGust: mB[3] || "" };
-        }
-      }
+      const parsed = parseWindString(newData.wind, commAtisData);
+      out = { ...out, ...parsed };
     }
 
     // When airport ID is entered/changed, look it up in AIRPORT_DB — the matched
@@ -3099,7 +3120,7 @@ const commParseGround = (text) => {
     window.speechSynthesis.cancel();
     const queue = mergedItems.map(item => ({ label: item.l, action: item.a || "" }));
     if (!queue.length) return;
-    t_queueRef.current = queue; ttsIdxRef.current = 0;
+    ttsQueueRef.current = queue; ttsIdxRef.current = 0;
     setTtsPaused(false); setTtsActive({ sectionKey, idx: -1 });
     speakItem(queue, 0, sectionKey);
   };
