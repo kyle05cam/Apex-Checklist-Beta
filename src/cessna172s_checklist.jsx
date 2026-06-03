@@ -3601,7 +3601,7 @@ const commParseGround = (text) => {
                     {commTxLog[0] && (
                       <>
                         <span className="efb-rx-live-ts">{fmtRxTs(commTxLog[0].ts)}</span>
-                        {commTxLog[0].type && (
+                        {commTxLog[0].type && commTxLog[0].type !== "general" && (
                           <span
                             className="efb-rx-live-type"
                             style={{
@@ -3665,7 +3665,7 @@ const commParseGround = (text) => {
                   .map(entry => (
                     <div key={entry.id} className="efb-rx-log-row">
                       <span className="efb-rx-log-ts">{fmtRxTs(entry.ts)}</span>
-                      {entry.type && (
+                      {entry.type && entry.type !== "general" && (
                         <span
                           className="efb-rx-log-type"
                           style={{ color: rxTypeColor(entry.type) }}

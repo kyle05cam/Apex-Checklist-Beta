@@ -4040,21 +4040,21 @@ ul, li { list-style: none; padding: 0; margin: 0; }
   /* ── ATC log rows — readable, wrapping text ── */
   .efb-rx-log-row {
     padding: 5px 10px;
-    font-size: 12px;
-    gap: 6px;
-    align-items: flex-start;
+    gap: 4px;
+    align-items: baseline;
     flex-wrap: wrap;
   }
-  .efb-rx-log-ts   { min-width: 0; font-size: 8px; opacity: 0.55; flex-shrink: 0; }
-  .efb-rx-log-type { min-width: 0; font-size: 9px; display: none; }
-  .efb-rx-log-freq { min-width: 0; font-size: 9px; flex-shrink: 0; }
+  .efb-rx-log-ts   { min-width: 0; font-size: 7px; opacity: 0.45; flex-shrink: 0; letter-spacing: 0; }
+  .efb-rx-log-type { display: none; }
+  .efb-rx-log-freq { min-width: 0; font-size: 8px; flex-shrink: 0; opacity: 0.7; }
   .efb-rx-log-text {
     font-size: 12px;
     white-space: normal;
     overflow: visible;
     text-overflow: unset;
     flex-basis: 100%;
-    line-height: 1.4;
+    line-height: 1.45;
+    color: var(--t-secondary);
   }
 
   /* ── Left rail — thinner, icon-only, pinned EMG at bottom ── */
@@ -4092,6 +4092,9 @@ ul, li { list-style: none; padding: 0; margin: 0; }
 
   /* ── Hide checklist page header block ── */
   .efb-page-header.compact-hidden { display: none; }
+
+  /* ── Hide Smart Coms AI hero (waveform + header) in compact ── */
+  .radio-hero { display: none; }
 
   /* ── Checklist tap targets — smaller font, still tappable ── */
   .efb-check-row {
