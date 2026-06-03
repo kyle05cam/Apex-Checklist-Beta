@@ -4096,8 +4096,10 @@ ul, li { list-style: none; padding: 0; margin: 0; }
     font-size: 12px;
   }
   .efb-check-value {
-    font-size: 10px;
-    font-weight: 700;
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--t-primary);
+    letter-spacing: 0.08em;
   }
 
   /* ── Section header — hide READ/EDIT/progress, show full wrapping title ── */
@@ -4144,11 +4146,39 @@ ul, li { list-style: none; padding: 0; margin: 0; }
     background: rgba(220, 38, 38, 0.22) !important;
   }
   .efb-rail-emg-toggle.active-emg {
-    background: rgba(220, 38, 38, 0.28) !important;
-    border-left: 2px solid #ff4444 !important;
+    background: rgba(74, 222, 128, 0.1) !important;
+    border-top-color: rgba(74, 222, 128, 0.35) !important;
+    border-left: 2px solid #4ade80 !important;
   }
-  .efb-rail-emg-toggle .efb-rail-ico {
-    color: #ff4444;
+
+  /* ── Drag handle — resize ATC zone ── */
+  .efb-atc-drag-handle {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    align-self: end;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    cursor: ns-resize;
+    background: linear-gradient(to bottom, transparent, var(--bg-2));
+    z-index: 20;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .efb-atc-drag-pip {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--t-quiet);
+    opacity: 0.5;
+  }
+  .efb-atc-drag-handle:hover .efb-atc-drag-pip,
+  .efb-atc-drag-handle:active .efb-atc-drag-pip {
+    opacity: 1;
+    background: var(--accent);
   }
 }
 

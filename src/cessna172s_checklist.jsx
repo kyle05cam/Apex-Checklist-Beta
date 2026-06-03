@@ -1661,6 +1661,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [isCompact, setIsCompact] = useState(() => window.innerWidth <= 400);
   const [compactEmgMode, setCompactEmgMode] = useState(false);
+  const [atcHeightPct, setAtcHeightPct] = useState(35);
   useEffect(() => {
     const ro = new ResizeObserver(entries => {
       setIsCompact(entries[0].contentRect.width <= 400);
@@ -1668,6 +1669,24 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
     ro.observe(document.documentElement);
     return () => ro.disconnect();
   }, []);
+
+  const handleAtcDragStart = (e) => {
+    e.preventDefault();
+    const startY = e.clientY ?? e.touches?.[0]?.clientY;
+    const startPct = atcHeightPct;
+    const vh = window.innerHeight;
+    const onMove = (ev) => {
+      const y = ev.clientY ?? ev.touches?.[0]?.clientY;
+      const deltaPct = ((y - startY) / vh) * 100;
+      setAtcHeightPct(Math.min(60, Math.max(25, startPct + deltaPct)));
+    };
+    const onUp = () => {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+    };
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  };
   const [activeMoreRef, setActiveMoreRef] = useState("light_gun");
   const [activeDrawer, setActiveDrawer] = useState(new Set());   // Set of open keys — multiple allowed
   const [pohTab, setPohTab] = useState("vspeeds");               // Active tab in POH overlay
@@ -3551,7 +3570,7 @@ const commParseGround = (text) => {
            Watchdog banner appears conditionally above when ACK is needed.
       ────────────────────────────────────────────────────────────────────────── */}
       {currentPage !== "comm" && (
-        <div className="efb-rx-wrap">
+        <div className="efb-rx-wrap" style={isCompact ? { height: `${atcHeightPct}vh`, minHeight: `${atcHeightPct}vh`, maxHeight: `${atcHeightPct}vh` } : undefined}>
 
           {/* ── TRANSCRIPT + NRST area ── */}
           <div className="efb-rx-area">
@@ -3706,6 +3725,15 @@ const commParseGround = (text) => {
         </div>
       )}
 
+      {/* ── COMPACT DRAG HANDLE — resize ATC / checklist split ── */}
+      {isCompact && (
+        <div className="efb-atc-drag-handle" onPointerDown={handleAtcDragStart}>
+          <span className="efb-atc-drag-pip"/>
+          <span className="efb-atc-drag-pip"/>
+          <span className="efb-atc-drag-pip"/>
+        </div>
+      )}
+
       {/* ── LEFT RAIL ── */}
       <nav className={`efb-rail-l${isCompact ? " compact" : ""}`}>
         {(isCompact && compactEmgMode ? EMG_PAGES : activePages).map(pg => {
@@ -3719,7 +3747,7 @@ const commParseGround = (text) => {
               key={pg.id}
               className={`efb-rail-item${isActive ? " active" : ""}${isDone ? " complete" : ""}${isEmgRail ? " efb-rail-emg" : ""}`}
               style={isEmgRail ? { "--emg-color": pg.color } : {}}
-              onClick={() => { setCurrentPage(pg.id); if (isCompact && compactEmgMode) setCompactEmgMode(false); }}
+              onClick={() => setCurrentPage(pg.id)}
             >
               <span className="efb-rail-ico">
                 {isEmgRail && typeof pg.icon === "function"
@@ -3736,9 +3764,11 @@ const commParseGround = (text) => {
         <button
           className={`efb-rail-item efb-rail-emg-toggle${compactEmgMode ? " active-emg" : ""}`}
           onClick={() => setCompactEmgMode(m => !m)}
-          title="Emergency procedures"
+          title={compactEmgMode ? "Back to normal checklist" : "Emergency procedures"}
         >
-          <span className="efb-rail-ico" style={{ fontSize: isCompact ? 16 : 14, fontWeight: 700, color: compactEmgMode ? "#ff4444" : undefined }}>EMG</span>
+          <span className="efb-rail-ico" style={{ fontSize: isCompact ? 13 : 11, fontWeight: 700, color: compactEmgMode ? "#4ade80" : "#ff4444", letterSpacing: "0.04em" }}>
+            {compactEmgMode ? "STD" : "EMG"}
+          </span>
         </button>
         {!isCompact && (
           <button className="efb-rail-item" onClick={() => setMoreOpen(true)}>
