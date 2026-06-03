@@ -3986,12 +3986,18 @@ ul, li { list-style: none; padding: 0; margin: 0; }
     height: 44px;
     opacity: 0.35;
   }
-  /* ── LISTEN button full-width in idle ── */
+  /* ── LISTEN button — centered, compact icon ── */
   .efb-rx-idle .efb-rb-listen-btn {
-    margin: 4px 0 0;
-    width: 100%;
-    max-width: 160px;
+    margin: 4px auto 0;
+    width: auto;
+    padding: 0 20px;
     justify-content: center;
+    height: 32px;
+    font-size: 12px;
+  }
+  .efb-rb-listen-btn svg {
+    width: 11px;
+    height: 11px;
   }
 
   /* ── ATC live header — tiny timestamp, no "GENERAL" type label ── */
@@ -4021,15 +4027,25 @@ ul, li { list-style: none; padding: 0; margin: 0; }
     padding: 7px 10px 5px;
   }
 
-  /* ── ATC log rows — tiny, dense ── */
+  /* ── ATC log rows — readable, wrapping text ── */
   .efb-rx-log-row {
-    padding: 4px 10px;
-    font-size: 9px;
+    padding: 5px 10px;
+    font-size: 12px;
     gap: 6px;
+    align-items: flex-start;
+    flex-wrap: wrap;
   }
-  .efb-rx-log-ts   { min-width: 32px; font-size: 9px; }
+  .efb-rx-log-ts   { min-width: 0; font-size: 8px; opacity: 0.55; flex-shrink: 0; }
   .efb-rx-log-type { min-width: 0; font-size: 9px; display: none; }
-  .efb-rx-log-freq { min-width: 36px; font-size: 9px; }
+  .efb-rx-log-freq { min-width: 0; font-size: 9px; flex-shrink: 0; }
+  .efb-rx-log-text {
+    font-size: 12px;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    flex-basis: 100%;
+    line-height: 1.4;
+  }
 
   /* ── Left rail — thinner, icon-only, taller items ── */
   .efb-rail-l {
@@ -4040,12 +4056,12 @@ ul, li { list-style: none; padding: 0; margin: 0; }
   }
   .efb-rail-l.compact .efb-rail-item {
     padding: 0;
-    min-height: 56px;
+    min-height: 68px;
     justify-content: center;
   }
   .efb-rail-l.compact .efb-rail-ico {
-    width: 26px;
-    height: 26px;
+    width: 30px;
+    height: 30px;
   }
 
   /* ── Right rail — gone ── */
@@ -4081,6 +4097,7 @@ ul, li { list-style: none; padding: 0; margin: 0; }
   }
   .efb-check-value {
     font-size: 10px;
+    font-weight: 700;
   }
 
   /* ── Section header — hide READ/EDIT/progress, show full wrapping title ── */
@@ -4115,7 +4132,7 @@ ul, li { list-style: none; padding: 0; margin: 0; }
     background: rgba(220, 38, 38, 0.12) !important;
     border-top: 1px solid rgba(220, 38, 38, 0.3) !important;
     color: #ff4444 !important;
-    min-height: 64px;
+    min-height: 72px;
     padding: 0;
     justify-content: center;
     font-family: var(--f-mono);

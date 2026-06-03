@@ -3723,8 +3723,8 @@ const commParseGround = (text) => {
             >
               <span className="efb-rail-ico">
                 {isEmgRail && typeof pg.icon === "function"
-                  ? pg.icon(isCompact ? 20 : 22)
-                  : <Icon name={iconMap[pg.id] || "plane"} size={isCompact ? 20 : 22}/>
+                  ? pg.icon(isCompact ? 24 : 22)
+                  : <Icon name={iconMap[pg.id] || "plane"} size={isCompact ? 24 : 22}/>
                 }
               </span>
               {!isCompact && <span className="efb-rail-lbl">{pg.label}</span>}
