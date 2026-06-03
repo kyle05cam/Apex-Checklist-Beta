@@ -319,16 +319,16 @@ export const EMG_PAGES = [
     ]
   },
   {
-    id: "engine_fail", label: "ENGINE\nFAIL", color: "#e8c84a", dimColor: "#7a6a20",
+    id: "engine_fail", label: "ENGINE\nFAIL", color: "#60a5f5", dimColor: "#1e3a5f",
     icon: (size) => (
       <svg viewBox="0 0 24 24" width={size} height={size} fill="none">
-        <rect x="2.5" y="8" width="19" height="8" rx="1.5" stroke="#e8c84a" strokeWidth="1.4" fill="rgba(232,200,74,0.1)"/>
-        <rect x="6" y="10" width="3" height="4" rx="0.5" fill="#e8c84a" opacity="0.75"/>
-        <rect x="10.5" y="10" width="3" height="4" rx="0.5" fill="#e8c84a" opacity="0.75"/>
-        <path d="M5.5 8V6M9.5 8V5M14.5 8V6M18.5 8V5" stroke="#e8c84a" strokeWidth="1.4" strokeLinecap="round"/>
-        <path d="M2.5 12H1M23 12H21.5" stroke="#e8c84a" strokeWidth="1.4" strokeLinecap="round"/>
-        <path d="M5.5 16V18M9.5 16V19M14.5 16V18M18.5 16V19" stroke="#e8c84a" strokeWidth="1.4" strokeLinecap="round"/>
-        <circle cx="17" cy="12" r="1" fill="#e8c84a"/>
+        <rect x="2.5" y="8" width="19" height="8" rx="1.5" stroke="#60a5f5" strokeWidth="1.4" fill="rgba(96,165,245,0.1)"/>
+        <rect x="6" y="10" width="3" height="4" rx="0.5" fill="#60a5f5" opacity="0.75"/>
+        <rect x="10.5" y="10" width="3" height="4" rx="0.5" fill="#60a5f5" opacity="0.75"/>
+        <path d="M5.5 8V6M9.5 8V5M14.5 8V6M18.5 8V5" stroke="#60a5f5" strokeWidth="1.4" strokeLinecap="round"/>
+        <path d="M2.5 12H1M23 12H21.5" stroke="#60a5f5" strokeWidth="1.4" strokeLinecap="round"/>
+        <path d="M5.5 16V18M9.5 16V19M14.5 16V18M18.5 16V19" stroke="#60a5f5" strokeWidth="1.4" strokeLinecap="round"/>
+        <circle cx="17" cy="12" r="1" fill="#60a5f5"/>
         <line x1="14" y1="20" x2="20" y2="20" stroke="#e85a4a" strokeWidth="1.8" strokeLinecap="round"/>
         <line x1="17" y1="20" x2="17" y2="23" stroke="#e85a4a" strokeWidth="1.8" strokeLinecap="round"/>
       </svg>
@@ -371,6 +371,50 @@ export const EMG_PAGES = [
         { l: "Magnetos", a: "CHECK BOTH / L / R" },
         { l: "Engine Gauges", a: "SCAN ALL" },
         { type: "note", l: "RPM drop then rise on carb heat = ice present. Allow time to clear." },
+      ]},
+    ]
+  },
+  {
+    id: "electrical", label: "ELEC\nFAIL", color: "#e8c84a", dimColor: "#7a6a20",
+    icon: (size) => (
+      <svg viewBox="0 0 24 24" width={size} height={size} fill="none">
+        <path d="M13 2L4.5 13.5H12L11 22L19.5 10.5H12L13 2Z" stroke="#e8c84a" strokeWidth="1.5" strokeLinejoin="round" fill="rgba(232,200,74,0.12)"/>
+        <line x1="3" y1="21" x2="7" y2="17" stroke="#e85a4a" strokeWidth="1.5" strokeLinecap="round"/>
+        <line x1="7" y1="21" x2="3" y2="17" stroke="#e85a4a" strokeWidth="1.5" strokeLinecap="round"/>
+      </svg>
+    ),
+    sections: [
+      { title: "Alternator Failure / Low Voltage", items: [
+        { l: "Ammeter / Voltmeter", a: "CHECK READINGS" },
+        { l: "All Non-Essential Loads", a: "OFF" },
+        { l: "Avionics", a: "REDUCE TO MINIMUM" },
+        { l: "Lights (Non-Essential)", a: "OFF" },
+        { l: "Pitot Heat", a: "OFF IF VMC" },
+        { l: "Transponder", a: "SQUAWK 7600" },
+        { l: "Declare Emergency", a: "121.5 IF NEEDED" },
+        { l: "Land ASAP", a: "NEAREST SUITABLE" },
+        { type: "note", l: "Monitor for total electrical failure. Prepare to fly without instruments." },
+      ]},
+      { title: "Total Electrical Failure", items: [
+        { type: "caution", l: "Engine continues to run — magneto ignition is independent of electrical system" },
+        { l: "Master Switch", a: "CHECK ON" },
+        { l: "Circuit Breakers", a: "CHECK ALL / RESET ONCE" },
+        { l: "Avionics / All Electrics", a: "OFF" },
+        { l: "Master Switch", a: "CYCLE OFF / ON" },
+        { l: "Land ASAP", a: "NEAREST SUITABLE" },
+        { l: "Use Handheld Radio", a: "IF AVAILABLE" },
+        { l: "Light Gun Signals", a: "WATCH FOR ATC" },
+        { type: "note", l: "VMC: navigate visually. Request light gun clearance at towered airports." },
+      ]},
+      { title: "Avionics / Bus Failure", items: [
+        { l: "Avionics Master", a: "CYCLE OFF / ON" },
+        { l: "Individual Avionics CB", a: "CHECK / RESET ONCE" },
+        { l: "Primary GPS / Nav", a: "SWITCH TO BACKUP" },
+        { l: "Comm — Switch Radios", a: "TRY ALTERNATE COM" },
+        { l: "Magnetic Compass", a: "PRIMARY HEADING REF" },
+        { l: "Paper Charts / iPad", a: "REVERT TO BACKUP NAV" },
+        { type: "note", l: "If G1000 dark: use standby instruments and backup CDI" },
+        { l: "Declare if Unable to Nav", a: "121.5 / ATC" },
       ]},
     ]
   },
@@ -444,50 +488,6 @@ export const EMG_PAGES = [
         { l: "Flaps", a: "AVOID FULL (ICE ON TAIL)" },
         { l: "Landing Speed", a: "ADD 5-10 KIAS" },
         { type: "caution", l: "Ice on tail can cause pitch upset with flap extension — extend slowly" },
-      ]},
-    ]
-  },
-  {
-    id: "electrical", label: "ELEC\nFAIL", color: "#f0d060", dimColor: "#6a5820",
-    icon: (size) => (
-      <svg viewBox="0 0 24 24" width={size} height={size} fill="none">
-        <path d="M13 2L4.5 13.5H12L11 22L19.5 10.5H12L13 2Z" stroke="#f0d060" strokeWidth="1.5" strokeLinejoin="round" fill="rgba(240,208,96,0.12)"/>
-        <line x1="3" y1="21" x2="7" y2="17" stroke="#e85a4a" strokeWidth="1.5" strokeLinecap="round"/>
-        <line x1="7" y1="21" x2="3" y2="17" stroke="#e85a4a" strokeWidth="1.5" strokeLinecap="round"/>
-      </svg>
-    ),
-    sections: [
-      { title: "Alternator Failure / Low Voltage", items: [
-        { l: "Ammeter / Voltmeter", a: "CHECK READINGS" },
-        { l: "All Non-Essential Loads", a: "OFF" },
-        { l: "Avionics", a: "REDUCE TO MINIMUM" },
-        { l: "Lights (Non-Essential)", a: "OFF" },
-        { l: "Pitot Heat", a: "OFF IF VMC" },
-        { l: "Transponder", a: "SQUAWK 7600" },
-        { l: "Declare Emergency", a: "121.5 IF NEEDED" },
-        { l: "Land ASAP", a: "NEAREST SUITABLE" },
-        { type: "note", l: "Monitor for total electrical failure. Prepare to fly without instruments." },
-      ]},
-      { title: "Total Electrical Failure", items: [
-        { type: "caution", l: "Engine continues to run — magneto ignition is independent of electrical system" },
-        { l: "Master Switch", a: "CHECK ON" },
-        { l: "Circuit Breakers", a: "CHECK ALL / RESET ONCE" },
-        { l: "Avionics / All Electrics", a: "OFF" },
-        { l: "Master Switch", a: "CYCLE OFF / ON" },
-        { l: "Land ASAP", a: "NEAREST SUITABLE" },
-        { l: "Use Handheld Radio", a: "IF AVAILABLE" },
-        { l: "Light Gun Signals", a: "WATCH FOR ATC" },
-        { type: "note", l: "VMC: navigate visually. Request light gun clearance at towered airports." },
-      ]},
-      { title: "Avionics / Bus Failure", items: [
-        { l: "Avionics Master", a: "CYCLE OFF / ON" },
-        { l: "Individual Avionics CB", a: "CHECK / RESET ONCE" },
-        { l: "Primary GPS / Nav", a: "SWITCH TO BACKUP" },
-        { l: "Comm — Switch Radios", a: "TRY ALTERNATE COM" },
-        { l: "Magnetic Compass", a: "PRIMARY HEADING REF" },
-        { l: "Paper Charts / iPad", a: "REVERT TO BACKUP NAV" },
-        { type: "note", l: "If G1000 dark: use standby instruments and backup CDI" },
-        { l: "Declare if Unable to Nav", a: "121.5 / ATC" },
       ]},
     ]
   },
@@ -1700,6 +1700,7 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
   const ttsQueueRef = useRef([]);
   const ttsIdxRef = useRef(0);
   const ttsUtterRef = useRef(null);
+  const mainScrollRef = useRef(null);
 
   // ── COMM AUDIO ENGINE — global background state (survives page changes) ──────
   // Worker + ring buffer live here so monitoring continues across all tabs.
@@ -1734,6 +1735,10 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
     );
     return () => navigator.geolocation.clearWatch(wid);
   }, []);
+
+  useEffect(() => {
+    if (mainScrollRef.current) mainScrollRef.current.scrollTop = 0;
+  }, [currentPage]);
 
   // ── POH performance data — merges uploaded data over built-in defaults.
   // When takeoff/landing tables are extracted from the POH, they replace the
@@ -3736,31 +3741,42 @@ const commParseGround = (text) => {
 
       {/* ── LEFT RAIL ── */}
       <nav className={`efb-rail-l${isCompact ? " compact" : ""}`}>
-        {(isCompact && compactEmgMode ? EMG_PAGES : activePages).map(pg => {
-          const iconMap = { preflight:"preflight", startup:"startup", taxi:"taxi", takeoff:"takeoff", cruise:"cruise", approach:"landing", shutdown:"power" };
-          const isEmgRail = EMG_PAGES.some(p => p.id === pg.id);
-          const isActive = currentPage === pg.id;
-          const count = countPage(pg.id);
-          const isDone = count.total > 0 && count.done === count.total;
-          return (
-            <button
-              key={pg.id}
-              className={`efb-rail-item${isActive ? " active" : ""}${isDone ? " complete" : ""}${isEmgRail ? " efb-rail-emg" : ""}`}
-              style={isEmgRail ? { "--emg-color": pg.color } : {}}
-              onClick={() => setCurrentPage(pg.id)}
-            >
-              <span className="efb-rail-ico">
-                {isEmgRail && typeof pg.icon === "function"
-                  ? pg.icon(isCompact ? 24 : 22)
-                  : <Icon name={iconMap[pg.id] || "plane"} size={isCompact ? 24 : 22}/>
-                }
-              </span>
-              {!isCompact && <span className="efb-rail-lbl">{pg.label}</span>}
-              {!isCompact && count.total > 0 && <span className="efb-rail-cnt">{isDone ? "✓" : `${count.done}/${count.total}`}</span>}
+        {/* Scrollable page icons — wrapped so the EMG button stays pinned below */}
+        <div className="efb-rail-pages">
+          {(isCompact && compactEmgMode ? EMG_PAGES : activePages).map(pg => {
+            const iconMap = { preflight:"preflight", startup:"startup", taxi:"taxi", takeoff:"takeoff", cruise:"cruise", approach:"landing", shutdown:"power" };
+            const isEmgRail = EMG_PAGES.some(p => p.id === pg.id);
+            const isActive = currentPage === pg.id;
+            const count = countPage(pg.id);
+            const isDone = count.total > 0 && count.done === count.total;
+            return (
+              <button
+                key={pg.id}
+                className={`efb-rail-item${isActive ? " active" : ""}${isDone ? " complete" : ""}${isEmgRail ? " efb-rail-emg" : ""}`}
+                style={isEmgRail ? { "--emg-color": pg.color } : {}}
+                onClick={() => setCurrentPage(pg.id)}
+              >
+                <span className="efb-rail-ico">
+                  {isEmgRail && typeof pg.icon === "function"
+                    ? pg.icon(isCompact ? 24 : 22)
+                    : <Icon name={iconMap[pg.id] || "plane"} size={isCompact ? 24 : 22}/>
+                  }
+                </span>
+                {!isCompact && <span className="efb-rail-lbl">{pg.label}</span>}
+                {!isCompact && count.total > 0 && <span className="efb-rail-cnt">{isDone ? "✓" : `${count.done}/${count.total}`}</span>}
+              </button>
+            );
+          })}
+          {!isCompact && <div className="efb-rail-spacer"/>}
+          {!isCompact && (
+            <button className="efb-rail-item" onClick={() => setMoreOpen(true)}>
+              <span className="efb-rail-ico"><Icon name="menu" size={20}/></span>
+              <span className="efb-rail-lbl">MORE</span>
             </button>
-          );
-        })}
-        <div className="efb-rail-spacer"/>
+          )}
+        </div>
+
+        {/* EMG/STD toggle — always pinned at the bottom, never scrolls away */}
         <button
           className={`efb-rail-item efb-rail-emg-toggle${compactEmgMode ? " active-emg" : ""}`}
           onClick={() => setCompactEmgMode(m => !m)}
@@ -3770,17 +3786,11 @@ const commParseGround = (text) => {
             {compactEmgMode ? "STD" : "EMG"}
           </span>
         </button>
-        {!isCompact && (
-          <button className="efb-rail-item" onClick={() => setMoreOpen(true)}>
-            <span className="efb-rail-ico"><Icon name="menu" size={20}/></span>
-            <span className="efb-rail-lbl">MORE</span>
-          </button>
-        )}
       </nav>
 
       {/* ── MAIN CONTENT ── */}
       <main className="efb-main">
-        <div style={{ flex: 1, overflow: currentPage === "comm" ? "hidden" : "auto", overflowX: "hidden", scrollbarWidth: "thin", display: "flex", flexDirection: "column" }}>
+        <div ref={mainScrollRef} style={{ flex: 1, overflow: currentPage === "comm" ? "hidden" : "auto", overflowX: "hidden", scrollbarWidth: "thin", display: "flex", flexDirection: "column" }}>
             {currentPage === "comm"
               ? <CommPage
                   lightMode={lightMode}

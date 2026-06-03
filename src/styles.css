@@ -930,6 +930,16 @@ ul, li { list-style: none; padding: 0; margin: 0; }
   flex-shrink: 0;
 }
 .efb-rail-spacer { flex: 1; }
+
+/* Scrollable page icon wrapper inside left rail */
+.efb-rail-pages {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+}
 .efb-rail-section-label {
   font-family: var(--f-mono);
   font-size: 8px;
@@ -4047,12 +4057,13 @@ ul, li { list-style: none; padding: 0; margin: 0; }
     line-height: 1.4;
   }
 
-  /* ── Left rail — thinner, icon-only, taller items ── */
+  /* ── Left rail — thinner, icon-only, pinned EMG at bottom ── */
   .efb-rail-l {
     grid-row: 2;
     grid-column: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
   .efb-rail-l.compact .efb-rail-item {
     padding: 0;
