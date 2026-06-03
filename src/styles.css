@@ -4100,10 +4100,40 @@ ul, li { list-style: none; padding: 0; margin: 0; }
   .efb-comm-full .efb-rail-l { display: none; }
   .efb-comm-full .efb-main   { grid-column: 1 / -1; }
 
-  /* ── Condense clearance cards: hide sub-label, fix header overflow ── */
+  /* ── Condense clearance cards: hide sub-label, fix right-side clipping ── */
   .clearance-sub { display: none; }
-  .clearance-head { padding-right: 10px; }
-  .content-inner { padding-left: 10px; padding-right: 10px; }
+  .content-inner {
+    padding: 10px 10px;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+  }
+  .clearance-card {
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  /* ── Comm page split drag handle ── */
+  .efb-comm-drag-handle {
+    height: 18px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    cursor: ns-resize;
+    background: var(--bg-2);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .efb-comm-drag-handle:hover .efb-atc-drag-pip,
+  .efb-comm-drag-handle:active .efb-atc-drag-pip {
+    opacity: 1;
+    background: var(--accent);
+  }
 
   /* ── Checklist tap targets — smaller font, still tappable ── */
   .efb-check-row {

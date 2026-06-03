@@ -168,11 +168,30 @@ export function CommPage({
   ...rest
 }) {
   const [tab, setTab] = useState("active");
+  const [commSplitPct, setCommSplitPct] = useState(40);
 
   // Jump to Nearest Freqs tab when triggered from the header NRST widget
   useEffect(() => {
     if (forceFreqTab > 0) setTab("freq");
   }, [forceFreqTab]);
+
+  const handleCommDragStart = (e) => {
+    e.preventDefault();
+    const startY = e.clientY ?? e.touches?.[0]?.clientY;
+    const startPct = commSplitPct;
+    const totalH = e.currentTarget.closest('[data-comm-split]')?.clientHeight || window.innerHeight;
+    const onMove = (ev) => {
+      const y = ev.clientY ?? ev.touches?.[0]?.clientY;
+      const deltaPct = ((y - startY) / totalH) * 100;
+      setCommSplitPct(Math.min(75, Math.max(20, startPct + deltaPct)));
+    };
+    const onUp = () => {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+    };
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  };
   const [editPopover, setEditPopover] = useState(null); // { id, label, value, inputMode }
 
   const openEdit = (f) => setEditPopover({ id: f.id, label: f.label, value: getFieldValue(f.id), inputMode: f.inputMode });
@@ -240,8 +259,11 @@ export function CommPage({
   const tail = aircraft?.tail ?? "N/A";
 
   return (
-    <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", display: "flex", flexDirection: "column" }}>
-      <div className="content-inner" style={{ flex: 1 }}>
+    <div data-comm-split style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+
+      {/* ── UPPER PANE: tabs + transmission feed ── */}
+      <div style={{ height: `${commSplitPct}%`, minHeight: 0, overflowY: "auto", overflowX: "hidden", flexShrink: 0 }}>
+      <div className="content-inner">
 
         {/* ── Radio Hero ── */}
         <div className="radio-hero">
@@ -410,7 +432,21 @@ export function CommPage({
               </div>
             )}
 
-            {/* Replay bar — placed above the capture cards where it naturally belongs */}
+      </div>{/* end content-inner upper */}
+      </div>{/* end upper pane */}
+
+      {/* ── DRAG HANDLE ── */}
+      <div className="efb-comm-drag-handle" onPointerDown={handleCommDragStart}>
+        <span className="efb-atc-drag-pip"/>
+        <span className="efb-atc-drag-pip"/>
+        <span className="efb-atc-drag-pip"/>
+      </div>
+
+      {/* ── LOWER PANE: replay + clearance cards ── */}
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden" }}>
+      <div className="content-inner">
+
+            {/* Replay bar */}
             <div className="radio-replay-bar" onClick={() => onReplay?.(10)}>
               <Icon name="play" size={11}/>
               Replay Last 10 Seconds
@@ -483,7 +519,8 @@ export function CommPage({
         {tab === "archive" && <ArchiveLog txLog={txLog} onClearLog={onClearLog}/>}
         {tab === "freq"    && <NearestFreqs/>}
 
-      </div>
+      </div>{/* end content-inner lower */}
+      </div>{/* end lower pane */}
 
       {/* ── Compact back button ── */}
       {isCompact && onBack && (
