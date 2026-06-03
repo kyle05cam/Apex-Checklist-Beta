@@ -3481,7 +3481,7 @@ const commParseGround = (text) => {
   };
 
   return (
-    <div className="efb-app">
+    <div className={`efb-app${isCompact && currentPage === "comm" ? " efb-comm-full" : ""}`}>
 
       {/* ── TOPBAR ── */}
       <header className="efb-topbar">
@@ -3793,6 +3793,8 @@ const commParseGround = (text) => {
         <div ref={mainScrollRef} style={{ flex: 1, overflow: currentPage === "comm" ? "hidden" : "auto", overflowX: "hidden", scrollbarWidth: "thin", display: "flex", flexDirection: "column" }}>
             {currentPage === "comm"
               ? <CommPage
+                  isCompact={isCompact}
+                  onBack={() => setCurrentPage(activePages[0]?.id || "preflight")}
                   lightMode={lightMode}
                   aircraft={aircraft}
                   listening={commListening}

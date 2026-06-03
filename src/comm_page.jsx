@@ -162,6 +162,8 @@ export function CommPage({
   atisData,  onSetAtisData,  atisArmState,  onArmAtis,  onClearAtisRaw,
   taxiData,  onSetTaxiData,  taxiArmState,  onArmTaxi,  onClearTaxiRaw,
   gndData,   onSetGndData,   gndArmState,   onArmGnd,   onClearGndRaw,
+  isCompact = false,
+  onBack,
   // Remaining props accepted silently to preserve parent contract
   ...rest
 }) {
@@ -238,8 +240,8 @@ export function CommPage({
   const tail = aircraft?.tail ?? "N/A";
 
   return (
-    <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
-      <div className="content-inner">
+    <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", display: "flex", flexDirection: "column" }}>
+      <div className="content-inner" style={{ flex: 1 }}>
 
         {/* ── Radio Hero ── */}
         <div className="radio-hero">
@@ -408,6 +410,12 @@ export function CommPage({
               </div>
             )}
 
+            {/* Replay bar — placed above the capture cards where it naturally belongs */}
+            <div className="radio-replay-bar" onClick={() => onReplay?.(10)}>
+              <Icon name="play" size={11}/>
+              Replay Last 10 Seconds
+            </div>
+
             {/* Clearance cards */}
             {CLEARANCES.map((c) => (
               <div
@@ -469,11 +477,6 @@ export function CommPage({
               </div>
             ))}
 
-            {/* Replay bar */}
-            <div className="radio-replay-bar" onClick={() => onReplay?.(10)}>
-              <Icon name="play" size={11}/>
-              Replay Last 10 Seconds
-            </div>
           </>
         )}
 
@@ -481,6 +484,18 @@ export function CommPage({
         {tab === "freq"    && <NearestFreqs/>}
 
       </div>
+
+      {/* ── Compact back button ── */}
+      {isCompact && onBack && (
+        <div style={{ padding: "10px 12px", borderTop: "1px solid var(--line)", background: "var(--bg-1)", flexShrink: 0 }}>
+          <button
+            onClick={onBack}
+            style={{ width: "100%", padding: "12px", background: "var(--accent-bg)", border: "1px solid var(--accent-line)", borderRadius: "var(--r-md)", color: "var(--accent)", fontFamily: "var(--f-mono)", fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+          >
+            ← BACK TO CHECKLIST
+          </button>
+        </div>
+      )}
 
       {/* ── Field edit popover ── */}
       {editPopover && (
@@ -1235,13 +1250,12 @@ function fmtTs(ts) {
 }
 
 function fmtType(type) {
-  if (!type) return "GENERAL";
+  if (!type || type === "general") return null;
   const lookup = {
     ifr_departure: "IFR CLRNCE",
     ifr_approach:  "IFR APPRCH",
     landing:       "LANDING",
     pattern:       "PATTERN",
-    general:       "GENERAL",
     tower:         "TOWER",
     ground:        "GROUND",
     clnc_del:      "CLNC DEL",
@@ -1263,9 +1277,11 @@ function TransmissionFeed({ txLog = [], limit }) {
           <span style={{ fontFamily: "var(--f-mono)", fontSize: 11, color: "var(--t-tertiary)", letterSpacing: "0.06em" }}>
             {fmtTs(e.ts)}
           </span>
-          <span style={{ fontFamily: "var(--f-mono)", fontSize: 10, color: "var(--accent)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
-            {fmtType(e.type)}
-          </span>
+          {fmtType(e.type) && (
+            <span style={{ fontFamily: "var(--f-mono)", fontSize: 10, color: "var(--accent)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+              {fmtType(e.type)}
+            </span>
+          )}
           <span style={{ fontFamily: "var(--f-ui)", fontSize: 13, color: "var(--t-secondary)" }}>
             {e.text}
           </span>

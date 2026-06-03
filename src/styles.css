@@ -4096,6 +4096,15 @@ ul, li { list-style: none; padding: 0; margin: 0; }
   /* ── Hide Smart Coms AI hero (waveform + header) in compact ── */
   .radio-hero { display: none; }
 
+  /* ── Comm page full-width: hide left rail, main spans full grid ── */
+  .efb-comm-full .efb-rail-l { display: none; }
+  .efb-comm-full .efb-main   { grid-column: 1 / -1; }
+
+  /* ── Condense clearance cards: hide sub-label, fix header overflow ── */
+  .clearance-sub { display: none; }
+  .clearance-head { padding-right: 10px; }
+  .content-inner { padding-left: 10px; padding-right: 10px; }
+
   /* ── Checklist tap targets — smaller font, still tappable ── */
   .efb-check-row {
     padding: 9px 8px;
