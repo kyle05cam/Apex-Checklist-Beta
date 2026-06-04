@@ -5,7 +5,9 @@
       "Bash(sed -i '' 's/fontFamily:\"'\\\\''Share Tech Mono'\\\\'', monospace\"/fontFamily:\"var\\(--f-mono\\)\"/g' /Users/bexx/Desktop/Apex-Checklist/src/comm_page.jsx)",
       "Bash(sed -i '' 's/fontFamily:\"'\\\\''Oswald'\\\\'',sans-serif\"/fontFamily:\"var\\(--f-ui\\)\"/g' /Users/bexx/Desktop/Apex-Checklist/src/comm_page.jsx)",
       "Bash(sed -i '' 's/fontFamily:\"'\\\\''Oswald'\\\\'', sans-serif\"/fontFamily:\"var\\(--f-ui\\)\"/g' /Users/bexx/Desktop/Apex-Checklist/src/comm_page.jsx)",
-      "Bash(sed -i '' 's/fontFamily:\"'\\\\''Rajdhani'\\\\'',sans-serif\"/fontFamily:\"var\\(--f-ui\\)\"/g' /Users/bexx/Desktop/Apex-Checklist/src/comm_page.jsx)"
+      "Bash(sed -i '' 's/fontFamily:\"'\\\\''Rajdhani'\\\\'',sans-serif\"/fontFamily:\"var\\(--f-ui\\)\"/g' /Users/bexx/Desktop/Apex-Checklist/src/comm_page.jsx)",
+      "Bash(npm install *)",
+      "Bash(npx cap *)"
     ]
   }
 }

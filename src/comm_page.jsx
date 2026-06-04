@@ -261,265 +261,159 @@ export function CommPage({
   return (
     <div data-comm-split style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
 
-      {/* ── UPPER PANE: tabs + transmission feed ── */}
+      {/* ══ UPPER PANE — tabs + live transmission feed ══ */}
       <div style={{ height: `${commSplitPct}%`, minHeight: 0, overflowY: "auto", overflowX: "hidden", flexShrink: 0 }}>
-      <div className="content-inner">
+        <div className="content-inner">
 
-        {/* ── Radio Hero ── */}
-        <div className="radio-hero">
-          <div className="radio-hero-head">
-            <div className="radio-hero-title">
-              <span className="radio-hero-icon">
-                <Icon name="radar" size={18}/>
-              </span>
-              <div>
-                <div className="radio-hero-name">Smart Communication AI</div>
-                <div className="radio-hero-sub">
-                  Callsign: {tail} · {listening ? "Listening" : "Standby"}
+          {/* Radio Hero (hidden in compact via CSS) */}
+          <div className="radio-hero">
+            <div className="radio-hero-head">
+              <div className="radio-hero-title">
+                <span className="radio-hero-icon"><Icon name="radar" size={18}/></span>
+                <div>
+                  <div className="radio-hero-name">Smart Communication AI</div>
+                  <div className="radio-hero-sub">Callsign: {tail} · {listening ? "Listening" : "Standby"}</div>
                 </div>
               </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className={`btn btn-sm ${listening ? "btn-warn" : "btn-primary"}`} onClick={handleListen}>
+                  <Icon name={listening ? "mic" : "play"} size={11}/>
+                  {listening ? "STOP" : "LISTEN"}
+                </button>
+              </div>
             </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button
-                className={`btn btn-sm ${listening ? "btn-warn" : "btn-primary"}`}
-                onClick={handleListen}
-              >
-                <Icon name={listening ? "mic" : "play"} size={11}/>
-                {listening ? "STOP" : "LISTEN"}
-              </button>
+            <Waveform live={listening} rmsLevel={rmsLevel}/>
+          </div>
+
+          {/* Tabs */}
+          <div className="radio-tabs">
+            <div className={`radio-tab${tab === "active" ? " active" : ""}`} onClick={() => setTab("active")}>Active Feed</div>
+            <div className={`radio-tab${tab === "archive" ? " active" : ""}`} onClick={() => setTab("archive")}>
+              Archive Log <span className="tab-count">{txLog.length > 0 ? txLog.length : 0}</span>
+            </div>
+            <div className={`radio-tab${tab === "freq" ? " active" : ""}`} onClick={() => setTab("freq")}>
+              Nearest Freqs <span className="tab-count">6</span>
             </div>
           </div>
 
-          <Waveform live={listening} rmsLevel={rmsLevel}/>
-        </div>
-
-        {/* ── Tabs ── */}
-        <div className="radio-tabs">
-          <div
-            className={`radio-tab${tab === "active" ? " active" : ""}`}
-            onClick={() => setTab("active")}
-          >
-            Active Feed
-          </div>
-          <div
-            className={`radio-tab${tab === "archive" ? " active" : ""}`}
-            onClick={() => setTab("archive")}
-          >
-            Archive Log{" "}
-            <span className="tab-count">{txLog.length > 0 ? txLog.length : 0}</span>
-          </div>
-          <div
-            className={`radio-tab${tab === "freq" ? " active" : ""}`}
-            onClick={() => setTab("freq")}
-          >
-            Nearest Freqs <span className="tab-count">6</span>
-          </div>
-        </div>
-
-        {/* ── Active Feed ── */}
-        {tab === "active" && (
-          <>
-            {/* Transmission history — featured most-recent + compact history rows */}
-            {txLog.length > 0 && (
-              <div style={{ marginBottom: 16 }}>
-
-                {/* ── Most recent — large featured card ── */}
-                {(() => {
-                  const isWd = watchdogState !== "clear" && txLog[0]?.id === watchdogTx?.id;
-                  const wdAlert      = isWd && watchdogState === "alert";
-                  const wdUnanswered = isWd && watchdogState === "unanswered";
-                  const borderLeft   = wdUnanswered ? "3px solid var(--warn)"
-                                     : isWd        ? "3px solid var(--caution)"
-                                     :               "3px solid var(--accent)";
-                  const cardBg       = wdUnanswered ? "rgba(255,107,107,0.06)"
-                                     : isWd        ? "rgba(245,181,68,0.05)"
-                                     :               "var(--bg-1)";
-                  return (
-                    <div
-                      className={wdUnanswered ? "comm-wd-flash" : ""}
-                      style={{
-                        background: cardBg,
-                        border: "1px solid var(--line)",
-                        borderLeft,
-                        borderRadius: "var(--r-md)",
-                        overflow: "hidden",
-                        marginBottom: txLog.length > 1 ? 10 : 0,
-                        cursor: (wdAlert || wdUnanswered) ? "pointer" : "default",
-                      }}
-                      onClick={(wdAlert || wdUnanswered)
-                        ? e => { e.stopPropagation(); onAckCall?.(); }
-                        : undefined}
-                    >
-                      {/* Meta row: timestamp · type badge · watchdog badge · "Most Recent" */}
-                      <div style={{
-                        display: "flex", alignItems: "center", gap: 10,
-                        padding: "7px 14px",
-                        borderBottom: "1px solid var(--line-faint)",
-                        fontFamily: "var(--f-mono)", fontSize: 10,
-                      }}>
-                        <span style={{ color: "var(--t-tertiary)", letterSpacing: "0.06em" }}>
-                          {fmtTs(txLog[0].ts)}
-                        </span>
-                        <span style={{
-                          fontSize: 9, fontWeight: 700, letterSpacing: "0.1em",
-                          textTransform: "uppercase", color: "var(--accent)",
-                          border: "1px solid rgba(77,163,255,0.30)",
-                          borderRadius: "3px", padding: "1px 6px",
-                          background: "rgba(77,163,255,0.10)",
-                        }}>
-                          {fmtType(txLog[0].type)}
-                        </span>
-                        {txLog[0].tokens?.freq && (
-                          <span style={{ color: "var(--t-secondary)", letterSpacing: "0.04em" }}>
-                            {txLog[0].tokens.freq}
-                          </span>
-                        )}
-                        <span style={{ marginLeft: "auto", fontSize: 9, letterSpacing: "0.1em",
-                          textTransform: "uppercase", color: isWd ? "transparent" : "var(--t-quiet)" }}>
-                          Most Recent
-                        </span>
-                      </div>
-                      {/* Large transcript text */}
-                      <div style={{
-                        padding: "11px 14px 13px",
-                        fontFamily: "var(--f-ui)", fontSize: 18, fontWeight: 500,
-                        color: "var(--t-primary)", lineHeight: 1.5,
-                        letterSpacing: "-0.005em",
-                      }}>
-                        &ldquo;{txLog[0].text}&rdquo;
-                      </div>
-                      {/* Watchdog footer label — whole card is the tap target */}
-                      {isWd && (wdAlert || wdUnanswered) && (
-                        <div className="efb-rx-wd-footer" data-state={watchdogState}>
-                          {wdAlert
-                            ? `ATC call — tap anywhere to acknowledge  ·  ${ackCountdown}s`
-                            : "ATC call unanswered — tap anywhere to acknowledge"}
+          {/* Active feed */}
+          {tab === "active" && (
+            <>
+              {txLog.length > 0 && (
+                <div style={{ marginBottom: 16 }}>
+                  {/* Most recent featured card */}
+                  {(() => {
+                    const isWd = watchdogState !== "clear" && txLog[0]?.id === watchdogTx?.id;
+                    const wdAlert      = isWd && watchdogState === "alert";
+                    const wdUnanswered = isWd && watchdogState === "unanswered";
+                    const borderLeft   = wdUnanswered ? "3px solid var(--warn)" : isWd ? "3px solid var(--caution)" : "3px solid var(--accent)";
+                    const cardBg       = wdUnanswered ? "rgba(255,107,107,0.06)" : isWd ? "rgba(245,181,68,0.05)" : "var(--bg-1)";
+                    return (
+                      <div
+                        className={wdUnanswered ? "comm-wd-flash" : ""}
+                        style={{ background: cardBg, border: "1px solid var(--line)", borderLeft, borderRadius: "var(--r-md)", overflow: "hidden", marginBottom: txLog.length > 1 ? 10 : 0, cursor: (wdAlert || wdUnanswered) ? "pointer" : "default" }}
+                        onClick={(wdAlert || wdUnanswered) ? e => { e.stopPropagation(); onAckCall?.(); } : undefined}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 14px", borderBottom: "1px solid var(--line-faint)", fontFamily: "var(--f-mono)", fontSize: 10 }}>
+                          <span style={{ color: "var(--t-tertiary)", letterSpacing: "0.06em" }}>{fmtTs(txLog[0].ts)}</span>
+                          {fmtType(txLog[0].type) && (
+                            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--accent)", border: "1px solid rgba(77,163,255,0.30)", borderRadius: "3px", padding: "1px 6px", background: "rgba(77,163,255,0.10)" }}>
+                              {fmtType(txLog[0].type)}
+                            </span>
+                          )}
+                          {txLog[0].tokens?.freq && <span style={{ color: "var(--t-secondary)", letterSpacing: "0.04em" }}>{txLog[0].tokens.freq}</span>}
+                          <span style={{ marginLeft: "auto", fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: isWd ? "transparent" : "var(--t-quiet)" }}>Most Recent</span>
                         </div>
-                      )}
-                    </div>
-                  );
-                })()}
-
-                {/* ── Earlier transmissions — compact rows ── */}
-                {txLog.length > 1 && (
-                  <>
-                    <div style={{
-                      fontFamily: "var(--f-mono)", fontSize: 10, letterSpacing: "0.1em",
-                      textTransform: "uppercase", color: "var(--t-tertiary)",
-                      marginBottom: 6,
-                    }}>
-                      Earlier
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      <TransmissionFeed txLog={txLog.slice(1)} limit={4}/>
-                    </div>
-                  </>
-                )}
-
-              </div>
-            )}
-
-            {/* Empty state — only before any transmissions have ever been received */}
-            {!listening && !hasValues && txLog.length === 0 && (
-              <div className="radio-empty">
-                <div className="radio-empty-icon">
-                  <Icon name="antenna" size={22}/>
+                        <div style={{ padding: "11px 14px 13px", fontFamily: "var(--f-ui)", fontSize: 18, fontWeight: 500, color: "var(--t-primary)", lineHeight: 1.5, letterSpacing: "-0.005em" }}>
+                          &ldquo;{txLog[0].text}&rdquo;
+                        </div>
+                        {isWd && (wdAlert || wdUnanswered) && (
+                          <div className="efb-rx-wd-footer" data-state={watchdogState}>
+                            {wdAlert ? `ATC call — tap anywhere to acknowledge  ·  ${ackCountdown}s` : "ATC call unanswered — tap anywhere to acknowledge"}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                  {/* Earlier rows */}
+                  {txLog.length > 1 && (
+                    <>
+                      <div style={{ fontFamily: "var(--f-mono)", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--t-tertiary)", marginBottom: 6 }}>Earlier</div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        <TransmissionFeed txLog={txLog.slice(1)} limit={4}/>
+                      </div>
+                    </>
+                  )}
                 </div>
-                <div className="radio-empty-title">Awaiting Transmission</div>
-                <div className="radio-empty-sub">
-                  Forms below auto-fill from captured ATC audio.
+              )}
+              {!listening && !hasValues && txLog.length === 0 && (
+                <div className="radio-empty">
+                  <div className="radio-empty-icon"><Icon name="antenna" size={22}/></div>
+                  <div className="radio-empty-title">Awaiting Transmission</div>
+                  <div className="radio-empty-sub">Forms below auto-fill from captured ATC audio.</div>
                 </div>
-              </div>
-            )}
+              )}
+            </>
+          )}
 
-      </div>{/* end content-inner upper */}
+          {tab === "archive" && <ArchiveLog txLog={txLog} onClearLog={onClearLog}/>}
+          {tab === "freq"    && <NearestFreqs/>}
+
+        </div>
       </div>{/* end upper pane */}
 
-      {/* ── DRAG HANDLE ── */}
+      {/* ══ DRAG HANDLE ══ */}
       <div className="efb-comm-drag-handle" onPointerDown={handleCommDragStart}>
         <span className="efb-atc-drag-pip"/>
         <span className="efb-atc-drag-pip"/>
         <span className="efb-atc-drag-pip"/>
       </div>
 
-      {/* ── LOWER PANE: replay + clearance cards ── */}
+      {/* ══ LOWER PANE — replay bar + clearance capture cards ══ */}
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden" }}>
-      <div className="content-inner">
+        <div className="content-inner">
 
-            {/* Replay bar */}
-            <div className="radio-replay-bar" onClick={() => onReplay?.(10)}>
-              <Icon name="play" size={11}/>
-              Replay Last 10 Seconds
-            </div>
+          <div className="radio-replay-bar" onClick={() => onReplay?.(10)}>
+            <Icon name="play" size={11}/>
+            Replay Last 10 Seconds
+          </div>
 
-            {/* Clearance cards */}
-            {CLEARANCES.map((c) => (
-              <div
-                key={c.id}
-                className={`clearance-card${isArmed(c.id) ? " armed" : ""}`}
-              >
-                <div className="clearance-head">
-                  <div className="clearance-title">
-                    <span className="clearance-name">{c.name}</span>
-                    <span className="clearance-sub">{c.sub}</span>
-                  </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button
-                      className={`btn btn-sm${isArmed(c.id) ? " btn-ok" : ""}`}
-                      onClick={() => handleArm(c.id)}
-                    >
-                      <span style={{
-                        width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
-                        background: isArmed(c.id) ? "var(--ok)" : "var(--t-quiet)",
-                      }}/>
-                      {isArmed(c.id) ? "ARMED" : "ARM"}
-                    </button>
-                    <button
-                      className="btn btn-sm btn-warn"
-                      onClick={() => handleClear(c.id)}
-                    >
-                      <Icon name="reset" size={10}/>
-                      CLR
-                    </button>
-                  </div>
+          {CLEARANCES.map((c) => (
+            <div key={c.id} className={`clearance-card${isArmed(c.id) ? " armed" : ""}`}>
+              <div className="clearance-head">
+                <div className="clearance-title">
+                  <span className="clearance-name">{c.name}</span>
+                  <span className="clearance-sub">{c.sub}</span>
                 </div>
-
-                <div className="clearance-body">
-                  {c.fields.map((f) => (
-                    <React.Fragment key={f.id}>
-                      {f.critical && (
-                        <div className="hold-short-banner">
-                          <Icon name="alert" size={10}/>
-                          Hold Short
-                        </div>
-                      )}
-                      <button
-                        className={[
-                          "field-row",
-                          f.critical ? "critical" : "",
-                          getFieldValue(f.id) ? "has-value" : "",
-                        ].filter(Boolean).join(" ")}
-                        onClick={() => openEdit(f)}
-                      >
-                        <span className="field-row-label">{f.label}</span>
-                        <span className={`field-row-value${!getFieldValue(f.id) ? " empty" : ""}`}>
-                          {getFieldValue(f.id) || f.placeholder}
-                        </span>
-                        <span className="field-row-hint">›</span>
-                      </button>
-                    </React.Fragment>
-                  ))}
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button className={`btn btn-sm${isArmed(c.id) ? " btn-ok" : ""}`} onClick={() => handleArm(c.id)}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: isArmed(c.id) ? "var(--ok)" : "var(--t-quiet)" }}/>
+                    {isArmed(c.id) ? "ARMED" : "ARM"}
+                  </button>
+                  <button className="btn btn-sm btn-warn" onClick={() => handleClear(c.id)}>
+                    <Icon name="reset" size={10}/> CLR
+                  </button>
                 </div>
               </div>
-            ))}
+              <div className="clearance-body">
+                {c.fields.map((f) => (
+                  <React.Fragment key={f.id}>
+                    {f.critical && <div className="hold-short-banner"><Icon name="alert" size={10}/> Hold Short</div>}
+                    <button
+                      className={["field-row", f.critical ? "critical" : "", getFieldValue(f.id) ? "has-value" : ""].filter(Boolean).join(" ")}
+                      onClick={() => openEdit(f)}
+                    >
+                      <span className="field-row-label">{f.label}</span>
+                      <span className={`field-row-value${!getFieldValue(f.id) ? " empty" : ""}`}>{getFieldValue(f.id) || f.placeholder}</span>
+                      <span className="field-row-hint">›</span>
+                    </button>
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+          ))}
 
-          </>
-        )}
-
-        {tab === "archive" && <ArchiveLog txLog={txLog} onClearLog={onClearLog}/>}
-        {tab === "freq"    && <NearestFreqs/>}
-
-      </div>{/* end content-inner lower */}
+        </div>
       </div>{/* end lower pane */}
 
       {/* ── Compact back button ── */}

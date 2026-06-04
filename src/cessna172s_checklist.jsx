@@ -2048,6 +2048,31 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
     t = t.replace(/\bnine-r\b/gi,   "niner");
     t = t.replace(/\bnine\s+er\b/gi,"niner");
 
+    // ── ALTITUDE WORD-TO-NUMBER ────────────────────────────────────────────
+    // ATC says "climb and maintain six thousand five hundred" — engine hears exactly
+    // that but parsers expect digits. Convert before phonetic normalizer runs.
+    const ALT_THOUSANDS = {one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12};
+    // "X thousand five hundred" → e.g. 6500
+    t = t.replace(
+      /\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+thousand\s+five\s+hundred\b/gi,
+      (_, n) => String(ALT_THOUSANDS[n.toLowerCase()] * 1000 + 500)
+    );
+    // "X thousand" → e.g. 6000
+    t = t.replace(
+      /\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+thousand\b/gi,
+      (_, n) => String(ALT_THOUSANDS[n.toLowerCase()] * 1000)
+    );
+    // "flight level two four zero" → "FL240" (digit words handled by normalizePhonetic later)
+    t = t.replace(/\bflight\s+level\b/gi, "FL");
+
+    // ── RUNWAY NUMBER WORD PAIRS ───────────────────────────────────────────
+    // "runway two seven" → "runway 27" (outside taxi context where it's already handled)
+    const RWY_DIGITS = {zero:"0",one:"1",two:"2",three:"3",four:"4",five:"5",six:"6",seven:"7",eight:"8",nine:"9",niner:"9"};
+    t = t.replace(
+      /\brunway\s+(zero|one|two|three|four|five|six|seven|eight|nine|niner)\s+(zero|one|two|three|four|five|six|seven|eight|nine|niner)\b/gi,
+      (_, d1, d2) => `runway ${RWY_DIGITS[d1.toLowerCase()]}${RWY_DIGITS[d2.toLowerCase()]}`
+    );
+
     return t;
   };
 
@@ -2083,6 +2108,15 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
       /\b(information|with|squawk|ident|have)\s+(alpha|bravo|charlie|delta|echo|foxtrot|golf|hotel|india|juliett|juliet|kilo|lima|mike|november|oscar|papa|quebec|romeo|sierra|tango|uniform|victor|whiskey|xray|yankee|zulu)\b/gi,
       (_, prefix, letter) => `${prefix} ${PHONETIC_ALPHA_MAP[letter.toLowerCase()] || letter.toUpperCase()}`
     );
+
+    // Step 4 — merge spaced digits after "squawk" into a 4-digit code
+    // "squawk 4 5 3 2" → "squawk 4532" so the parser's \d{4} regex can match
+    t = t.replace(/\bsquawk\s+(\d)\s+(\d)\s+(\d)\s+(\d)\b/gi, "squawk $1$2$3$4");
+
+    // Step 5 — merge spaced digits after "FL" into flight level
+    // "FL 2 4 0" → "FL240"
+    t = t.replace(/\bFL\s+(\d)\s+(\d)\s+(\d)\b/gi, "FL$1$2$3");
+
     return t;
   };
 
@@ -2253,11 +2287,32 @@ export function ChecklistApp({ onBackToHangar, aircraft }) {
 
   const commDetectType = (text) => {
     const t = text.toLowerCase();
+
+    // IFR approach clearance — must check before generic "cleared" checks
     if (/cleared\s+(?:to|for)\s+(?:the\s+)?(?:ils|rnav|vor|gps|lda|loc|ndb)\s+approach/.test(t)) return "ifr_approach";
-    if (/cleared\s+to\s+[a-z]/.test(t) && /squawk|departure|maintain\s+\d/.test(t)) return "ifr_departure";
-    if (/cleared\s+to\s+land/.test(t)||/cleared\s+(?:for|the)\s+(?:option|landing|approach)/.test(t)) return "landing";
-    const LEGS=["upwind","crosswind","downwind","base","final","left downwind","right downwind","left base","right base","straight-in"];
-    if (/enter|make|report|traffic/.test(t)&&LEGS.some(l=>t.includes(l))) return "pattern";
+
+    // Landing clearance
+    if (/cleared\s+to\s+land/.test(t) || /cleared\s+(?:for|the)\s+(?:option|landing|approach)/.test(t)) return "landing";
+
+    // IFR departure clearance (CLNC DEL) — has destination + squawk/departure freq
+    if (/cleared\s+to\s+[a-z]/.test(t) && /squawk|departure\s+(?:frequency|on)|maintain\s+\d/.test(t)) return "clnc_del";
+
+    // Pattern / traffic pattern entry calls
+    const LEGS = ["upwind","crosswind","downwind","base","final","left downwind","right downwind","left base","right base","straight-in"];
+    if (/enter|make|report|traffic/.test(t) && LEGS.some(l => t.includes(l))) return "pattern";
+
+    // ATIS — automated weather broadcast or readback with info identifier
+    if (/(?:automated\s+weather|atis\b|information\s+[a-z]\b.*(?:wind|altimeter|visibility)|(?:wind|altimeter)\s+.*information\s+[a-z]\b)/.test(t)) return "atis";
+
+    // Ground — taxi instructions, hold short, runway assignment (not tower takeoff/landing)
+    if (/(?:taxi\s+(?:to|via)|hold\s+short|hold\s+position|run\s+up\s+area|advise\s+(?:tower|when)|contact\s+tower)/.test(t) && !/cleared\s+for\s+takeoff/.test(t)) return "ground";
+
+    // Tower — takeoff, departure, go-around, traffic calls, wind check
+    if (/(?:cleared\s+for\s+takeoff|line\s+up\s+and\s+wait|back\s+taxi|go\s+around|wind\s+check|number\s+\d+\s+for|caution\s+wake|fly\s+runway\s+heading|fly\s+heading|turn\s+(?:left|right)\s+(?:heading|immediately)|winds?\s+\d{3}\s+at)/.test(t)) return "tower";
+
+    // Approach / Departure — radar contact, vectors, altitude assignments in the air
+    if (/(?:radar\s+contact|radar\s+service|descend\s+(?:and\s+)?maintain|climb\s+(?:and\s+)?maintain|turn\s+(?:left|right)\s+heading|direct\s+[a-z]{3,5}|vectors\s+(?:to|for)|ident|frequency\s+change|resume\s+own\s+nav|say\s+altitude|altimeter\s+\d{4}(?!\s*information))/.test(t)) return "approach";
+
     return "general";
   };
 
@@ -2883,14 +2938,39 @@ const commParseGround = (text) => {
       };
       commAnimFrameRef.current = requestAnimationFrame(animVu);
       
-      if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
+      // Use on-device ATC Whisper engine when running inside Capacitor (iOS native),
+      // fall back to webkitSpeechRecognition in browser dev / PWA context.
+      const cap = window.Capacitor;
+      if (cap && cap.Plugins && cap.Plugins.WhisperPlugin) {
+        const WhisperPlugin = cap.Plugins.WhisperPlugin;
+        // Wire transcript events — payload: { transcript, isFinal }
+        const whisperListener = WhisperPlugin.addListener("transcript", ({ transcript, isFinal }) => {
+          if (!isFinal) {
+            setCommTranscript(transcript);
+            commWatchdogOnInterim();
+          } else if (transcript.trim()) {
+            commHandleTranscriptRef.current?.(transcript.trim(), true);
+          }
+        });
+        WhisperPlugin.startListening().catch((err) => {
+          console.warn("WhisperPlugin.startListening failed:", err);
+          setCommMicStatus("error");
+        });
+        // Store a stop handle compatible with commStopListening
+        commRecognitionRef.current = {
+          stop: () => {
+            WhisperPlugin.stopListening().catch(() => {});
+            whisperListener.remove();
+          },
+        };
+      } else if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-        const rec = new SR(); 
-        rec.continuous = true; 
-        rec.interimResults = true; 
-        rec.lang = "en-US"; 
+        const rec = new SR();
+        rec.continuous = true;
+        rec.interimResults = true;
+        rec.lang = "en-US";
         rec.maxAlternatives = 1;
-        
+
         rec.onresult = (e) => {
           let p = "", f = "";
           for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -2908,12 +2988,12 @@ const commParseGround = (text) => {
           if (f.trim()) commHandleTranscriptRef.current?.(f.trim(), true);
         };
         rec.onerror = (e) => { if (e.error === "not-allowed") setCommMicStatus("denied"); };
-        rec.onend = () => { 
+        rec.onend = () => {
           if (commStreamRef.current && commStreamRef.current.getAudioTracks()[0].enabled) {
-            try { rec.start(); } catch {} 
+            try { rec.start(); } catch {}
           }
         };
-        rec.start(); 
+        rec.start();
         commRecognitionRef.current = rec;
       }
       
@@ -3442,8 +3522,10 @@ const commParseGround = (text) => {
                             <div className="efb-check-box">
                               <Icon name="check" size={11} stroke={2.5}/>
                             </div>
-                            <span className="efb-check-label">{item.l}</span>
-                            <span className="efb-check-value">{item.a}</span>
+                            <div className="efb-check-content">
+                              <span className="efb-check-label">{item.l}</span>
+                              <span className="efb-check-value">{item.a}</span>
+                            </div>
                           </div>
                           {item.notepad && openNotepads.has(key) && (
                             <DrawingNotepad title={item.notepadLabel || "NOTEPAD"} footer={item.notepadFooter} storageKey={`notepad-${key}`} initialImage={notepadImages[`notepad-${key}`]} onSave={(dataUrl) => setNotepadImages(prev => ({ ...prev, [`notepad-${key}`]: dataUrl }))} onClose={() => setOpenNotepads(prev => { const next = new Set(prev); next.delete(key); return next; })} />

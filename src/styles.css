@@ -1318,10 +1318,10 @@ ul, li { list-style: none; padding: 0; margin: 0; }
 /* Check rows */
 .efb-check-row {
   display: grid;
-  grid-template-columns: 32px 1fr auto;
-  align-items: center;
-  gap: var(--s-3);
-  padding: 0 var(--s-5);
+  grid-template-columns: 32px 1fr;
+  align-items: start;
+  column-gap: var(--s-3);
+  padding: 10px var(--s-5);
   min-height: 48px;
   border-bottom: 1px solid var(--line-faint);
   cursor: pointer;
@@ -1355,18 +1355,31 @@ ul, li { list-style: none; padding: 0; margin: 0; }
 .efb-check-box svg { opacity: 0; transition: opacity 0.12s; }
 .efb-check-row.checked .efb-check-box svg { opacity: 1; }
 
+/* Label left (wraps within itself), value right (wraps within itself).
+   Both stay in their columns — label never pushes value off screen. */
+.efb-check-content {
+  display: grid;
+  grid-template-columns: 1fr minmax(0, 45%);
+  align-items: center;
+  column-gap: var(--s-4);
+}
 .efb-check-label {
   font-size: 14px;
   color: var(--t-primary);
   font-weight: 450;
+  line-height: 1.35;
+  min-width: 0;
 }
 .efb-check-value {
   font-family: var(--f-mono);
   font-size: 12px;
-  font-weight: 500;
-  color: var(--t-secondary);
+  font-weight: 600;
+  color: var(--caution);
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  white-space: normal;
+  word-break: break-word;
+  text-align: right;
 }
 .efb-check-value.critical { color: var(--warn); }
 
@@ -4135,24 +4148,26 @@ ul, li { list-style: none; padding: 0; margin: 0; }
     background: var(--accent);
   }
 
-  /* ── Checklist tap targets — smaller font, still tappable ── */
+  /* ── Checklist rows — match emergency checklist size/style ── */
   .efb-check-row {
-    padding: 9px 8px;
-    min-height: 40px;
+    padding: 11px 8px;
+    min-height: 52px;
+    grid-template-columns: 28px 1fr;
   }
   .efb-check-box {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     flex-shrink: 0;
   }
   .efb-check-label {
-    font-size: 12px;
+    font-size: 15px;
+    font-weight: 500;
   }
   .efb-check-value {
-    font-size: 11px;
-    font-weight: 800;
-    color: var(--t-primary);
-    letter-spacing: 0.08em;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--caution);
+    letter-spacing: 0.06em;
   }
 
   /* ── Section header — hide READ/EDIT/progress, show full wrapping title ── */
@@ -4166,7 +4181,7 @@ ul, li { list-style: none; padding: 0; margin: 0; }
     display: none;
   }
   .efb-cl-head {
-    padding: 6px 8px 6px 12px;
+    padding: 8px 10px 8px 14px;
     align-items: flex-start;
   }
   .efb-cl-title {
@@ -4174,7 +4189,8 @@ ul, li { list-style: none; padding: 0; margin: 0; }
     flex: 1;
   }
   .efb-cl-name {
-    font-size: 11px;
+    font-size: 15px;
+    font-weight: 700;
     white-space: normal;
     overflow: visible;
     text-overflow: unset;
